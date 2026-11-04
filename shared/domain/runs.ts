@@ -189,3 +189,25 @@ export function cancelRun(run: GroupRun, now: Date): DomainResult<GroupRun, 'run
 export function isUpcoming(run: Pick<GroupRun, 'status' | 'startsAt'>, now: Date): boolean {
   return run.status === 'open' && new Date(run.startsAt).getTime() > now.getTime()
 }
+
+export interface RunFilter {
+  dungeonSlug?: string | null
+  /** Zeitraum ab jetzt in Tagen; null = alle kommenden */
+  withinDays?: number | null
+  onlyOpenSlots?: boolean
+  includeCancelled?: boolean
+}
+
+/** Kommende Runs filtern (abgeschlossene und vergangene Runs nie, abgesagte optional). */
+export function filterRuns<T extends GroupRun>(runs: readonly T[], filter: RunFilter, now: Date): T[] {
+  const until = filter.withinDays != null ? now.getTime() + filter.withinDays * 86_400_000 : Number.POSITIVE_INFINITY
+  return runs.filter((run) => {
+    const startsAt = Date.parse(run.startsAt)
+    if (startsAt <= now.getTime() || startsAt > until) return false
+    if (run.status === 'completed') return false
+    if (run.status === 'cancelled' && !filter.includeCancelled) return false
+    if (filter.dungeonSlug && run.dungeonSlug !== filter.dungeonSlug) return false
+    if (filter.onlyOpenSlots && (run.status !== 'open' || computeComposition(run).isFull)) return false
+    return true
+  })
+}

@@ -6,7 +6,7 @@ import { mergeEvents } from '../../shared/domain/events'
 import { computeGuildStats } from '../../shared/domain/guild'
 import { accessLevelFromRoles, can, visitor, type Viewer } from '../../shared/domain/permissions'
 import { filterMembers } from '../../shared/domain/members'
-import { formatDate, formatDateTime, formatTime } from '../../shared/utils/datetime'
+import { formatDate, formatDateTime, formatTime, toZonedParts, zonedToIso } from '../../shared/utils/datetime'
 import type { DiscordEvent } from '../../shared/types'
 import { character, dungeon, member, NOW, run } from './fixtures'
 
@@ -179,5 +179,21 @@ describe('filterMembers', () => {
   it('zeigt Mitglieder ohne Charakter nur ohne Charakter-Filter', () => {
     expect(filterMembers(members, {}).map(m => m.id)).toEqual(['a', 'b', 'c'])
     expect(filterMembers(members, { maxLevel: 30 }).map(m => m.id)).toEqual(['b'])
+  })
+})
+
+describe('Zeitumrechnung für Formulare', () => {
+  it('rechnet Berliner Ortszeit in UTC um (Winter- und Sommerzeit)', () => {
+    expect(zonedToIso('2026-11-05', '19:00')).toBe('2026-11-05T18:00:00.000Z')
+    expect(zonedToIso('2026-07-01', '20:30')).toBe('2026-07-01T18:30:00.000Z')
+    expect(zonedToIso('2026-13-01', '19:00')).toBeNull()
+    expect(zonedToIso('2026-11-05', '7 Uhr')).toBeNull()
+  })
+
+  it('liefert Formularwerte zurück, die sich verlustfrei umrechnen lassen', () => {
+    const iso = '2026-03-29T01:30:00.000Z' // Tag der Zeitumstellung
+    const parts = toZonedParts(iso)
+    expect(parts).toEqual({ date: '2026-03-29', time: '03:30' })
+    expect(zonedToIso(parts.date, parts.time)).toBe(iso)
   })
 })

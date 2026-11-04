@@ -185,3 +185,6 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 3 | Betrachter (`/api/me`) wird per Plugin vor dem Rendern geladen | geschützte Daten können so direkt serverseitig gerendert werden |
 | 3 | Hero-Illustration als eigenes, prozedurales SVG | keine fremden Assets; austauschbar, sobald Miinyus Artwork freigegeben ist |
 | 3 | Zusätzliche Seite `/streamer` | „Weitere Gilden-Streamer“ bekommen eine eigene Übersicht (auf der Startseite als Auszug) |
+| 4 | Eigene Seiten `/gruppen` und `/gruppen/<id>` neben `/dungeons` | Gruppen lassen sich dungeonübergreifend nach Datum und freien Plätzen filtern |
+| 4 | Teilnehmer werden für Besucher serverseitig anonymisiert (Besetzung bleibt sichtbar) | Datenschutz: nur Gildenmitglieder sehen, wer teilnimmt |
+| 4 | Startseite und Kalender zeigen weiterhin die Server-Runs, nicht die lokalen Demo-Änderungen | Kalender-Zusammenführung folgt in Phase 5 |

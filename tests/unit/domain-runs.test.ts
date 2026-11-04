@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computeComposition, defaultCapacity } from '../../shared/domain/composition'
 import { checkLevelFit } from '../../shared/domain/level'
-import { cancelRun, canJoinRun, joinRun, leaveRun, validateRunDraft } from '../../shared/domain/runs'
+import { cancelRun, canJoinRun, filterRuns, joinRun, leaveRun, validateRunDraft } from '../../shared/domain/runs'
 import type { Participant } from '../../shared/types'
 import { character, dungeon, IN_ONE_DAY, member, NOW, run } from './fixtures'
 
@@ -183,5 +183,27 @@ describe('validateRunDraft / cancelRun', () => {
     const cancelled = cancelRun(run(), NOW)
     expect(cancelled.ok && cancelled.value.status).toBe('cancelled')
     expect(cancelRun(run({ status: 'cancelled' }), NOW).ok).toBe(false)
+  })
+})
+
+describe('filterRuns', () => {
+  const runs = [
+    run({ id: 'soon', startsAt: '2026-11-05T18:00:00Z' }),
+    run({ id: 'later', startsAt: '2026-11-20T18:00:00Z', dungeonSlug: 'other' }),
+    run({ id: 'full', startsAt: '2026-11-06T18:00:00Z', capacity: { tank: 1, healer: 0, dps: 0 }, participants: [participant('a', 'tank')] }),
+    run({ id: 'cancelled', startsAt: '2026-11-06T18:00:00Z', status: 'cancelled' }),
+    run({ id: 'past', startsAt: '2026-11-01T18:00:00Z' }),
+  ]
+  const ids = (filter: Parameters<typeof filterRuns>[1]) => filterRuns(runs, filter, NOW).map(entry => entry.id)
+
+  it('zeigt nur kommende Runs, abgesagte nur auf Wunsch', () => {
+    expect(ids({})).toEqual(['soon', 'later', 'full'])
+    expect(ids({ includeCancelled: true })).toContain('cancelled')
+  })
+
+  it('filtert nach Dungeon, Zeitraum und freien Plätzen', () => {
+    expect(ids({ dungeonSlug: 'other' })).toEqual(['later'])
+    expect(ids({ withinDays: 7 })).toEqual(['soon', 'full'])
+    expect(ids({ onlyOpenSlots: true })).toEqual(['soon', 'later'])
   })
 })

@@ -103,8 +103,10 @@ function onBackdropClick(event: MouseEvent) {
 <style scoped lang="scss">
 .base-dialog {
   width: min(100% - 2 * var(--space-4), var(--dialog-width, 32rem));
-  max-height: min(90dvh, 48rem);
+  max-height: min(92dvh, 52rem);
   padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: auto;
   color: var(--color-text);
   background: transparent;
@@ -165,12 +167,20 @@ function onBackdropClick(event: MouseEvent) {
     color: var(--color-text-muted);
   }
 
+  // Aktionen bleiben bei langem Inhalt am unteren Rand erreichbar
   &__actions {
+    position: sticky;
+    bottom: 0;
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
     justify-content: flex-end;
-    padding-top: var(--space-2);
+    padding: var(--space-4) 0;
+    margin: 0 calc(-1 * var(--space-8)) calc(-1 * var(--space-8));
+    padding-inline: var(--space-8);
+    padding-bottom: var(--space-6);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
   }
 
   @include motion-safe {

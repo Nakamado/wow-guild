@@ -114,6 +114,16 @@ const isCancelled = computed(() => props.event.status === 'cancelled')
     letter-spacing: 0;
   }
 
+  &__link {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-frost);
+      text-decoration: underline;
+    }
+  }
+
   &__meta {
     display: flex;
     flex-wrap: wrap;

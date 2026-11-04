@@ -4,7 +4,7 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 3 – Öffentliche Seiten (Hero, Startseite, Gilde, Mitglieder, Charaktere, Regeln, Clips, Streamer).
+> **Status:** Phase 4 – Dungeon-Finder (Katalog, Gruppenplaner mit Beitreten/Verlassen, Warteliste, Demo).
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -36,7 +36,8 @@ Solange `NUXT_PUBLIC_DEMO_MODE=true` (Standard) gesetzt ist,
 
 - zeigt die Seite ausschließlich **eindeutig fiktive** Beispieldaten,
 - ist oben ein Demo-Banner sichtbar,
-- werden simulierte Änderungen nur im `sessionStorage` des Browsers gehalten (ab Phase 4),
+- werden Änderungen am Gruppenplaner (erstellen, beitreten, absagen …) nur im `sessionStorage` des Browser-Tabs
+  gehalten und laufen durch dieselben Geschäftsregeln wie später auf dem Server,
 - gibt es oben eine **Demo-Steuerung**: „Ansicht als“ Besucher, Mitglied, Organisator oder Admin (statt echtem
   Discord-Login) und „Live simulieren“ für den Twitch-Livestatus. Beides wird per Cookie gemerkt.
 
@@ -117,6 +118,15 @@ UI ──► composables ──► server/api ──► useProviders() ──►
 - Klassen, Völker und Dungeons sind **Daten**, keine Enums, und verweisen per `sourceIds` auf
   `shared/data/sources.ts`. Neue Forever-Inhalte = neuer Datensatz.
 - Geschäftsregeln (`shared/domain/`) sind reine Funktionen und vollständig unit-getestet.
+
+### Gruppenplaner
+
+- Katalog: `/dungeons` (Suche, Stufe, passender eigener Charakter, nur mit Gruppen), Detail: `/dungeons/<slug>`.
+- Gruppen: `/gruppen` (Filter nach Dungeon, Zeitraum, freien Plätzen), Detail: `/gruppen/<id>`.
+- Regeln (`shared/domain/runs.ts`): nur Gildenmitglieder, ein Platz pro Person, Rolle muss zu Klasse und
+  Charakter passen, Mindeststufe blockiert, Levelbereich wird als Hinweis erklärt, volle Rollen → Warteliste
+  (falls erlaubt), Nachrücken beim Abmelden. Bearbeiten/Absagen nur Organisation oder Admin.
+- Datum und Uhrzeit werden in Europe/Berlin eingegeben und als UTC gespeichert.
 
 ### Inhalte bearbeiten
 
