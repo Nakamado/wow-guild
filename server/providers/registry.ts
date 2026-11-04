@@ -14,7 +14,7 @@ import type { ProviderKey, Providers } from './types'
 export interface ProviderConfig {
   demoMode: boolean
   guild: GuildInfo
-  discord: { botToken: string, guildId: string, memberRoleId: string }
+  discord: { botToken: string, guildId: string, memberRoleId: string, adminRoleId: string }
   twitch: { clientId: string, clientSecret: string, broadcasterId: string, channel: string }
   supabase: { url: string, serviceRoleKey: string }
 }

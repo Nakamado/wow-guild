@@ -14,6 +14,7 @@
       <slot />
     </main>
     <AppFooter />
+    <CharacterOnboarding />
   </div>
 </template>
 

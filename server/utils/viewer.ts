@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import type { User } from '#auth-utils'
 import {
   DEFAULT_DEMO_PERSONA,
   DEMO_LIVE_COOKIE,
@@ -7,25 +8,89 @@ import {
   isDemoPersonaId,
   type DemoPersonaId,
 } from '../../data/demo/personas'
-import { can, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
+import { accessLevelFromRoles, can, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
+import { createDiscordBotClient } from '../providers/discord'
 
 export interface ResolvedViewer extends Viewer {
   /** Nur im Demo-Modus gesetzt */
   persona: DemoPersonaId | null
+  /** Angemeldeter Discord-Nutzer (nur live) */
+  user: User | null
 }
+
+/** Rollen werden nach dieser Zeit beim Discord-Bot neu geprüft. */
+export const ROLE_RECHECK_MS = 10 * 60_000
+/** Ohne erfolgreiche Prüfung gelten Rollen höchstens so lange (z. B. wenn der Bot fehlt). */
+export const ROLE_MAX_AGE_MS = 12 * 60 * 60_000
+
+let warnedSession = false
 
 /**
  * Wer stellt die Anfrage?
  * - Demo-Modus: Persona aus dem Demo-Cookie (sichtbar markierte Rollenauswahl).
- * - Live: Discord-Session (Phase 6). Bis dahin ist jeder Besucher.
+ * - Live: Discord-Session. Rollen älter als 10 Minuten werden per Bot nachgeprüft;
+ *   wer die Gildenrolle verliert, verliert damit sofort die Mitgliedsrechte.
  */
-export function getViewer(event: H3Event): ResolvedViewer {
-  if (!useRuntimeConfig(event).public.demoMode) return { ...visitor, persona: null }
+export async function getViewer(event: H3Event): Promise<ResolvedViewer> {
+  const cached = event.context.viewer as ResolvedViewer | undefined
+  if (cached) return cached
 
-  const cookie = getCookie(event, DEMO_PERSONA_COOKIE)
-  const persona = isDemoPersonaId(cookie) ? cookie : DEFAULT_DEMO_PERSONA
-  const { level, memberId } = demoPersonas[persona]
-  return { level, memberId, persona }
+  const viewer = await resolveViewer(event)
+  event.context.viewer = viewer
+  return viewer
+}
+
+async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
+  const config = useRuntimeConfig(event)
+  if (config.public.demoMode) {
+    const cookie = getCookie(event, DEMO_PERSONA_COOKIE)
+    const persona = isDemoPersonaId(cookie) ? cookie : DEFAULT_DEMO_PERSONA
+    const { level, memberId } = demoPersonas[persona]
+    return { level, memberId, persona, user: null }
+  }
+
+  let session
+  try {
+    session = await getUserSession(event)
+  }
+  catch {
+    // Meist fehlt NUXT_APP_SECRET – dann ist niemand angemeldet
+    if (!warnedSession) console.warn('[auth] Session nicht lesbar – ist NUXT_APP_SECRET gesetzt?')
+    warnedSession = true
+    return { ...visitor, persona: null, user: null }
+  }
+  if (!session.user || !session.secure) return { ...visitor, persona: null, user: null }
+
+  let { roles, rolesCheckedAt } = session.secure
+  const age = Date.now() - rolesCheckedAt
+  if (age > ROLE_RECHECK_MS) {
+    const fresh = await recheckRoles(event, session.user.id)
+    if (fresh !== undefined) {
+      roles = fresh
+      rolesCheckedAt = Date.now()
+      await replaceUserSession(event, { ...session, secure: { roles, rolesCheckedAt } })
+    }
+    else if (age > ROLE_MAX_AGE_MS) {
+      roles = null // veraltet und nicht prüfbar → nur noch „angemeldet“
+    }
+  }
+
+  const level = accessLevelFromRoles(roles, config.discord)
+  return { level, memberId: session.user.id, persona: null, user: session.user }
+}
+
+/** undefined = Prüfung nicht möglich (kein Bot, Discord nicht erreichbar) */
+async function recheckRoles(event: H3Event, userId: string): Promise<string[] | null | undefined> {
+  const { botToken, guildId } = useRuntimeConfig(event).discord
+  if (!botToken || !guildId) return undefined
+  try {
+    const member = await createDiscordBotClient(botToken).getGuildMember(guildId, userId)
+    return member ? member.roles : null
+  }
+  catch (error) {
+    console.warn(`[auth] Rollenprüfung fehlgeschlagen: ${error instanceof Error ? error.message : 'unbekannt'}`)
+    return undefined
+  }
 }
 
 export function isDemoLiveSimulated(event: H3Event): boolean {
@@ -33,9 +98,14 @@ export function isDemoLiveSimulated(event: H3Event): boolean {
 }
 
 /** Bricht mit 401/403 ab, wenn die Aktion nicht erlaubt ist – verbindliche serverseitige Prüfung. */
-export function requirePermission(event: H3Event, action: Action, resource?: PermissionResource): ResolvedViewer {
-  const viewer = getViewer(event)
-  if (can(viewer, action, resource)) return viewer
+export async function requirePermission(event: H3Event, action: Action, resource?: PermissionResource): Promise<ResolvedViewer> {
+  const viewer = await getViewer(event)
+  assertPermission(viewer, action, resource)
+  return viewer
+}
+
+export function assertPermission(viewer: Viewer, action: Action, resource?: PermissionResource) {
+  if (can(viewer, action, resource)) return
 
   const signedIn = viewer.level !== 'visitor'
   throw createError({

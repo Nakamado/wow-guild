@@ -4,7 +4,8 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 5 – Eventkalender und Raids (Monats- und Listenansicht, Raidgrößen 10/20/40, Warteliste).
+> **Status:** Phase 6 – Integrationen (Discord-Login & Rollen, Mitgliederliste per Bot, Scheduled Events, Twitch Helix,
+> Supabase mit atomarer Anmeldung, Charakter-Onboarding & Einstellungen).
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -55,7 +56,7 @@ cp .env.example .env
 |---|---|---|
 | Allgemein | `NUXT_PUBLIC_SITE_URL`, `NUXT_PUBLIC_DEMO_MODE` | öffentlich |
 | Gilde | `NUXT_PUBLIC_GUILD_NAME`, `…_REALM`, `…_FACTION`, `…_DISCORD_INVITE` | öffentlich |
-| Session | `NUXT_SESSION_PASSWORD` | nur Server |
+| Session | `NUXT_APP_SECRET` | nur Server |
 | Discord | `NUXT_DISCORD_CLIENT_ID/SECRET`, `…_GUILD_ID`, `…_MEMBER_ROLE_ID`, `…_ADMIN_ROLE_ID`, `…_BOT_TOKEN` | nur Server |
 | Twitch | `NUXT_TWITCH_CLIENT_ID/SECRET`, `NUXT_PUBLIC_TWITCH_CHANNEL`, `…_BROADCASTER_ID` | gemischt |
 | Supabase | `NUXT_SUPABASE_URL`, `NUXT_SUPABASE_SERVICE_ROLE_KEY` | nur Server |
@@ -63,18 +64,57 @@ cp .env.example .env
 Die Werte werden über die [Nuxt Runtime Config](https://nuxt.com/docs/guide/going-further/runtime-config) zur
 Laufzeit eingelesen. Nur Werte mit `NUXT_PUBLIC_`-Präfix gelangen in den Browser.
 
-### Discord-OAuth-Einrichtung
+### Live-Betrieb einschalten
 
-_Folgt in Phase 6._ Vorgesehen: Scopes `identify` + `guilds.members.read`, Redirect-URL `<SITE_URL>/auth/discord`,
-Gildenmitgliedschaft über die Discord-Rolle „WoW Forever“.
+`NUXT_PUBLIC_DEMO_MODE=false` setzen. Jede Quelle schaltet nur live, wenn ihre Zugangsdaten vollständig sind; sonst
+bleibt sie bei Demo-Daten und das Server-Log nennt die fehlenden Variablen. Für Logins wird zusätzlich
+`NUXT_APP_SECRET` gebraucht (versiegelt die Session-Cookies, z. B. `openssl rand -base64 32`; lokal erzeugt Nuxt
+ihn automatisch).
+
+### Discord-Einrichtung (Login, Rollen, Bot)
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
+2. **OAuth2** → Client ID und Client Secret nach `NUXT_DISCORD_CLIENT_ID` / `NUXT_DISCORD_CLIENT_SECRET`.
+   Unter **Redirects** eintragen: `<SITE_URL>/auth/discord` (lokal `http://localhost:3000/auth/discord`,
+   später zusätzlich die Vercel-Domain). `NUXT_PUBLIC_SITE_URL` muss exakt dazu passen.
+3. **Bot** → Token erzeugen → `NUXT_DISCORD_BOT_TOKEN`. Unter *Privileged Gateway Intents* den
+   **Server Members Intent** aktivieren (sonst liefert Discord keine Mitgliederliste).
+4. Bot auf den Server einladen: **OAuth2 → URL Generator**, Scope `bot`, keine Berechtigungen nötig
+   (Lesen von Mitgliedern und Events reicht). Für Scheduled Events braucht der Bot nur Sichtbarkeit auf den Server.
+5. Rollen-IDs (Discord: *Einstellungen → Erweitert → Entwicklermodus*, dann Rechtsklick auf die Rolle →
+   *ID kopieren*): Rolle „WoW Forever“ → `NUXT_DISCORD_MEMBER_ROLE_ID`, Admin-/Event-Moderator-Rolle →
+   `NUXT_DISCORD_ADMIN_ROLE_ID`.
+
+Ablauf: Login mit Scopes `identify` + `guilds.members.read`, danach liest die Seite die eigenen Rollen auf dem
+Gilden-Server und speichert sie (nur serverseitig lesbar) in der versiegelten Session. Das Discord-Token wird
+nicht gespeichert. Rollen werden spätestens alle 10 Minuten per Bot nachgeprüft – wer die Rolle verliert, verliert
+damit die Mitgliedsrechte. Die Mitgliederliste zeigt nur Träger der Rolle „WoW Forever“.
 
 ### Twitch-Integration
 
-_Folgt in Phase 3 (Demo) und Phase 6 (Helix API)._
+1. [Twitch Developer Console](https://dev.twitch.tv/console/apps) → **Register Your Application**
+   (OAuth Redirect `http://localhost`, Kategorie *Website Integration*, Client-Typ *Confidential*).
+2. Client ID und Secret nach `NUXT_TWITCH_CLIENT_ID` / `NUXT_TWITCH_CLIENT_SECRET`.
+3. `NUXT_PUBLIC_TWITCH_BROADCASTER_ID` ist Miinyus Twitch-User-ID (voreingestellt).
 
-### Datenbank-Setup
+Die Seite nutzt ein App-Token (kein Login nötig): Livestatus wird 60 Sekunden, Clips 15 Minuten zwischengespeichert.
+Weitere Gilden-Streamer stehen in `content/streamers.ts` (Twitch-Login, optional Discord-ID für die
+Zuordnung zum Mitglied).
 
-_Folgt in Phase 6_ (Supabase-Migrationen unter `supabase/migrations/`).
+### Datenbank-Setup (Supabase)
+
+1. Projekt auf [supabase.com](https://supabase.com) anlegen (Region EU, z. B. Frankfurt).
+2. **SQL Editor** → Inhalt von `supabase/migrations/20261104000000_initial_schema.sql` ausführen
+   (oder mit der Supabase-CLI: `supabase db push`).
+3. **Project Settings → API**: Projekt-URL → `NUXT_SUPABASE_URL`, `service_role`-Key →
+   `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Der Key bleibt auf dem Server und darf nie im Client landen.
+
+Schema: `characters`, `runs`, `run_participants` (eindeutig je Run und Mitglied bzw. Charakter). RLS ist aktiv,
+ohne Policies für `anon` – gelesen und geschrieben wird nur über Nitro. Anmeldungen laufen über die
+Postgres-Funktion `join_run()`, die den Run per `SELECT … FOR UPDATE` sperrt und Plätze je Rolle prüft:
+Zwei gleichzeitige Anmeldungen auf den letzten Platz können so nicht beide durchkommen. `leave_run()` lässt die
+nächste Person derselben Rolle von der Warteliste nachrücken. Die Migration wird in den Unit-Tests mit PGlite
+(eingebettetes Postgres) geprüft.
 
 ## Projektstruktur
 
@@ -149,6 +189,17 @@ Platzhalter handelt.
 - Mitgliederliste, Profile und Charaktere liefert der Server nur an Gildenmitglieder (`requirePermission`).
 - Organisatoren-Namen im Kalender und Streamer-Zuordnungen werden für Besucher entfernt.
 - Twitch-Clips werden erst nach Klick geladen (2-Klick-Lösung).
+- Schreibende Endpunkte prüfen Herkunft, Anmeldung, Berechtigung und Fachregeln auf dem Server; im Demo-Modus
+  antworten sie mit 409 (die Demo speichert im Browser).
+
+### Charaktere
+
+- Nach dem ersten Login fragt ein Dialog nach dem Hauptcharakter (Name, Fraktion, Volk, Klasse, Stufe, Rollen).
+  „Später“ blendet ihn für die Sitzung aus.
+- `/einstellungen`: Twinks hinzufügen, bearbeiten, Hauptcharakter wechseln, löschen (nicht bei offenen
+  Anmeldungen). Volk, Klasse und Rollen werden gegen `shared/data` geprüft (`checkCharacterInput`).
+- Demo: Ansicht „Neues Mitglied“ zeigt das Onboarding; Änderungen bleiben im Browser-Tab.
+- Blizzard-API: nur ein Stub (`server/providers/blizzard/`), da Forever-Unterstützung nicht belegt ist.
 
 ### CSS-Konventionen
 

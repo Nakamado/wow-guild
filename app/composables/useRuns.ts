@@ -6,26 +6,32 @@ import {
   joinRun as joinRunRule,
   leaveRun as leaveRunRule,
   validateRunDraft,
-  type RunDraft,
+  type JoinCheck,
 } from '#shared/domain/runs'
-import type { Character, CommunityMember, GroupRun, RoleId } from '#shared/types'
+import type { Character, CommunityMember, GroupRun, RoleId, RunInput } from '#shared/types'
 
 export const DEMO_RUNS_STORAGE_KEY = 'wow-guild:demo-runs'
 
 /** Lokale Demo-Änderungen: vollständige Run-Snapshots, die Server-Runs gleicher ID ersetzen. */
 export const useDemoRunOverrides = () => useState<Record<string, GroupRun>>('demo-run-overrides', () => ({}))
 
-export interface RunInput extends RunDraft {
-  dungeonSlug: string
-  title: string | null
-  waitlistEnabled: boolean
+export interface JoinOutcome {
+  run: GroupRun
+  check: JoinCheck
+}
+
+export interface LeaveOutcome {
+  run: GroupRun
+  /** Mitglied, das von der Warteliste nachgerückt ist */
+  promotedMemberId: string | null
 }
 
 type MemberDirectory = (CommunityMember & { characters: Character[] })[]
 
 /**
- * Runs lesen und (im Demo-Modus) verändern. Alle Änderungen laufen durch die gleichen
- * Geschäftsregeln wie später auf dem Server (shared/domain/runs.ts).
+ * Runs lesen und verändern.
+ * - Demo: lokal im sessionStorage, mit denselben Regeln wie der Server (shared/domain/runs.ts)
+ * - Live: über die API; Plätze vergibt Postgres atomar (`join_run()`)
  */
 export function useRuns() {
   const { isDemo } = useSiteConfig()
@@ -34,10 +40,9 @@ export function useRuns() {
 
   const { data: serverRuns, status, error, refresh } = useFetch<GroupRun[]>('/api/runs', { key: 'runs', default: () => [] })
 
-  const canJoin = computed(() => can('runs:join'))
   const canSeeMembers = computed(() => can('members:view'))
 
-  const { data: myCharacters } = useProtectedFetchSync<Character[]>('my-characters', '/api/me/characters', canJoin)
+  const { mine: myCharacters } = useCharacters()
   const { data: directory } = useProtectedFetchSync<MemberDirectory>('members', '/api/members', canSeeMembers)
 
   const runs = computed<GroupRun[]>(() => {
@@ -47,7 +52,9 @@ export function useRuns() {
   })
 
   const memberById = computed(() => new Map((directory.value ?? []).map(member => [member.id, member])))
-  const characterById = computed(() => new Map((directory.value ?? []).flatMap(member => member.characters).map(character => [character.id, character])))
+  const characterById = computed(() => new Map(
+    [...(directory.value ?? []).flatMap(member => member.characters), ...myCharacters.value].map(character => [character.id, character]),
+  ))
 
   function getRun(id: string) {
     return runs.value.find(run => run.id === id) ?? null
@@ -63,15 +70,25 @@ export function useRuns() {
     }
   }
 
-  function guard(): DomainResult<true, 'not-available' | 'not-allowed'> {
-    if (!isDemo) return fail('not-available', 'Gruppen lassen sich bald direkt hier verwalten. Bis dahin plant ihr im Discord.')
-    return ok(true)
+  /** Live: Server-Antwort in die geladene Liste übernehmen */
+  function upsert(run: GroupRun) {
+    serverRuns.value = [...(serverRuns.value ?? []).filter(entry => entry.id !== run.id), run]
   }
 
-  function createRun(input: RunInput): DomainResult<GroupRun> {
-    const available = guard()
-    if (!available.ok) return available
+  async function live<T extends { run: GroupRun | null } | GroupRun>(request: () => Promise<T>): Promise<DomainResult<T>> {
+    const result = await apiResult(request)
+    if (result.ok) {
+      const value = result.value as { run?: GroupRun | null } & Partial<GroupRun>
+      const run = 'run' in value ? value.run : (value as GroupRun)
+      if (run) upsert(run)
+      else await refresh()
+    }
+    return result
+  }
+
+  async function createRun(input: RunInput): Promise<DomainResult<GroupRun>> {
     if (!can('runs:create') || !viewer.value.memberId) return fail('not-allowed', 'Nur Gildenmitglieder können Gruppen erstellen.')
+    if (!isDemo) return live(() => $fetch<GroupRun>('/api/runs', { method: 'POST', body: input }))
     const dungeon = findDungeon(input.dungeonSlug)
     if (!dungeon) return fail('unknown-dungeon', 'Bitte wähle einen Dungeon aus.')
 
@@ -99,13 +116,12 @@ export function useRuns() {
     return ok(run)
   }
 
-  function updateRun(id: string, input: RunInput): DomainResult<GroupRun> {
-    const available = guard()
-    if (!available.ok) return available
+  async function updateRun(id: string, input: RunInput): Promise<DomainResult<GroupRun>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
     if (!can('runs:edit', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder die Gildenleitung kann diese Gruppe bearbeiten.')
     if (run.status !== 'open') return fail('run-not-open', 'Abgesagte oder abgeschlossene Gruppen lassen sich nicht mehr bearbeiten.')
+    if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}`, { method: 'PATCH', body: input }))
     const dungeon = findDungeon(input.dungeonSlug)
     if (!dungeon) return fail('unknown-dungeon', 'Bitte wähle einen Dungeon aus.')
 
@@ -125,26 +141,31 @@ export function useRuns() {
     return ok(updated)
   }
 
-  function cancelRun(id: string): DomainResult<GroupRun> {
-    const available = guard()
-    if (!available.ok) return available
+  async function cancelRun(id: string): Promise<DomainResult<GroupRun>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
     if (!can('runs:cancel', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder die Gildenleitung kann diese Gruppe absagen.')
+    if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}/cancel`, { method: 'POST' }))
     const result = cancelRunRule(run, new Date())
     if (result.ok) persist(result.value)
     return result
   }
 
-  function joinRun(id: string, characterId: string, role: RoleId) {
-    const available = guard()
-    if (!available.ok) return available
+  async function joinRun(id: string, characterId: string, role: RoleId): Promise<DomainResult<JoinOutcome>> {
     const run = getRun(id)
     const dungeon = run ? findDungeon(run.dungeonSlug) : undefined
-    const character = myCharacters.value?.find(entry => entry.id === characterId)
+    const character = myCharacters.value.find(entry => entry.id === characterId)
     if (!run || !dungeon) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
     if (!can('runs:join') || !viewer.value.memberId) return fail('not-allowed', 'Nur Gildenmitglieder können Gruppen beitreten.')
     if (!character) return fail('character-not-owned', 'Bitte wähle einen deiner Charaktere aus.')
+
+    if (!isDemo) {
+      type Response = { placement: JoinCheck['placement'], warnings: string[], run: GroupRun | null }
+      const result = await live(() => $fetch<Response>(`/api/runs/${id}/join`, { method: 'POST', body: { characterId, role } }))
+      if (!result.ok) return result
+      const { placement, warnings } = result.value
+      return ok({ run: result.value.run ?? run, check: { placement, warnings } })
+    }
 
     const result = joinRunRule({
       run,
@@ -158,15 +179,21 @@ export function useRuns() {
     return result
   }
 
-  function leaveRun(id: string) {
-    const available = guard()
-    if (!available.ok) return available
+  async function leaveRun(id: string): Promise<DomainResult<LeaveOutcome>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
     if (!viewer.value.memberId) return fail('not-allowed', 'Bitte melde dich an.')
+
+    if (!isDemo) {
+      const result = await live(() => $fetch<{ promoted: string | null, run: GroupRun | null }>(`/api/runs/${id}/leave`, { method: 'POST' }))
+      if (!result.ok) return result
+      return ok({ run: result.value.run ?? run, promotedMemberId: result.value.promoted })
+    }
+
     const result = leaveRunRule(run, viewer.value.memberId, new Date())
-    if (result.ok) persist(result.value.run)
-    return result
+    if (!result.ok) return result
+    persist(result.value.run)
+    return ok({ run: result.value.run, promotedMemberId: result.value.promoted?.memberId ?? null })
   }
 
   function resetDemoChanges() {
@@ -195,7 +222,7 @@ export function useRuns() {
     error,
     refresh,
     getRun,
-    myCharacters: computed(() => myCharacters.value ?? []),
+    myCharacters,
     memberById,
     characterById,
     hasDemoChanges: computed(() => Object.keys(overrides.value).length > 0),

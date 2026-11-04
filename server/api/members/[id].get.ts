@@ -3,7 +3,7 @@ import { z } from 'zod'
 const ParamsSchema = z.object({ id: z.string().min(1).max(64) })
 
 export default defineEventHandler(async (event) => {
-  requirePermission(event, 'members:view')
+  await requirePermission(event, 'members:view')
   const { id } = await getValidatedRouterParams(event, ParamsSchema.parse)
 
   const providers = useProviders()

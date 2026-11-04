@@ -8,5 +8,5 @@ export default defineEventHandler(async (event) => {
   if (!run) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', message: 'Diese Gruppe gibt es nicht (mehr).' })
   }
-  return redactRun(run, getViewer(event))
+  return redactRun(run, await getViewer(event))
 })

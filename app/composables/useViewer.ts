@@ -5,6 +5,8 @@ export interface ViewerState {
   level: AccessLevel
   memberId: string | null
   displayName: string | null
+  avatarUrl: string | null
+  loginAvailable: boolean
   demo: {
     persona: DemoPersonaId | null
     personas: { id: string, label: string }[]
@@ -21,6 +23,7 @@ export const useViewerState = () => useState<ViewerState | null>('viewer', () =>
  */
 export function useViewer() {
   const state = useViewerState()
+  const route = useRoute()
 
   const viewer = computed<Viewer>(() => ({
     level: state.value?.level ?? 'visitor',
@@ -55,9 +58,25 @@ export function useViewer() {
     await refreshNuxtData()
   }
 
+  /** Live: Discord-Login starten (volle Navigation, da OAuth-Redirect) */
+  function login(returnTo = route.fullPath) {
+    return navigateTo(`/auth/discord?returnTo=${encodeURIComponent(returnTo)}`, { external: true })
+  }
+
+  async function logout() {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    await refresh()
+    await refreshNuxtData()
+  }
+
   return {
     viewer,
+    signedIn: computed(() => (state.value?.level ?? 'visitor') !== 'visitor'),
     displayName: computed(() => state.value?.displayName ?? null),
+    avatarUrl: computed(() => state.value?.avatarUrl ?? null),
+    loginAvailable: computed(() => state.value?.loginAvailable ?? false),
+    login,
+    logout,
     demo: computed(() => state.value?.demo ?? null),
     can,
     refresh,

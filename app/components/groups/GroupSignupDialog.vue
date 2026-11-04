@@ -71,9 +71,13 @@ function slotLabel(roleId: RoleId) {
   return props.run.waitlistEnabled ? 'voll, Warteliste' : 'voll'
 }
 
-function submit() {
-  if (!characterId.value || !role.value) return
-  const result = joinRun(props.run.id, characterId.value, role.value)
+const submitting = ref(false)
+
+async function submit() {
+  if (!characterId.value || !role.value || submitting.value) return
+  submitting.value = true
+  const result = await joinRun(props.run.id, characterId.value, role.value)
+  submitting.value = false
   if (!result.ok) {
     submitError.value = result.error.message
     return
@@ -233,6 +237,7 @@ function submit() {
         type="submit"
         form="signup-form"
         :disabled="!check || !check.ok"
+        :loading="submitting"
       >
         {{ check?.ok && check.value.placement === 'waitlist' ? 'Auf die Warteliste' : 'Beitreten' }}
       </BaseButton>

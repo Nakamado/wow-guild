@@ -36,3 +36,18 @@ export const GroupRunSchema = z.object({
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 })
+
+/** Eingabe beim Erstellen/Bearbeiten eines Runs (Fachregeln: validateRunDraft) */
+export const RunInputSchema = z.object({
+  dungeonSlug: SlugSchema,
+  title: z.string().trim().max(80).nullable().transform(value => value || null),
+  description: z.string().trim().max(500),
+  startsAt: IsoDateTimeSchema,
+  capacity: RoleCapacitySchema,
+  waitlistEnabled: z.boolean(),
+})
+
+export const JoinInputSchema = z.object({
+  characterId: IdSchema,
+  role: RoleIdSchema,
+})

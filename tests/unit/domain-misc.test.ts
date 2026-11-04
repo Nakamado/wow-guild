@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dungeons } from '../../shared/data/dungeons'
-import { isValidRaceClass, validateCharacter } from '../../shared/domain/characters'
+import { checkCharacterInput, isValidRaceClass, sortCharacters, validateCharacter, withMainCharacter } from '../../shared/domain/characters'
+import { CharacterInputSchema } from '../../shared/schemas/community'
 import { filterDungeons } from '../../shared/domain/dungeons'
 import { mergeEvents } from '../../shared/domain/events'
 import { computeGuildStats } from '../../shared/domain/guild'
@@ -195,5 +196,44 @@ describe('Zeitumrechnung für Formulare', () => {
     const parts = toZonedParts(iso)
     expect(parts).toEqual({ date: '2026-03-29', time: '03:30' })
     expect(zonedToIso(parts.date, parts.time)).toBe(iso)
+  })
+})
+
+describe('Charakterpflege', () => {
+  const input = { name: 'Funkelzahn', faction: 'alliance', classId: 'paladin', raceId: 'dwarf', level: 12, roles: ['tank', 'healer'] } as const
+  const opts = { maxCharacters: 3 }
+
+  it('akzeptiert gültige Kombinationen aus Volk, Klasse und Rollen', () => {
+    expect(checkCharacterInput({ ...input, roles: [...input.roles] }, [], opts).ok).toBe(true)
+  })
+
+  it('lehnt unpassende Volk/Klasse-Kombinationen und Rollen ab', () => {
+    expect(checkCharacterInput({ ...input, classId: 'druid', roles: ['dps'] }, [], opts)).toMatchObject({ ok: false, error: { code: 'invalid-race-class' } })
+    expect(checkCharacterInput({ ...input, classId: 'mage', raceId: 'human', roles: ['tank'] }, [], opts)).toMatchObject({ ok: false, error: { code: 'invalid-roles' } })
+  })
+
+  it('verhindert doppelte Namen (außer beim Bearbeiten desselben Charakters) und zu viele Charaktere', () => {
+    const existing = [{ id: 'a', name: 'funkelzahn' }]
+    expect(checkCharacterInput({ ...input, roles: ['tank'] }, existing, opts)).toMatchObject({ ok: false, error: { code: 'name-taken' } })
+    expect(checkCharacterInput({ ...input, roles: ['tank'] }, existing, { ...opts, editingId: 'a' }).ok).toBe(true)
+    const full = [{ id: 'x', name: 'Eins' }, { id: 'y', name: 'Zwei' }, { id: 'z', name: 'Drei' }]
+    expect(checkCharacterInput({ ...input, roles: ['tank'] }, full, opts)).toMatchObject({ ok: false, error: { code: 'too-many-characters' } })
+  })
+
+  it('setzt genau einen Hauptcharakter und sortiert ihn nach vorn', () => {
+    const list = [
+      { id: 'a', isMain: true, level: 60, name: 'Alpha' },
+      { id: 'b', isMain: false, level: 20, name: 'Beta' },
+    ]
+    const changed = withMainCharacter(list, 'b')
+    expect(changed.filter(entry => entry.isMain).map(entry => entry.id)).toEqual(['b'])
+    expect(sortCharacters(changed).map(entry => entry.id)).toEqual(['b', 'a'])
+  })
+
+  it('validiert Eingaben per Schema (Name, Stufe, Rollen)', () => {
+    expect(CharacterInputSchema.safeParse({ ...input, name: 'Mit Leerzeichen' }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, level: 61 }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, roles: ['tank', 'tank'] }).success).toBe(false)
+    expect(CharacterInputSchema.parse({ ...input, name: '  Ölmühle ', level: '7' })).toMatchObject({ name: 'Ölmühle', level: 7 })
   })
 })

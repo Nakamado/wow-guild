@@ -54,22 +54,22 @@ function onJoined(_placement: 'participant' | 'waitlist', message: string) {
   notice.value = { tone: 'success', text: message }
 }
 
-function onLeave() {
-  const result = leaveRun(id.value)
+async function onLeave() {
+  const result = await leaveRun(id.value)
   if (!result.ok) {
     notice.value = { tone: 'error', text: result.error.message }
     return
   }
-  const promoted = result.value.promoted
-  const promotedName = promoted ? memberById.value.get(promoted.memberId)?.displayName : null
+  const promotedId = result.value.promotedMemberId
+  const promotedName = promotedId ? memberById.value.get(promotedId)?.displayName : null
   notice.value = {
     tone: 'success',
     text: promotedName ? `Du hast dich abgemeldet. ${promotedName} rückt von der Warteliste nach.` : 'Du hast dich abgemeldet.',
   }
 }
 
-function onCancel() {
-  const result = cancelRun(id.value)
+async function onCancel() {
+  const result = await cancelRun(id.value)
   confirmCancelOpen.value = false
   notice.value = result.ok
     ? { tone: 'success', text: 'Die Gruppe wurde abgesagt. Alle Angemeldeten sehen das jetzt hier.' }

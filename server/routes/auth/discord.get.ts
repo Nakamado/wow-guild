@@ -1,0 +1,58 @@
+import { discordAvatarUrl, discordDisplayName } from '../../providers/discord/normalize'
+import { DiscordUserSchema } from '../../providers/discord/schemas'
+import { fetchOwnGuildMember } from '../../providers/discord'
+
+import { safeReturnPath } from '#shared/utils/return-path'
+
+const RETURN_COOKIE = 'wow-guild-return-to'
+
+/**
+ * Discord-Login (OAuth2, Scopes `identify` + `guilds.members.read`).
+ * Danach werden die Rollen auf dem Gilden-Server abgefragt und – nur serverseitig lesbar –
+ * in der versiegelten Session gespeichert. Das Discord-Token selbst wird nicht gespeichert.
+ */
+export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig(event)
+  if (config.public.demoMode) return sendRedirect(event, '/')
+
+  const query = getQuery(event)
+  // Erster Aufruf (ohne `code`): Rücksprungziel merken
+  if (!query.code && !query.error) {
+    setCookie(event, RETURN_COOKIE, safeReturnPath(query.returnTo), { httpOnly: true, sameSite: 'lax', maxAge: 600, path: '/' })
+  }
+
+  const handler = defineOAuthDiscordEventHandler({
+    config: {
+      clientId: config.discord.clientId,
+      clientSecret: config.discord.clientSecret,
+      scope: ['identify', 'guilds.members.read'],
+      redirectURL: `${config.public.siteUrl.replace(/\/$/, '')}/auth/discord`,
+    },
+    // Typen von nuxt-auth-utils zielen auf h3 v2; zur Laufzeit ist es dasselbe Event wie oben
+    async onSuccess(_, { user, tokens }) {
+      const discordUser = DiscordUserSchema.parse(user)
+      const member = await fetchOwnGuildMember(tokens.access_token, config.discord.guildId)
+
+      await replaceUserSession(event, {
+        user: {
+          id: discordUser.id,
+          displayName: discordDisplayName(discordUser, member?.nick),
+          avatarUrl: discordAvatarUrl(discordUser, config.discord.guildId, member?.avatar),
+        },
+        secure: { roles: member?.roles ?? null, rolesCheckedAt: Date.now() },
+        loggedInAt: new Date().toISOString(),
+      })
+
+      const returnTo = safeReturnPath(getCookie(event, RETURN_COOKIE))
+      deleteCookie(event, RETURN_COOKIE, { path: '/' })
+      return sendRedirect(event, returnTo)
+    },
+    onError(_, error) {
+      // Abbruch durch Nutzer oder abgelaufener State – keine Details ins Log (Datenschutz)
+      console.warn(`[auth] Discord-Login fehlgeschlagen (${error.statusCode ?? 'unbekannt'})`)
+      return sendRedirect(event, '/?login=fehlgeschlagen')
+    },
+  })
+
+  return handler(event as unknown as Parameters<typeof handler>[0])
+})

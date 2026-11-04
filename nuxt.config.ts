@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
 
-  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/test-utils/module'],
+  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/test-utils/module', 'nuxt-auth-utils'],
 
   // Ordner gruppieren Komponenten fachlich; der Komponentenname trägt selbst schon das Präfix
   // (BaseButton, AppHeader, DungeonCard …), daher kein zusätzliches Pfad-Präfix.
@@ -38,8 +38,8 @@ export default defineNuxtConfig({
    *   (siehe .env.example).
    */
   runtimeConfig: {
-    // Wird ab Phase 6 von nuxt-auth-utils genutzt (NUXT_SESSION_PASSWORD)
-    session: { password: '' },
+    // Login-Session (nuxt-auth-utils). Versiegelt mit NUXT_APP_SECRET (im Dev automatisch erzeugt).
+    session: { maxAge: 60 * 60 * 24 * 7 },
     discord: {
       clientId: '',
       clientSecret: '',
@@ -94,6 +94,9 @@ export default defineNuxtConfig({
     strict: true,
     typeCheck: false, // explizit über `pnpm typecheck`, damit der Dev-Server schnell bleibt
   },
+
+  // Der Betrachter kommt aus /api/me (viewer-Plugin), nicht aus der Client-Session von nuxt-auth-utils
+  auth: { loadStrategy: 'none' },
 
   eslint: {
     // ESLint übernimmt auch die Formatierung (kein zusätzlicher Prettier)

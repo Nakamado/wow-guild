@@ -2,6 +2,7 @@
 /** Hinweis für Besucher, warum Aktionen (beitreten, erstellen) fehlen. */
 defineProps<{ action: string }>()
 const { isDemo } = useSiteConfig()
+const { signedIn } = useViewer()
 </script>
 
 <template>
@@ -14,14 +15,18 @@ const { isDemo } = useSiteConfig()
     <span>
       Um {{ action }}, brauchst du die Discord-Rolle „WoW Forever“.
       <template v-if="isDemo">In der Demo: oben „Ansicht als“ auf „Mitglied“ stellen.</template>
-      <template v-else>Die Anmeldung mit Discord folgt in Kürze.</template>
     </span>
+    <LoginButton
+      v-if="!isDemo && !signedIn"
+      size="sm"
+    />
   </p>
 </template>
 
 <style scoped lang="scss">
 .sign-in-hint {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: flex-start;
   font-size: var(--text-sm);

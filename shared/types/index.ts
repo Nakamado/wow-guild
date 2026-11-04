@@ -17,11 +17,13 @@ export type Dungeon = z.infer<typeof S.DungeonSchema>
 
 export type CommunityMember = z.infer<typeof S.CommunityMemberSchema>
 export type Character = z.infer<typeof S.CharacterSchema>
+export type CharacterInput = z.infer<typeof S.CharacterInputSchema>
 
 export type RoleCapacity = z.infer<typeof S.RoleCapacitySchema>
 export type Participant = z.infer<typeof S.ParticipantSchema>
 export type RunStatus = z.infer<typeof S.RunStatusSchema>
 export type GroupRun = z.infer<typeof S.GroupRunSchema>
+export type RunInput = z.infer<typeof S.RunInputSchema>
 
 export type EventStatus = z.infer<typeof S.EventStatusSchema>
 export type DiscordEvent = z.infer<typeof S.DiscordEventSchema>

@@ -44,3 +44,16 @@ export const CharacterSchema = z.object({
   source: DataSourceSchema,
   updatedAt: IsoDateTimeSchema,
 })
+
+export const MAX_CHARACTERS_PER_MEMBER = 12
+
+/** Eingabe beim Anlegen/Bearbeiten eines eigenen Charakters (Realm setzt der Server) */
+export const CharacterInputSchema = z.object({
+  name: z.string().trim().pipe(CharacterNameSchema),
+  faction: FactionSchema,
+  classId: SlugSchema,
+  raceId: SlugSchema,
+  level: z.coerce.number().pipe(LevelSchema),
+  roles: z.array(RoleIdSchema).min(1, 'Wähle mindestens eine Rolle.').max(3)
+    .refine(roles => new Set(roles).size === roles.length, 'Jede Rolle nur einmal.'),
+})

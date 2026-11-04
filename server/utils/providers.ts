@@ -1,5 +1,6 @@
+import { createLiveFactories } from '../providers/live'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
-import type { ProviderKey, Providers } from '../providers/types'
+import type { ProviderKey, Providers, Writers } from '../providers/types'
 
 /**
  * Zugriff auf die Datenquellen in Server-Routen: `const { dungeons } = useProviders()`.
@@ -7,15 +8,21 @@ import type { ProviderKey, Providers } from '../providers/types'
  * Die Instanzen werden pro UTC-Tag gecacht: So bleiben relative Demo-Termine aktuell,
  * ohne den Datensatz bei jeder Anfrage neu zu erzeugen.
  */
-let cache: { day: string, providers: Providers, modes: Record<ProviderKey, ProviderModeInfo> } | null = null
+let cache: {
+  day: string
+  providers: Providers
+  modes: Record<ProviderKey, ProviderModeInfo>
+  writers: Writers | null
+} | null = null
 let loggedModes = false
 
 export function useProviders(): Providers {
   const now = new Date()
   const day = now.toISOString().slice(0, 10)
   if (cache?.day !== day) {
-    const { providers, modes } = createProviders(readProviderConfig(), { now })
-    cache = { day, providers, modes }
+    const live = createLiveFactories()
+    const { providers, modes } = createProviders(readProviderConfig(), { now, liveFactories: live.factories })
+    cache = { day, providers, modes, writers: live.writers() }
     logModes(modes)
   }
   return cache.providers
@@ -24,6 +31,22 @@ export function useProviders(): Providers {
 export function useProviderModes(): Record<ProviderKey, ProviderModeInfo> {
   useProviders()
   return cache!.modes
+}
+
+/**
+ * Schreibzugriffe (Runs, Charaktere) – nur wenn Supabase live ist.
+ * Im Demo-Modus speichert der Browser Änderungen selbst (sessionStorage).
+ */
+export function useWriters(): Writers {
+  useProviders()
+  if (cache!.writers) return cache!.writers
+  throw createError({
+    statusCode: 409,
+    statusMessage: 'Conflict',
+    message: useRuntimeConfig().public.demoMode
+      ? 'Im Demo-Modus werden Änderungen nur im Browser gespeichert.'
+      : 'Speichern ist gerade nicht möglich: Die Datenbank ist nicht eingerichtet.',
+  })
 }
 
 function readProviderConfig(): ProviderConfig {
@@ -41,6 +64,7 @@ function readProviderConfig(): ProviderConfig {
       botToken: config.discord.botToken,
       guildId: config.discord.guildId,
       memberRoleId: config.discord.memberRoleId,
+      adminRoleId: config.discord.adminRoleId,
     },
     twitch: {
       clientId: config.twitch.clientId,

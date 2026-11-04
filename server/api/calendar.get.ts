@@ -11,7 +11,7 @@ const QuerySchema = z.object({
 /** Kalender aus Discord-Events und Webseiten-Runs (stabile IDs, ohne Duplikate). */
 export default defineEventHandler(async (event) => {
   const query = await getValidatedQuery(event, QuerySchema.parse)
-  const viewer = getViewer(event)
+  const viewer = await getViewer(event)
   const providers = useProviders()
 
   const [discordEvents, runs, dungeons, members] = await Promise.all([

@@ -191,3 +191,11 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 5 | Raids als eigener Katalog (`shared/data/raids.ts`), Lookup über `instances` | der Dungeon-Katalog bleibt übersichtlich; Raids lassen sich trotzdem planen |
 | 5 | Kalender wird im Browser zusammengeführt (gleiche `mergeEvents`-Logik wie auf dem Server) | so erscheinen auch lokale Demo-Änderungen; `/api/calendar` bleibt für spätere Exporte |
 | 5 | Organisatorische Hinweise zu Raids über die Run-Beschreibung (mehrzeilig) | kein eigenes Feld nötig, bis echte Anforderungen feststehen |
+| 6 | Session mit `NUXT_APP_SECRET` statt `NUXT_SESSION_PASSWORD` | nuxt-auth-utils 0.6 versiegelt Sessions mit dem App-Secret von Nuxt |
+| 6 | Betrachter weiterhin über `/api/me`, Client-Session von nuxt-auth-utils abgeschaltet (`loadStrategy: 'none'`) | eine Quelle für Zugriffsstufe und Demo-Personas |
+| 6 | Ohne erfolgreiche Rollenprüfung (z. B. Bot fehlt) gelten Rollen höchstens 12 Stunden | verlorene Gildenrolle darf nicht tagelang weiterwirken |
+| 6 | Weitere Streamer in `content/streamers.ts` statt Tabelle `streamer_links` | wenige Einträge, per Code-Review pflegbar; eine Tabelle lohnt sich erst mit Admin-Oberfläche |
+| 6 | Charaktere je Mitglied höchstens 12, Namen je Realm eindeutig | Schutz vor Tippfehler-Duplikaten und Missbrauch |
+| 6 | Löschen eines Charakters mit kommenden Anmeldungen wird abgelehnt | sonst rückt niemand von der Warteliste nach |
+| 6 | Demo-Persona „Neues Mitglied“ (ohne Charaktere) | Onboarding lässt sich in der Demo ausprobieren |
+| 6 | Twitch- und Discord-Clients ohne SDK, mit eigenem Zod-Schema und einem Wiederholversuch | wenige Endpunkte; Antworten werden validiert statt blind übernommen |

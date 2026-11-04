@@ -35,17 +35,20 @@ const signedIn = computed(() => viewer.value.level !== 'visitor')
       >
         Demo: Stell oben bei „Ansicht als“ auf „Mitglied“, um die Liste zu sehen.
       </p>
-      <p
+      <LoginButton
         v-else-if="!signedIn"
-        class="members-locked__demo"
-      >
-        Die Anmeldung mit Discord folgt in Kürze.
-      </p>
+        size="sm"
+        class="members-locked__login"
+      />
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
+.members-locked__login {
+  margin-top: var(--space-3);
+}
+
 .members-locked {
   display: flex;
   gap: var(--space-4);

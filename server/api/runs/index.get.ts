@@ -1,6 +1,6 @@
 /** Alle Runs (Dungeon- und Raidgruppen). Teilnehmer nur für Gildenmitglieder erkennbar. */
 export default defineEventHandler(async (event) => {
-  const viewer = getViewer(event)
+  const viewer = await getViewer(event)
   const runs = await useProviders().groups.list()
   return runs
     .map(run => redactRun(run, viewer))

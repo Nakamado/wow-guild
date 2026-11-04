@@ -1,7 +1,7 @@
 import { findClass, gameClasses } from '../data/classes'
 import { findRace, races } from '../data/races'
 import { getRole } from '../data/roles'
-import type { Character, Faction, GameClass, Race, RoleId } from '../types'
+import type { Character, CharacterInput, Faction, GameClass, Race, RoleId } from '../types'
 import { fail, ok, type DomainResult } from './result'
 
 export interface GameCatalog {
@@ -66,4 +66,54 @@ export function validateCharacter(
     return fail('invalid-roles', `Mindestens eine Rolle passt nicht zur Klasse ${gameClass.name}.`)
   }
   return ok(character)
+}
+
+export type CharacterRuleCode
+  = | 'unknown-class'
+    | 'unknown-race'
+    | 'invalid-race-class'
+    | 'invalid-roles'
+    | 'name-taken'
+    | 'too-many-characters'
+    | 'not-found'
+    | 'has-signups'
+
+/**
+ * Prüft einen eigenen Charakter vor dem Speichern (Demo und Live identisch).
+ * `existing` = alle Charaktere des Mitglieds, `editingId` beim Bearbeiten.
+ */
+export function checkCharacterInput(
+  input: CharacterInput,
+  existing: readonly Pick<Character, 'id' | 'name'>[],
+  options: { editingId?: string, maxCharacters: number, catalog?: GameCatalog },
+): DomainResult<CharacterInput, CharacterRuleCode> {
+  const catalog = options.catalog ?? defaultCatalog
+  const gameClass = findClass(input.classId, catalog.classes)
+  if (!gameClass) return fail('unknown-class', 'Bitte wähle eine Klasse.')
+  const race = findRace(input.raceId, catalog.races)
+  if (!race) return fail('unknown-race', 'Bitte wähle ein Volk.')
+  if (!isValidRaceClass(input.raceId, input.classId, input.faction, catalog)) {
+    return fail('invalid-race-class', `${race.name} kann in dieser Fraktion kein ${gameClass.name} sein.`)
+  }
+  const invalidRole = input.roles.find(role => !gameClass.roles.includes(role))
+  if (invalidRole) return fail('invalid-roles', `${gameClass.name} kann nicht als ${getRole(invalidRole).name} spielen.`)
+
+  const others = existing.filter(character => character.id !== options.editingId)
+  if (others.some(character => character.name.toLocaleLowerCase('de') === input.name.toLocaleLowerCase('de'))) {
+    return fail('name-taken', `Du hast bereits einen Charakter namens ${input.name}.`)
+  }
+  if (!options.editingId && existing.length >= options.maxCharacters) {
+    return fail('too-many-characters', `Du kannst höchstens ${options.maxCharacters} Charaktere eintragen.`)
+  }
+  return ok(input)
+}
+
+/** Neuer Hauptcharakter: genau einer je Mitglied (Liste der eigenen Charaktere). */
+export function withMainCharacter<T extends Pick<Character, 'id' | 'isMain'>>(characters: readonly T[], mainId: string): T[] {
+  return characters.map(character => ({ ...character, isMain: character.id === mainId }))
+}
+
+/** Hauptcharakter zuerst, danach nach Stufe absteigend, dann nach Name. */
+export function sortCharacters<T extends Pick<Character, 'isMain' | 'level' | 'name'>>(characters: readonly T[]): T[] {
+  return [...characters].sort((a, b) => Number(b.isMain) - Number(a.isMain) || b.level - a.level || a.name.localeCompare(b.name, 'de'))
 }

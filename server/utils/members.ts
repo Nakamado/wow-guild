@@ -1,13 +1,12 @@
 import type { Character, CommunityMember } from '#shared/types'
+import { sortCharacters } from '#shared/domain/characters'
 
 export interface MemberWithCharacters extends CommunityMember {
   characters: Character[]
 }
 
-/** Hauptcharakter zuerst, danach nach Stufe absteigend. */
-export function sortCharacters(characters: Character[]): Character[] {
-  return [...characters].sort((a, b) => Number(b.isMain) - Number(a.isMain) || b.level - a.level || a.name.localeCompare(b.name, 'de'))
-}
+/** Hauptcharakter zuerst, danach nach Stufe absteigend (gemeinsame Regel mit dem Client). */
+export { sortCharacters } from '#shared/domain/characters'
 
 export async function loadMembersWithCharacters(): Promise<MemberWithCharacters[]> {
   const providers = useProviders()

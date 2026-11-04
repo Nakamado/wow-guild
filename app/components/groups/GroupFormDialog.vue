@@ -89,7 +89,9 @@ function setCapacity(role: keyof RoleCapacity, value: string) {
   capacityTouched.value = true
 }
 
-function submit() {
+const saving = ref(false)
+
+async function submit() {
   errorMessage.value = null
   const startsAt = zonedToIso(form.date, form.time)
   if (!startsAt) {
@@ -104,7 +106,9 @@ function submit() {
     capacity: form.capacity,
     waitlistEnabled: form.waitlistEnabled,
   }
-  const result = props.run ? updateRun(props.run.id, input) : createRun(input)
+  saving.value = true
+  const result = props.run ? await updateRun(props.run.id, input) : await createRun(input)
+  saving.value = false
   if (!result.ok) {
     errorMessage.value = result.error.message
     return
@@ -309,6 +313,7 @@ function submit() {
       <BaseButton
         type="submit"
         :form="`${ids.error}-form`"
+        :loading="saving"
       >
         {{ isEdit ? 'Änderungen speichern' : 'Gruppe erstellen' }}
       </BaseButton>

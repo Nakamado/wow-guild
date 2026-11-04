@@ -14,7 +14,7 @@ export default defineNuxtPlugin({
       state.value = await useRequestFetch()<ViewerState>('/api/me')
     }
     catch {
-      state.value = { level: 'visitor', memberId: null, displayName: null, demo: null }
+      state.value = { level: 'visitor', memberId: null, displayName: null, avatarUrl: null, loginAvailable: false, demo: null }
     }
   },
 })

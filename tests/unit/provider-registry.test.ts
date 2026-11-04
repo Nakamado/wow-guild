@@ -7,7 +7,7 @@ import type { DiscordEventProvider } from '../../server/providers/types'
 const baseConfig: ProviderConfig = {
   demoMode: true,
   guild: { name: 'Testgilde', realm: 'Test', faction: 'alliance', discordInvite: 'https://discord.gg/test', description: '' },
-  discord: { botToken: '', guildId: '723275162971275335', memberRoleId: '' },
+  discord: { botToken: '', guildId: '723275162971275335', memberRoleId: '', adminRoleId: '' },
   twitch: { clientId: '', clientSecret: '', broadcasterId: '114422810', channel: 'miinyu' },
   supabase: { url: '', serviceRoleKey: '' },
 }
@@ -15,7 +15,7 @@ const baseConfig: ProviderConfig = {
 const liveConfig: ProviderConfig = {
   ...baseConfig,
   demoMode: false,
-  discord: { botToken: 'secret-bot', guildId: '723275162971275335', memberRoleId: 'role' },
+  discord: { botToken: 'secret-bot', guildId: '723275162971275335', memberRoleId: 'role', adminRoleId: 'admin' },
   twitch: { ...baseConfig.twitch, clientId: 'id', clientSecret: 'secret' },
   supabase: { url: 'https://example.supabase.co', serviceRoleKey: 'service' },
 }

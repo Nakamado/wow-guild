@@ -1,5 +1,6 @@
 <script setup lang="ts">
-const { guild } = useSiteConfig()
+const { guild, isDemo } = useSiteConfig()
+const { signedIn } = useViewer()
 const route = useRoute()
 
 const menuOpen = ref(false)
@@ -73,6 +74,8 @@ onBeforeUnmount(() => {
           Discord
         </BaseButton>
 
+        <UserMenu class="app-header__user" />
+
         <button
           type="button"
           class="app-header__toggle"
@@ -110,6 +113,11 @@ onBeforeUnmount(() => {
         >
           Discord beitreten
         </BaseButton>
+        <LoginButton
+          v-if="!signedIn && !isDemo"
+          block
+          size="lg"
+        />
       </div>
     </div>
   </header>

@@ -1,15 +1,20 @@
 import { demoPersonas } from '../../data/demo/personas'
 
-/** Aktueller Betrachter (Zugriffsstufe, Mitglied) und Demo-Steuerung. */
+/** Aktueller Betrachter (Zugriffsstufe, Mitglied), Login-Status und Demo-Steuerung. */
 export default defineEventHandler(async (event) => {
-  const viewer = getViewer(event)
-  const member = viewer.memberId ? await useProviders().members.getMember(viewer.memberId) : null
-  const demoMode = Boolean(useRuntimeConfig(event).public.demoMode)
+  const viewer = await getViewer(event)
+  const config = useRuntimeConfig(event)
+  const demoMode = Boolean(config.public.demoMode)
+
+  const member = !viewer.user && viewer.memberId ? await useProviders().members.getMember(viewer.memberId) : null
 
   return {
     level: viewer.level,
     memberId: viewer.memberId,
-    displayName: member?.displayName ?? null,
+    displayName: viewer.user?.displayName ?? member?.displayName ?? null,
+    avatarUrl: viewer.user?.avatarUrl ?? member?.avatarUrl ?? null,
+    /** Discord-Login ist eingerichtet (nur live) */
+    loginAvailable: !demoMode && Boolean(config.discord.clientId && config.discord.clientSecret),
     demo: demoMode
       ? {
           persona: viewer.persona,
