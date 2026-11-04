@@ -14,7 +14,8 @@ test.describe('Charakter-Onboarding & Einstellungen (Demo)', () => {
     // Pflicht-Dialog erscheint automatisch
     const onboarding = page.getByRole('dialog', { name: 'Willkommen, Funkelzahn!' })
     await expect(onboarding).toBeVisible()
-    await onboarding.getByLabel('Name').fill('Ambosshieb')
+    await onboarding.getByLabel('Vorname').fill('ambosshieb')
+    await onboarding.getByLabel('Nachname').fill('Glutbart')
     await onboarding.getByLabel('Volk').selectOption({ label: 'Zwerg' })
     await onboarding.getByLabel('Klasse').selectOption({ label: 'Paladin' })
     await onboarding.getByLabel('Stufe').fill('14')
@@ -23,34 +24,35 @@ test.describe('Charakter-Onboarding & Einstellungen (Demo)', () => {
     await expect(onboarding).toBeHidden()
 
     const list = page.locator('.settings-page__list')
-    await expect(list.getByRole('heading', { name: 'Ambosshieb' })).toBeVisible()
+    await expect(list.getByRole('heading', { name: 'Ambosshieb Glutbart' })).toBeVisible()
     await expect(list.getByText('Hauptcharakter')).toBeVisible()
 
     // Twink hinzufügen – Klassen passen zum Volk
     await page.getByRole('button', { name: 'Twink hinzufügen' }).click()
     const form = page.getByRole('dialog', { name: 'Charakter hinzufügen' })
-    await form.getByLabel('Name').fill('Ambosshieb')
+    await form.getByLabel('Vorname').fill('Ambosshieb')
+    await form.getByLabel('Nachname').fill('Glutbart')
     await form.getByLabel('Volk').selectOption({ label: 'Gnom' })
     await expect(form.getByLabel('Klasse').locator('option', { hasText: 'Paladin' })).toHaveCount(0)
     await form.getByLabel('Klasse').selectOption({ label: 'Magier' })
     await form.getByLabel('Stufe').fill('5')
     await form.getByRole('button', { name: 'Charakter speichern' }).click()
-    await expect(form.getByRole('alert')).toContainText('bereits einen Charakter namens Ambosshieb')
-    await form.getByLabel('Name').fill('Zahnradfunke')
+    await expect(form.getByRole('alert')).toContainText('bereits einen Charakter namens Ambosshieb Glutbart')
+    await form.getByLabel('Nachname').fill('Zahnradfunke')
     await form.getByRole('button', { name: 'Charakter speichern' }).click()
     await expect(form).toBeHidden()
-    await expect(list.getByRole('heading', { name: 'Zahnradfunke' })).toBeVisible()
+    await expect(list.getByRole('heading', { name: 'Ambosshieb Zahnradfunke' })).toBeVisible()
 
     // Hauptcharakter wechseln, übersteht Neuladen
-    await page.getByRole('button', { name: 'Zahnradfunke als Hauptcharakter festlegen' }).click()
-    await expect(page.locator('.settings-page__notice')).toContainText('Zahnradfunke ist jetzt dein Hauptcharakter')
+    await page.getByRole('button', { name: 'Ambosshieb Zahnradfunke als Hauptcharakter festlegen' }).click()
+    await expect(page.locator('.settings-page__notice')).toContainText('Ambosshieb Zahnradfunke ist jetzt dein Hauptcharakter')
     await page.reload()
     await expect(list.locator('.character-card').first()).toContainText('Zahnradfunke')
 
     // Löschen
-    await page.getByRole('button', { name: 'Ambosshieb löschen' }).click()
+    await page.getByRole('button', { name: 'Ambosshieb Glutbart löschen' }).click()
     await page.getByRole('dialog', { name: 'Charakter löschen?' }).getByRole('button', { name: 'Löschen' }).click()
-    await expect(list.getByRole('heading', { name: 'Ambosshieb' })).toHaveCount(0)
+    await expect(list.getByRole('heading', { name: 'Ambosshieb Glutbart' })).toHaveCount(0)
   })
 
   test('„Später“ blendet das Onboarding für die Sitzung aus', async ({ page, context, baseURL }) => {

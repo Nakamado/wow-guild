@@ -39,7 +39,7 @@ export function character(id: string, memberId: string, overrides: Partial<Chara
   return {
     id,
     memberId,
-    name: 'Testheld',
+    name: 'Testheld Mustermann',
     realm: 'Test',
     faction: 'alliance',
     classId: 'warrior',

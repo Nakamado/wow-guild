@@ -30,11 +30,11 @@ beforeEach(async () => {
   await db.exec('delete from run_participants; delete from runs; delete from characters;')
 })
 
-async function character(memberId: string, name: string, options: { isMain?: boolean, roles?: string[] } = {}) {
+async function character(memberId: string, firstName: string, options: { isMain?: boolean, roles?: string[] } = {}) {
   const { rows } = await db.query<{ id: string }>(
     `insert into characters (member_id, name, realm, faction, class_id, race_id, level, roles, is_main)
      values ($1, $2, 'Testrealm', 'alliance', 'warrior', 'human', 60, $3, $4) returning id`,
-    [memberId, name, options.roles ?? ['tank', 'dps'], options.isMain ?? false],
+    [memberId, `${firstName} Test`, options.roles ?? ['tank', 'dps'], options.isMain ?? false],
   )
   return rows[0]!.id
 }
@@ -137,13 +137,17 @@ describe('Constraints', () => {
   it('prüft Werte (Stufe, Rollen, Kapazität)', async () => {
     await expect(db.query(
       `insert into characters (member_id, name, realm, faction, class_id, race_id, level, roles)
-       values ($1, 'Zuhoch', 'R', 'alliance', 'mage', 'human', 61, '{dps}')`, [ALICE],
+       values ($1, 'Zu Hoch', 'R', 'alliance', 'mage', 'human', 61, '{dps}')`, [ALICE],
     )).rejects.toThrow()
     await expect(db.query(
       `insert into characters (member_id, name, realm, faction, class_id, race_id, level, roles)
-       values ($1, 'Falsch', 'R', 'alliance', 'mage', 'human', 10, '{dancer}')`, [ALICE],
+       values ($1, 'Falsche Rolle', 'R', 'alliance', 'mage', 'human', 10, '{dancer}')`, [ALICE],
     )).rejects.toThrow()
     await expect(run({ tank: 0, healer: 0, dps: 0 })).rejects.toThrow()
+    await expect(db.query(
+      `insert into characters (member_id, name, realm, faction, class_id, race_id, level, roles)
+       values ($1, 'Ohnenachname', 'R', 'alliance', 'mage', 'human', 10, '{dps}')`, [ALICE],
+    )).rejects.toThrow()
   })
 
   it('entfernt Anmeldungen gelöschter Charaktere mit', async () => {

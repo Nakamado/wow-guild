@@ -40,6 +40,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Login-Session (nuxt-auth-utils). Versiegelt mit NUXT_APP_SECRET (im Dev automatisch erzeugt).
     session: { maxAge: 60 * 60 * 24 * 7 },
+    // Discord-User-IDs (kommagetrennt) mit Admin-Rechten auf der Seite, unabhängig von Discord-Rollen
+    adminUserIds: '',
     discord: {
       clientId: '',
       clientSecret: '',

@@ -8,7 +8,7 @@ import {
   isDemoPersonaId,
   type DemoPersonaId,
 } from '../../data/demo/personas'
-import { accessLevelFromRoles, can, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
+import { accessLevelFromRoles, can, parseIdList, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
 import { createDiscordBotClient } from '../providers/discord'
 
 export interface ResolvedViewer extends Viewer {
@@ -53,9 +53,9 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
   try {
     session = await getUserSession(event)
   }
-  catch {
+  catch (error) {
     // Meist fehlt NUXT_APP_SECRET – dann ist niemand angemeldet
-    if (!warnedSession) console.warn('[auth] Session nicht lesbar – ist NUXT_APP_SECRET gesetzt?')
+    if (!warnedSession) console.warn(`[auth] Session nicht lesbar – ist NUXT_APP_SECRET gesetzt? (${error instanceof Error ? error.message : 'unbekannt'})`)
     warnedSession = true
     return { ...visitor, persona: null, user: null }
   }
@@ -75,7 +75,10 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
     }
   }
 
-  const level = accessLevelFromRoles(roles, config.discord)
+  // Betreiber der Seite (NUXT_ADMIN_USER_IDS) sind immer Admin – auch ohne Discord-Rolle
+  const isConfiguredAdmin = parseIdList(config.adminUserIds).includes(session.user.id)
+  const roleConfig = { memberRoleId: String(config.discord.memberRoleId ?? ''), adminRoleId: String(config.discord.adminRoleId ?? '') }
+  const level = isConfiguredAdmin ? 'admin' : accessLevelFromRoles(roles, roleConfig)
   return { level, memberId: session.user.id, persona: null, user: session.user }
 }
 

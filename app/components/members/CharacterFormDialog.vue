@@ -3,7 +3,7 @@ import { gameClasses, findClass } from '#shared/data/classes'
 import { races } from '#shared/data/races'
 import { roles as roleDefinitions } from '#shared/data/roles'
 import { MAX_LEVEL } from '#shared/schemas/common'
-import { CharacterInputSchema } from '#shared/schemas/community'
+import { CharacterInputSchema, splitCharacterName } from '#shared/schemas/community'
 import type { Character, Faction, RoleId } from '#shared/types'
 
 /**
@@ -26,12 +26,13 @@ const emit = defineEmits<{ saved: [character: Character] }>()
 const { guild, isDemo } = useSiteConfig()
 const { create, update } = useCharacters()
 
-const ids = { name: useId(), faction: useId(), race: useId(), class: useId(), level: useId(), roles: useId(), error: useId() }
+const ids = { firstName: useId(), lastName: useId(), faction: useId(), race: useId(), class: useId(), level: useId(), roles: useId(), error: useId() }
 const isEdit = computed(() => Boolean(props.character))
 
 const guildFaction: Faction = guild.faction === 'horde' ? 'horde' : 'alliance'
 const form = reactive({
-  name: '',
+  firstName: '',
+  lastName: '',
   faction: guildFaction as Faction,
   raceId: '',
   classId: '',
@@ -45,7 +46,9 @@ watch(open, (isOpen) => {
   if (!isOpen) return
   errorMessage.value = null
   const source = props.character
-  form.name = source?.name ?? ''
+  const name = splitCharacterName(source?.name ?? '')
+  form.firstName = name.firstName
+  form.lastName = name.lastName
   form.faction = source?.faction ?? guildFaction
   form.raceId = source?.raceId ?? ''
   form.classId = source?.classId ?? ''
@@ -76,7 +79,11 @@ watch(classRoles, (allowed) => {
 
 /** Verständliche Meldung je Feld (Reihenfolge wie im Formular) */
 function describeIssue(field: PropertyKey | undefined): string {
-  if (field === 'name') return 'Der Name besteht aus 2–12 Buchstaben, ohne Leer- oder Sonderzeichen.'
+  if (field === 'name') {
+    if (!form.firstName.trim() || !form.lastName.trim()) return 'Bitte gib Vor- und Nachnamen an.'
+    if (/(\p{L})\1\1/iu.test(`${form.firstName}${form.lastName}`)) return 'Ein Buchstabe darf nicht dreimal hintereinander stehen.'
+    return 'Vor- und Nachname bestehen aus je 2–12 Buchstaben, ohne Leer- oder Sonderzeichen.'
+  }
   if (!form.raceId) return 'Bitte wähle ein Volk.'
   if (!form.classId) return 'Bitte wähle eine Klasse.'
   if (field === 'level') return `Die Stufe muss zwischen 1 und ${MAX_LEVEL} liegen.`
@@ -91,7 +98,8 @@ function toggleRole(role: RoleId) {
 async function submit() {
   if (saving.value) return
   errorMessage.value = null
-  const parsed = CharacterInputSchema.safeParse(form)
+  const { firstName, lastName, ...rest } = form
+  const parsed = CharacterInputSchema.safeParse({ ...rest, name: `${firstName} ${lastName}` })
   if (!parsed.success) {
     errorMessage.value = describeIssue(parsed.error.issues[0]?.path[0])
     return
@@ -122,22 +130,42 @@ async function submit() {
       @submit.prevent="submit"
     >
       <div class="character-form__field">
-        <label
-          :for="ids.name"
-          class="character-form__label"
-        >Name</label>
-        <input
-          :id="ids.name"
-          v-model="form.name"
-          type="text"
-          class="character-form__input"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="12"
-          required
-        >
+        <div class="character-form__row">
+          <div class="character-form__field">
+            <label
+              :for="ids.firstName"
+              class="character-form__label"
+            >Vorname</label>
+            <input
+              :id="ids.firstName"
+              v-model="form.firstName"
+              type="text"
+              class="character-form__input"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="12"
+              required
+            >
+          </div>
+          <div class="character-form__field">
+            <label
+              :for="ids.lastName"
+              class="character-form__label"
+            >Nachname</label>
+            <input
+              :id="ids.lastName"
+              v-model="form.lastName"
+              type="text"
+              class="character-form__input"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="12"
+              required
+            >
+          </div>
+        </div>
         <p class="character-form__hint">
-          So wie im Spiel, 2–12 Buchstaben. Realm: {{ guild.realm }}
+          So wie im Spiel: je 2–12 Buchstaben. Groß- und Kleinschreibung passen wir automatisch an.
         </p>
       </div>
 

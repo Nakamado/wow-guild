@@ -195,7 +195,9 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 6 | Betrachter weiterhin über `/api/me`, Client-Session von nuxt-auth-utils abgeschaltet (`loadStrategy: 'none'`) | eine Quelle für Zugriffsstufe und Demo-Personas |
 | 6 | Ohne erfolgreiche Rollenprüfung (z. B. Bot fehlt) gelten Rollen höchstens 12 Stunden | verlorene Gildenrolle darf nicht tagelang weiterwirken |
 | 6 | Weitere Streamer in `content/streamers.ts` statt Tabelle `streamer_links` | wenige Einträge, per Code-Review pflegbar; eine Tabelle lohnt sich erst mit Admin-Oberfläche |
+| 6 | Charakternamen aus Vor- und Nachname (je 2–12 Buchstaben), Schreibweise wird angeglichen | Namenssystem von WoW: Forever |
 | 6 | Charaktere je Mitglied höchstens 12, Namen je Realm eindeutig | Schutz vor Tippfehler-Duplikaten und Missbrauch |
 | 6 | Löschen eines Charakters mit kommenden Anmeldungen wird abgelehnt | sonst rückt niemand von der Warteliste nach |
 | 6 | Demo-Persona „Neues Mitglied“ (ohne Charaktere) | Onboarding lässt sich in der Demo ausprobieren |
+| 6 | Zusätzliche Admins per Discord-User-ID (`NUXT_ADMIN_USER_IDS`) | Betreiber der Seite brauchen Admin-Rechte, ohne im Discord Moderator zu sein |
 | 6 | Twitch- und Discord-Clients ohne SDK, mit eigenem Zod-Schema und einem Wiederholversuch | wenige Endpunkte; Antworten werden validiert statt blind übernommen |

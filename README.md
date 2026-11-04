@@ -84,6 +84,8 @@ ihn automatisch).
 5. Rollen-IDs (Discord: *Einstellungen → Erweitert → Entwicklermodus*, dann Rechtsklick auf die Rolle →
    *ID kopieren*): Rolle „WoW Forever“ → `NUXT_DISCORD_MEMBER_ROLE_ID`, Admin-/Event-Moderator-Rolle →
    `NUXT_DISCORD_ADMIN_ROLE_ID`.
+6. Optional: Discord-User-IDs von Personen, die auf der Seite immer Admin sein sollen (z. B. Betreiber),
+   kommagetrennt in `NUXT_ADMIN_USER_IDS`. Sie brauchen dafür keine Discord-Rolle.
 
 Ablauf: Login mit Scopes `identify` + `guilds.members.read`, danach liest die Seite die eigenen Rollen auf dem
 Gilden-Server und speichert sie (nur serverseitig lesbar) in der versiegelten Session. Das Discord-Token wird
@@ -104,8 +106,8 @@ Zuordnung zum Mitglied).
 ### Datenbank-Setup (Supabase)
 
 1. Projekt auf [supabase.com](https://supabase.com) anlegen (Region EU, z. B. Frankfurt).
-2. **SQL Editor** → Inhalt von `supabase/migrations/20261104000000_initial_schema.sql` ausführen
-   (oder mit der Supabase-CLI: `supabase db push`).
+2. **SQL Editor** → jede Datei aus `supabase/migrations/` **einmal und in Reihenfolge** (nach Dateiname)
+   ausführen (oder mit der Supabase-CLI: `supabase db push`). Neue Dateien in späteren Updates ebenso.
 3. **Project Settings → API**: Projekt-URL → `NUXT_SUPABASE_URL`, `service_role`-Key →
    `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Der Key bleibt auf dem Server und darf nie im Client landen.
 

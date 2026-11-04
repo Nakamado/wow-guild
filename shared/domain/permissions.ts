@@ -58,6 +58,11 @@ function isSelf(viewer: Viewer, id: string | undefined): boolean {
   return viewer.memberId !== null && id !== undefined && viewer.memberId === id
 }
 
+/** Kommagetrennte ID-Liste aus der Konfiguration (Leerzeichen und leere Einträge werden ignoriert). */
+export function parseIdList(value: string | number | undefined | null): string[] {
+  return String(value ?? '').split(',').map(id => id.trim()).filter(Boolean)
+}
+
 /** Leitet die Zugriffsstufe aus den (serverseitig verifizierten) Discord-Rollen ab. */
 export function accessLevelFromRoles(
   roleIds: readonly string[] | null,

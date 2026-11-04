@@ -49,32 +49,38 @@ export function useWriters(): Writers {
   })
 }
 
+/**
+ * Umgebungsvariablen kommen nicht zwingend als Text an: Nitro wandelt kurze Zahlen
+ * (z. B. NUXT_PUBLIC_TWITCH_BROADCASTER_ID=114422810) automatisch in Numbers um.
+ */
+const text = (value: unknown) => (value === undefined || value === null ? '' : String(value).trim())
+
 function readProviderConfig(): ProviderConfig {
   const config = useRuntimeConfig()
   return {
     demoMode: Boolean(config.public.demoMode),
     guild: {
-      name: config.public.guild.name,
-      realm: config.public.guild.realm,
+      name: text(config.public.guild.name),
+      realm: text(config.public.guild.realm),
       faction: config.public.guild.faction === 'horde' ? 'horde' : 'alliance',
-      discordInvite: config.public.guild.discordInvite,
+      discordInvite: text(config.public.guild.discordInvite),
       description: '',
     },
     discord: {
-      botToken: config.discord.botToken,
-      guildId: config.discord.guildId,
-      memberRoleId: config.discord.memberRoleId,
-      adminRoleId: config.discord.adminRoleId,
+      botToken: text(config.discord.botToken),
+      guildId: text(config.discord.guildId),
+      memberRoleId: text(config.discord.memberRoleId),
+      adminRoleId: text(config.discord.adminRoleId),
     },
     twitch: {
-      clientId: config.twitch.clientId,
-      clientSecret: config.twitch.clientSecret,
-      broadcasterId: config.public.twitch.broadcasterId,
-      channel: config.public.twitch.channel,
+      clientId: text(config.twitch.clientId),
+      clientSecret: text(config.twitch.clientSecret),
+      broadcasterId: text(config.public.twitch.broadcasterId),
+      channel: text(config.public.twitch.channel),
     },
     supabase: {
-      url: config.supabase.url,
-      serviceRoleKey: config.supabase.serviceRoleKey,
+      url: text(config.supabase.url),
+      serviceRoleKey: text(config.supabase.serviceRoleKey),
     },
   }
 }

@@ -5,7 +5,7 @@ import { CharacterInputSchema } from '../../shared/schemas/community'
 import { filterDungeons } from '../../shared/domain/dungeons'
 import { mergeEvents } from '../../shared/domain/events'
 import { computeGuildStats } from '../../shared/domain/guild'
-import { accessLevelFromRoles, can, visitor, type Viewer } from '../../shared/domain/permissions'
+import { accessLevelFromRoles, can, parseIdList, visitor, type Viewer } from '../../shared/domain/permissions'
 import { filterMembers } from '../../shared/domain/members'
 import { formatDate, formatDateTime, formatTime, toZonedParts, zonedToIso } from '../../shared/utils/datetime'
 import type { DiscordEvent } from '../../shared/types'
@@ -200,7 +200,7 @@ describe('Zeitumrechnung für Formulare', () => {
 })
 
 describe('Charakterpflege', () => {
-  const input = { name: 'Funkelzahn', faction: 'alliance', classId: 'paladin', raceId: 'dwarf', level: 12, roles: ['tank', 'healer'] } as const
+  const input = { name: 'Funkelzahn Eisenhut', faction: 'alliance', classId: 'paladin', raceId: 'dwarf', level: 12, roles: ['tank', 'healer'] } as const
   const opts = { maxCharacters: 3 }
 
   it('akzeptiert gültige Kombinationen aus Volk, Klasse und Rollen', () => {
@@ -213,7 +213,7 @@ describe('Charakterpflege', () => {
   })
 
   it('verhindert doppelte Namen (außer beim Bearbeiten desselben Charakters) und zu viele Charaktere', () => {
-    const existing = [{ id: 'a', name: 'funkelzahn' }]
+    const existing = [{ id: 'a', name: 'funkelzahn eisenhut' }]
     expect(checkCharacterInput({ ...input, roles: ['tank'] }, existing, opts)).toMatchObject({ ok: false, error: { code: 'name-taken' } })
     expect(checkCharacterInput({ ...input, roles: ['tank'] }, existing, { ...opts, editingId: 'a' }).ok).toBe(true)
     const full = [{ id: 'x', name: 'Eins' }, { id: 'y', name: 'Zwei' }, { id: 'z', name: 'Drei' }]
@@ -231,9 +231,20 @@ describe('Charakterpflege', () => {
   })
 
   it('validiert Eingaben per Schema (Name, Stufe, Rollen)', () => {
-    expect(CharacterInputSchema.safeParse({ ...input, name: 'Mit Leerzeichen' }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, name: 'Ohnenachname' }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, name: 'Drei Teile Name' }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, name: 'Aaab Cdef' }).success).toBe(false)
+    expect(CharacterInputSchema.safeParse({ ...input, name: 'X Kurz' }).success).toBe(false)
     expect(CharacterInputSchema.safeParse({ ...input, level: 61 }).success).toBe(false)
     expect(CharacterInputSchema.safeParse({ ...input, roles: ['tank', 'tank'] }).success).toBe(false)
-    expect(CharacterInputSchema.parse({ ...input, name: '  Ölmühle ', level: '7' })).toMatchObject({ name: 'Ölmühle', level: 7 })
+    expect(CharacterInputSchema.parse({ ...input, name: '  ölmühle   VON ', level: '7' })).toMatchObject({ name: 'Ölmühle Von', level: 7 })
+  })
+})
+
+describe('parseIdList', () => {
+  it('liest kommagetrennte IDs und ignoriert Leerzeichen und Leereinträge', () => {
+    expect(parseIdList(' 123, 456 ,,')).toEqual(['123', '456'])
+    expect(parseIdList('')).toEqual([])
+    expect(parseIdList(undefined)).toEqual([])
   })
 })

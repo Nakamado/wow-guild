@@ -79,7 +79,7 @@ export function resolveProviderModes(
   for (const key of staticProviders) result[key] = { mode: 'static', reason: 'static-data', missing: [] }
 
   for (const key of Object.keys(required) as (keyof typeof required)[]) {
-    const missing = Object.entries(required[key]).filter(([, value]) => !value?.trim()).map(([name]) => name)
+    const missing = Object.entries(required[key]).filter(([, value]) => !String(value ?? '').trim()).map(([name]) => name)
     if (config.demoMode) result[key] = { mode: 'demo', reason: 'demo-mode', missing }
     else if (missing.length) result[key] = { mode: 'demo', reason: 'missing-credentials', missing }
     else if (!liveAvailable.includes(key)) result[key] = { mode: 'demo', reason: 'not-implemented', missing }

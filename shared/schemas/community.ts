@@ -24,10 +24,34 @@ export const CommunityMemberSchema = z.object({
   source: DataSourceSchema,
 })
 
-/** WoW-Charaktername: 2–12 Buchstaben (inkl. Umlaute/Akzente) */
+/**
+ * WoW: Forever: Vor- und Nachname, je 2–12 Buchstaben (inkl. Umlaute/Akzente),
+ * kein Zeichen dreimal hintereinander. Gespeichert als „Vorname Nachname“.
+ */
+export const NAME_PART_PATTERN = /^\p{L}{2,12}$/u
+const TRIPLE_PATTERN = /(\p{L})\1\1/iu
+
 export const CharacterNameSchema = z
   .string()
-  .regex(/^\p{L}{2,12}$/u, 'Charakternamen bestehen aus 2–12 Buchstaben')
+  .regex(/^\p{L}{2,12} \p{L}{2,12}$/u, 'Vor- und Nachname bestehen aus je 2–12 Buchstaben')
+  .refine(name => !TRIPLE_PATTERN.test(name), 'Ein Buchstabe darf nicht dreimal hintereinander stehen')
+
+/** Schreibweise wie im Spiel: erster Buchstabe groß, Rest klein – je Namensteil */
+export function formatNamePart(part: string): string {
+  const lower = part.trim().toLocaleLowerCase('de-DE')
+  return lower.charAt(0).toLocaleUpperCase('de-DE') + lower.slice(1)
+}
+
+/** Eingabe normalisieren: Leerzeichen zusammenfassen, Groß-/Kleinschreibung angleichen */
+export function normalizeCharacterName(value: string): string {
+  return value.trim().split(/\s+/u).filter(Boolean).map(formatNamePart).join(' ')
+}
+
+/** „Vorname Nachname“ → Teile (für das Formular) */
+export function splitCharacterName(name: string): { firstName: string, lastName: string } {
+  const [firstName = '', ...rest] = name.trim().split(/\s+/u)
+  return { firstName, lastName: rest.join(' ') }
+}
 
 export const CharacterSchema = z.object({
   id: IdSchema,
@@ -49,7 +73,7 @@ export const MAX_CHARACTERS_PER_MEMBER = 12
 
 /** Eingabe beim Anlegen/Bearbeiten eines eigenen Charakters (Realm setzt der Server) */
 export const CharacterInputSchema = z.object({
-  name: z.string().trim().pipe(CharacterNameSchema),
+  name: z.string().transform(normalizeCharacterName).pipe(CharacterNameSchema),
   faction: FactionSchema,
   classId: SlugSchema,
   raceId: SlugSchema,

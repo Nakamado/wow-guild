@@ -54,7 +54,7 @@ test.describe('Gruppenplaner (Demo)', () => {
     await expect(dialog.getByText(/über dem empfohlenen Bereich/)).toBeVisible()
     await dialog.getByRole('button', { name: 'Beitreten' }).click()
 
-    await expect(page.getByRole('status').filter({ hasText: 'Du bist dabei' })).toContainText('Eisblume als Heiler')
+    await expect(page.getByRole('status').filter({ hasText: 'Du bist dabei' })).toContainText('Eisblume Frostweber als Heiler')
     await expect(page.locator('.group-page__status')).toHaveText('1 Platz frei')
 
     await page.reload()

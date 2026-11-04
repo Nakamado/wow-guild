@@ -37,6 +37,11 @@ describe('resolveProviderModes', () => {
     expect(modes.groups.mode).toBe('live')
   })
 
+  it('verträgt Zahlen aus Umgebungsvariablen (Nitro wandelt kurze Zahlen um)', () => {
+    const config = { ...liveConfig, twitch: { ...liveConfig.twitch, broadcasterId: 114422810 as unknown as string } }
+    expect(resolveProviderModes(config, ['twitch']).twitch.mode).toBe('live')
+  })
+
   it('fällt auf Demo zurück, solange kein Live-Provider implementiert ist', () => {
     const modes = resolveProviderModes(liveConfig, [])
     expect(modes.members).toMatchObject({ mode: 'demo', reason: 'not-implemented' })

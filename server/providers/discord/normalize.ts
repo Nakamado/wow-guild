@@ -8,7 +8,7 @@ export function discordAvatarUrl(user: DiscordUser, guildId?: string, memberAvat
   if (memberAvatar && guildId) return `${CDN}/guilds/${guildId}/users/${user.id}/avatars/${memberAvatar}.png?size=128`
   if (user.avatar) return `${CDN}/avatars/${user.id}/${user.avatar}.png?size=128`
   // Standardavatar für Konten mit neuem Benutzernamen-System: (id >> 22) % 6
-  const index = Number((BigInt(user.id) >> 22n) % 6n)
+  const index = Number((BigInt(user.id) >> BigInt(22)) % BigInt(6))
   return `${CDN}/embed/avatars/${index}.png`
 }
 
