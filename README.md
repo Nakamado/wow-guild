@@ -4,7 +4,7 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 2 – Domain (Typen, Spieldaten, Demo-Daten, Provider, Geschäftslogik).
+> **Status:** Phase 3 – Öffentliche Seiten (Hero, Startseite, Gilde, Mitglieder, Charaktere, Regeln, Clips, Streamer).
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -36,7 +36,9 @@ Solange `NUXT_PUBLIC_DEMO_MODE=true` (Standard) gesetzt ist,
 
 - zeigt die Seite ausschließlich **eindeutig fiktive** Beispieldaten,
 - ist oben ein Demo-Banner sichtbar,
-- werden simulierte Änderungen nur im `sessionStorage` des Browsers gehalten (ab Phase 4).
+- werden simulierte Änderungen nur im `sessionStorage` des Browsers gehalten (ab Phase 4),
+- gibt es oben eine **Demo-Steuerung**: „Ansicht als“ Besucher, Mitglied, Organisator oder Admin (statt echtem
+  Discord-Login) und „Live simulieren“ für den Twitch-Livestatus. Beides wird per Cookie gemerkt.
 
 Fehlen einzelne Zugangsdaten im Live-Modus, fällt nur der betroffene Provider auf Demo-Daten zurück.
 
@@ -92,7 +94,8 @@ shared/            # von app/ und server/ gemeinsam genutzt (Alias #shared)
 ├── data/          # Klassen, Völker, Rollen, Dungeons – mit Quellenangaben
 ├── domain/        # reine Geschäftslogik (Anmeldung, Levelprüfung, Rechte, Kalender …)
 └── utils/         # z. B. Datumsformatierung (Europe/Berlin)
-data/demo/         # eindeutig fiktive Demo-Daten (relativ zum aktuellen Datum)
+data/demo/         # eindeutig fiktive Demo-Daten (relativ zum aktuellen Datum) und Demo-Personas
+content/           # redaktionelle Texte: guild.ts (Gildentexte), rules.ts (Regeln) – per Schema geprüft
 tests/
 ├── unit/          # reine Logik (Node)
 ├── nuxt/          # Komponenten/Composables (Nuxt-Umgebung)
@@ -114,6 +117,18 @@ UI ──► composables ──► server/api ──► useProviders() ──►
 - Klassen, Völker und Dungeons sind **Daten**, keine Enums, und verweisen per `sourceIds` auf
   `shared/data/sources.ts`. Neue Forever-Inhalte = neuer Datensatz.
 - Geschäftsregeln (`shared/domain/`) sind reine Funktionen und vollständig unit-getestet.
+
+### Inhalte bearbeiten
+
+Gildentexte und Regeln stehen in `content/guild.ts` und `content/rules.ts`. Einfach die Texte ändern; Tests prüfen
+die Struktur. Solange `isDraft` bzw. `isExample` auf `true` steht, zeigt die Seite einen Hinweis, dass es sich um
+Platzhalter handelt.
+
+### Datenschutz & Berechtigungen
+
+- Mitgliederliste, Profile und Charaktere liefert der Server nur an Gildenmitglieder (`requirePermission`).
+- Organisatoren-Namen im Kalender und Streamer-Zuordnungen werden für Besucher entfernt.
+- Twitch-Clips werden erst nach Klick geladen (2-Klick-Lösung).
 
 ### CSS-Konventionen
 

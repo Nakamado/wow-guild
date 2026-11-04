@@ -5,6 +5,7 @@ import { filterDungeons } from '../../shared/domain/dungeons'
 import { mergeEvents } from '../../shared/domain/events'
 import { computeGuildStats } from '../../shared/domain/guild'
 import { accessLevelFromRoles, can, visitor, type Viewer } from '../../shared/domain/permissions'
+import { filterMembers } from '../../shared/domain/members'
 import { formatDate, formatDateTime, formatTime } from '../../shared/utils/datetime'
 import type { DiscordEvent } from '../../shared/types'
 import { character, dungeon, member, NOW, run } from './fixtures'
@@ -151,5 +152,32 @@ describe('Zeitdarstellung (Europe/Berlin)', () => {
     expect(formatTime('2026-07-01T18:00:00Z')).toBe('20:00') // MESZ
     expect(formatDate('2026-12-31T23:30:00Z')).toBe('01.01.2027') // Datumswechsel
     expect(formatDateTime('2026-11-04T18:00:00Z')).toMatch(/04\.11\.2026.*19:00/)
+  })
+})
+
+describe('filterMembers', () => {
+  const members = [
+    { ...member('a', { displayName: 'Frostblüte' }), characters: [character('c1', 'a', { name: 'Eisblume', classId: 'priest', raceId: 'dwarf', roles: ['healer'], level: 60 })] },
+    { ...member('b', { displayName: 'Brummbart' }), characters: [
+      character('c2', 'b', { name: 'Thorgrimm', level: 60 }),
+      character('c3', 'b', { name: 'Hammerherz', classId: 'paladin', raceId: 'dwarf', roles: ['healer'], level: 22 }),
+    ] },
+    { ...member('c', { displayName: 'Neuling' }), characters: [] },
+  ]
+
+  it('sucht in Anzeige- und Charakternamen, ohne Akzente zu beachten', () => {
+    expect(filterMembers(members, { query: 'frostblute' }).map(m => m.id)).toEqual(['a'])
+    expect(filterMembers(members, { query: 'hammer' }).map(m => m.id)).toEqual(['b'])
+  })
+
+  it('verlangt, dass EIN Charakter alle Kriterien gleichzeitig erfüllt', () => {
+    // Brummbart hat einen Heiler (22) und einen Stufe-60-Krieger – aber keinen Heiler auf 60
+    expect(filterMembers(members, { role: 'healer', minLevel: 60 }).map(m => m.id)).toEqual(['a'])
+    expect(filterMembers(members, { classId: 'paladin' }).map(m => m.id)).toEqual(['b'])
+  })
+
+  it('zeigt Mitglieder ohne Charakter nur ohne Charakter-Filter', () => {
+    expect(filterMembers(members, {}).map(m => m.id)).toEqual(['a', 'b', 'c'])
+    expect(filterMembers(members, { maxLevel: 30 }).map(m => m.id)).toEqual(['b'])
   })
 })

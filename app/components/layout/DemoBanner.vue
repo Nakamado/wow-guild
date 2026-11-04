@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Deutlicher Hinweis, solange die Seite im Demo-Modus läuft.
- * Kann für die aktuelle Sitzung eingeklappt werden, bleibt aber als kleiner Hinweis sichtbar.
+ * Deutlicher Hinweis, solange die Seite im Demo-Modus läuft – mit Demo-Steuerung
+ * (Rolle wählen, Livestatus simulieren). Der Erklärtext lässt sich einklappen,
+ * Badge und Steuerung bleiben immer sichtbar.
  */
 const { isDemo } = useSiteConfig()
 const collapsed = ref(false)
@@ -31,7 +32,6 @@ function toggle() {
   <aside
     v-if="isDemo"
     class="demo-banner"
-    :class="{ 'demo-banner--collapsed': collapsed }"
     aria-label="Demo-Hinweis"
   >
     <div class="demo-banner__inner container">
@@ -40,19 +40,16 @@ function toggle() {
         v-show="!collapsed"
         class="demo-banner__text"
       >
-        <span class="demo-banner__short"><strong>Fiktive Beispieldaten</strong> – nichts wird gespeichert.</span>
-        <span class="demo-banner__full">
-          Alle Mitglieder, Charaktere, Gruppen und Clips sind <strong>fiktive Beispieldaten</strong>.
-          Nichts wird dauerhaft gespeichert.
-        </span>
+        <strong>Fiktive Beispieldaten</strong> – nichts wird dauerhaft gespeichert.
       </p>
+      <DemoControls class="demo-banner__controls" />
       <button
         type="button"
         class="demo-banner__toggle"
         :aria-expanded="!collapsed"
         @click="toggle"
       >
-        {{ collapsed ? 'Hinweis anzeigen' : 'Ausblenden' }}
+        {{ collapsed ? 'Hinweis' : 'Ausblenden' }}
       </button>
     </div>
   </aside>
@@ -67,7 +64,8 @@ function toggle() {
 
   &__inner {
     display: flex;
-    gap: var(--space-3);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
     align-items: center;
     min-height: 2.5rem;
     padding-block: var(--space-2);
@@ -79,14 +77,13 @@ function toggle() {
     font-size: var(--text-xs);
     font-weight: var(--font-weight-bold);
     color: var(--color-text-inverse);
-    text-transform: uppercase;
-    letter-spacing: var(--letter-spacing-caps);
+    letter-spacing: 0.04em;
     background: var(--color-lantern);
     border-radius: var(--radius-sm);
   }
 
   &__text {
-    flex: 1;
+    flex: 1 1 16rem;
     font-size: var(--text-xs);
     line-height: var(--line-height-snug);
     color: var(--color-text-muted);
@@ -100,25 +97,13 @@ function toggle() {
     }
   }
 
-  // Auf kleinen Screens nur die Kernaussage zeigen.
-  &__full {
-    display: none;
-
-    @include mq('md') {
-      display: inline;
-    }
-  }
-
-  &__short {
-    @include mq('md') {
-      display: none;
-    }
+  &__controls {
+    margin-left: auto;
   }
 
   &__toggle {
     flex-shrink: 0;
     padding: var(--space-1) var(--space-2);
-    margin-left: auto;
     font-size: var(--text-xs);
     color: var(--color-text-muted);
     text-decoration: underline;

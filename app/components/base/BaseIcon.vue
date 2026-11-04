@@ -15,6 +15,15 @@ const icons = {
   inbox: 'M4 13l2.5-7h11L20 13M4 13v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5M4 13h4l1.5 2.5h5L16 13h4',
   refresh: 'M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4',
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  shield: 'M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z',
+  heal: 'M12 5v14M5 12h14',
+  swords: 'M14.5 4H20v5.5L9 20.5 3.5 15 14.5 4zM5 19l-2 2M7.5 13.5l3 3',
+  users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6',
+  lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+  calendar: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4',
+  play: 'M8 5l11 7-11 7V5z',
+  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+  arrowLeft: 'M19 12H5M11 6l-6 6 6 6',
 } as const
 
 export type IconName = keyof typeof icons

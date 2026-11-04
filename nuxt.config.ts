@@ -75,6 +75,7 @@ export default defineNuxtConfig({
   routeRules: {
     '/impressum': { prerender: true },
     '/datenschutz': { prerender: true },
+    '/regeln': { prerender: true },
   },
   compatibilityDate: '2026-11-04',
 

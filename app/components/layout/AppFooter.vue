@@ -18,8 +18,8 @@ const year = new Date().getFullYear()
       <div class="app-footer__brand">
         <AppLogo />
         <p class="app-footer__about">
-          Community-Seite der WoW:&nbsp;Forever-Gilde rund um Miinyus Community ·
-          {{ guild.factionLabel }} · {{ guild.realm }}
+          Community-Seite der WoW:&nbsp;Forever-Gilde aus Miinyus Community.
+          Wir spielen {{ guild.factionLabel }} auf {{ guild.realm }}.
         </p>
       </div>
 
@@ -73,6 +73,12 @@ const year = new Date().getFullYear()
             >
               Twitch <span class="visually-hidden">(öffnet in neuem Tab)</span>
             </a>
+          </li>
+          <li>
+            <NuxtLink
+              to="/streamer"
+              class="app-footer__link"
+            >Streamer aus der Gilde</NuxtLink>
           </li>
         </ul>
       </div>

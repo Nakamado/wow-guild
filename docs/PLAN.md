@@ -181,3 +181,7 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 2 | Paladine auch als Tank | Paladine erhalten in Forever eine Spott-Fähigkeit |
 | 2 | Levelbereiche aus der Forever-Übersicht, Mindeststufen aus der Classic-Übersicht; neue Forever-Dungeons ohne belegte Mindeststufe (`null`) | keine erfundenen Werte |
 | 2 | Warteliste bereits in der Domain-Logik | Teil der Anmelderegeln; die UI folgt mit Kalender/Raids |
+| 3 | Gildentexte und Regeln als typisierte Content-Dateien (`content/*.ts`) statt `@nuxt/content` | `@nuxt/content` 3 setzt zod 3 und SQLite voraus; für zwei Seiten unverhältnismäßig. Inhalte bleiben editierbar und werden per Schema geprüft |
+| 3 | Betrachter (`/api/me`) wird per Plugin vor dem Rendern geladen | geschützte Daten können so direkt serverseitig gerendert werden |
+| 3 | Hero-Illustration als eigenes, prozedurales SVG | keine fremden Assets; austauschbar, sobald Miinyus Artwork freigegeben ist |
+| 3 | Zusätzliche Seite `/streamer` | „Weitere Gilden-Streamer“ bekommen eine eigene Übersicht (auf der Startseite als Auszug) |

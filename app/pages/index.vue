@@ -1,69 +1,257 @@
 <script setup lang="ts">
-/**
- * Vorläufige Startseite (Phase 1). Der cinematische Hero und die Dashboard-Sektionen
- * folgen in Phase 3 – hier wird bereits das Designsystem im Einsatz gezeigt.
- */
+import { guildContent } from '~~/content/guild'
+
 const { guild, twitch } = useSiteConfig()
 
 useSeoMeta({
   title: 'Start',
-  description: `Community- und Gildenwebseite für Miinyus WoW: Forever Gilde (${guild.factionLabel}).`,
+  description: `${guildContent.tagline} Gilde der ${guild.factionLabel} in WoW: Forever.`,
+  ogTitle: `${guild.name} – Miinyus Gilde für WoW: Forever`,
+  ogDescription: guildContent.tagline,
 })
 
-const upcoming = [
-  {
-    title: 'Dungeon-Finder',
-    text: 'Passende Dungeons für deinen Charakter finden und Gruppen mit klarer Rollenverteilung planen.',
-    to: '/dungeons',
-  },
-  {
-    title: 'Eventkalender',
-    text: 'Discord-Events und Raid-Termine an einem Ort – mit freien Plätzen auf einen Blick.',
-    to: '/kalender',
-  },
-  {
-    title: 'Mitglieder',
-    text: 'Wer spielt was? Hauptcharaktere, Twinks und Rollen der Gildenmitglieder.',
-    to: '/mitglieder',
-  },
-]
+const { can } = useViewer()
+const canViewMembers = computed(() => can('members:view'))
+const requestFetch = useRequestFetch()
+
+const [{ data: guildData }, { data: events, status: eventsStatus, refresh: refreshEvents }, { data: clips }, { data: streamers }] = await Promise.all([
+  useFetch('/api/guild', { key: 'guild' }),
+  useFetch('/api/calendar', { key: 'home-events', query: { upcoming: '1', limit: 5 } }),
+  useFetch('/api/twitch/clips', { key: 'home-clips', query: { period: '30d', sort: 'popular', limit: 3 } }),
+  useFetch('/api/twitch/streamers', { key: 'streamers' }),
+])
+
+const { data: members } = await useAsyncData(
+  'home-members',
+  () => (canViewMembers.value ? requestFetch('/api/members') : Promise.resolve(null)),
+  { watch: [canViewMembers] },
+)
+const memberPreview = computed(() => members.value?.slice(0, 8) ?? [])
 </script>
 
 <template>
-  <div class="home-page">
+  <div class="home">
+    <HeroSection />
+
     <section
-      class="home-page__intro"
-      aria-labelledby="home-title"
+      class="home__intro container"
+      aria-labelledby="home-intro-title"
     >
-      <div class="home-page__intro-inner container">
-        <p class="home-page__eyebrow">
-          Miinyus Community · WoW: Forever
-        </p>
-        <h1
-          id="home-title"
-          class="home-page__title"
+      <div class="home__intro-text">
+        <h2
+          id="home-intro-title"
+          class="home__intro-title"
         >
-          {{ guild.name }}
-        </h1>
-        <p class="home-page__lead">
-          Gemeinsam durch Azeroth – entspannt, hilfsbereit und mit viel Herz.
-          Hier entsteht die Heimat unserer Gilde.
+          {{ guildContent.tagline }}
+        </h2>
+        <p
+          v-for="(paragraph, index) in guildContent.intro"
+          :key="index"
+          class="home__intro-paragraph"
+        >
+          {{ paragraph }}
         </p>
-        <dl class="home-page__facts">
-          <div class="home-page__fact">
-            <dt>Fraktion</dt>
-            <dd>{{ guild.factionLabel }}</dd>
-          </div>
-          <div class="home-page__fact">
-            <dt>Realm</dt>
-            <dd>{{ guild.realm }}</dd>
-          </div>
-          <div class="home-page__fact">
-            <dt>Status</dt>
-            <dd>Im Aufbau</dd>
-          </div>
-        </dl>
-        <div class="home-page__actions">
+        <BaseButton
+          to="/gilde"
+          variant="secondary"
+          class="home__intro-link"
+        >
+          Mehr über die Gilde
+        </BaseButton>
+      </div>
+      <BaseCard
+        as="aside"
+        variant="ornate"
+        padding="lg"
+        class="home__stats"
+        aria-label="Gilde in Zahlen"
+      >
+        <GuildStats
+          v-if="guildData"
+          :stats="guildData.stats"
+        />
+        <LoadingSkeleton
+          v-else
+          :lines="5"
+          label="Statistiken werden geladen …"
+        />
+      </BaseCard>
+    </section>
+
+    <div class="home__columns container">
+      <section
+        class="home__events"
+        aria-labelledby="home-events-title"
+      >
+        <header class="home__section-header">
+          <h2
+            id="home-events-title"
+            class="home__section-title"
+          >
+            Nächste Termine
+          </h2>
+          <NuxtLink
+            to="/kalender"
+            class="home__more"
+          >Zum Kalender</NuxtLink>
+        </header>
+        <ErrorState
+          v-if="eventsStatus === 'error'"
+          @retry="refreshEvents()"
+        />
+        <ul
+          v-else-if="events?.length"
+          class="home__event-list"
+          role="list"
+        >
+          <li
+            v-for="event in events"
+            :key="event.id"
+          >
+            <EventListItem :event="event" />
+          </li>
+        </ul>
+        <EmptyState
+          v-else
+          icon="calendar"
+          title="Gerade ist nichts geplant"
+          description="Erstelle im Dungeon-Finder eine Gruppe – sie erscheint dann hier."
+        >
+          <BaseButton
+            to="/dungeons"
+            size="sm"
+          >
+            Gruppe erstellen
+          </BaseButton>
+        </EmptyState>
+      </section>
+
+      <section
+        class="home__members"
+        aria-labelledby="home-members-title"
+      >
+        <header class="home__section-header">
+          <h2
+            id="home-members-title"
+            class="home__section-title"
+          >
+            Mitglieder
+          </h2>
+          <NuxtLink
+            v-if="canViewMembers"
+            to="/mitglieder"
+            class="home__more"
+          >Alle Mitglieder</NuxtLink>
+        </header>
+        <ul
+          v-if="canViewMembers && memberPreview.length"
+          class="home__member-list"
+          role="list"
+        >
+          <li
+            v-for="member in memberPreview"
+            :key="member.id"
+          >
+            <NuxtLink
+              :to="`/mitglieder/${member.id}`"
+              class="home__member"
+            >
+              <MemberAvatar
+                :name="member.displayName"
+                :src="member.avatarUrl"
+                size="sm"
+              />
+              <span class="home__member-name">{{ member.displayName }}</span>
+              <ClassBadge
+                v-if="member.characters[0]"
+                :class-id="member.characters[0].classId"
+              />
+            </NuxtLink>
+          </li>
+        </ul>
+        <MembersLocked
+          v-else-if="!canViewMembers"
+          compact
+        />
+      </section>
+    </div>
+
+    <section
+      v-if="clips?.length"
+      class="home__clips container"
+      aria-labelledby="home-clips-title"
+    >
+      <header class="home__section-header">
+        <h2
+          id="home-clips-title"
+          class="home__section-title"
+        >
+          Beliebte Clips
+        </h2>
+        <NuxtLink
+          to="/clips"
+          class="home__more"
+        >Alle Clips</NuxtLink>
+      </header>
+      <ul
+        class="home__clip-grid"
+        role="list"
+      >
+        <li
+          v-for="clip in clips"
+          :key="clip.id"
+        >
+          <TwitchClipCard :clip="clip" />
+        </li>
+      </ul>
+    </section>
+
+    <section
+      v-if="streamers?.length"
+      class="home__streamers container"
+      aria-labelledby="home-streamers-title"
+    >
+      <header class="home__section-header">
+        <h2
+          id="home-streamers-title"
+          class="home__section-title"
+        >
+          Streamer aus der Gilde
+        </h2>
+        <NuxtLink
+          to="/streamer"
+          class="home__more"
+        >Alle Streamer</NuxtLink>
+      </header>
+      <ul
+        class="home__streamer-grid"
+        role="list"
+      >
+        <li
+          v-for="streamer in streamers"
+          :key="streamer.id"
+        >
+          <StreamerCard :streamer="streamer" />
+        </li>
+      </ul>
+    </section>
+
+    <section
+      class="home__join container"
+      aria-labelledby="home-join-title"
+    >
+      <div class="home__join-inner">
+        <h2
+          id="home-join-title"
+          class="home__join-title"
+        >
+          Lust mitzuspielen?
+        </h2>
+        <p class="home__join-text">
+          Komm auf Miinyus Discord und frag nach der Rolle „WoW Forever“. Danach kannst du dich hier mit Discord anmelden
+          und Gruppen beitreten.
+        </p>
+        <div class="home__join-actions">
           <BaseButton
             :href="guild.discordInvite"
             external
@@ -76,185 +264,167 @@ const upcoming = [
             :href="twitch.url"
             external
             size="lg"
-            variant="secondary"
+            variant="ghost"
             icon-left="broadcast"
           >
-            Zu Miinyus Twitch
+            Miinyu auf Twitch
           </BaseButton>
         </div>
-      </div>
-    </section>
-
-    <section
-      class="section"
-      aria-labelledby="home-upcoming-title"
-    >
-      <div class="container">
-        <div class="section__header">
-          <p class="section__eyebrow">
-            Bald verfügbar
-          </p>
-          <h2
-            id="home-upcoming-title"
-            class="section__title"
-          >
-            Was dich hier erwartet
-          </h2>
-        </div>
-        <ul
-          class="home-page__grid"
-          role="list"
-        >
-          <BaseCard
-            v-for="item in upcoming"
-            :key="item.to"
-            as="li"
-            variant="interactive"
-            class="home-page__card"
-          >
-            <template #header>
-              <h3 class="home-page__card-title">
-                <NuxtLink
-                  :to="item.to"
-                  class="home-page__card-link"
-                >{{ item.title }}</NuxtLink>
-              </h3>
-              <BaseIcon
-                name="arrowRight"
-                class="home-page__card-icon"
-              />
-            </template>
-            <p>{{ item.text }}</p>
-          </BaseCard>
-        </ul>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped lang="scss">
-.home-page {
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+
   &__intro {
-    position: relative;
-    padding-block: var(--space-20) var(--space-16);
-    overflow: hidden;
-    text-align: center;
+    display: grid;
+    gap: var(--space-12);
+    align-items: start;
+    margin-top: calc(var(--section-gap) * -0.25);
 
-    &::before {
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      content: '';
-      background:
-        radial-gradient(ellipse 45% 60% at 50% 30%, rgb(143 211 255 / 14%), transparent 70%),
-        radial-gradient(circle at 80% 60%, var(--color-lantern-glow), transparent 28%);
-
-      // Weich nach unten ausblenden, damit keine harte Kante am Sektionsende entsteht.
-      mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
+    @include mq('lg') {
+      grid-template-columns: 1.1fr 1fr;
+      gap: var(--space-16);
     }
   }
 
-  &__intro-inner {
+  &__intro-text {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
-    align-items: center;
+    gap: var(--space-5);
+    max-width: 38rem;
   }
 
-  &__eyebrow {
+  &__intro-title {
     font-family: var(--font-serif);
-    font-size: var(--text-lg);
+    font-size: var(--text-2xl);
     font-style: italic;
-    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-snug);
+    letter-spacing: 0;
   }
 
-  &__title {
-    font-size: var(--text-hero);
-    text-transform: uppercase;
-    letter-spacing: var(--letter-spacing-caps);
-    text-shadow: 0 0 40px var(--color-accent-glow);
+  &__intro-paragraph {
+    font-size: var(--text-md);
+    color: var(--color-text-muted);
   }
 
-  &__lead {
+  &__intro-link {
+    align-self: flex-start;
+    margin-top: var(--space-2);
+  }
+
+  &__columns {
+    display: grid;
+    gap: var(--space-16);
+
+    @include mq('lg') {
+      grid-template-columns: 3fr 2fr;
+    }
+  }
+
+  &__section-header {
+    display: flex;
+    gap: var(--space-4);
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+  }
+
+  &__section-title {
+    font-size: var(--text-xl);
+  }
+
+  &__more {
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  &__event-list {
+    border-top: 1px solid var(--color-border);
+  }
+
+  &__member-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: var(--space-2);
+  }
+
+  &__member {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 var(--space-3);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+
+    .class-badge {
+      grid-column: 2;
+      justify-self: start;
+    }
+
+    &:hover {
+      color: var(--color-frost);
+      background: rgb(150 190 255 / 6%);
+    }
+  }
+
+  &__member-name {
+    font-weight: var(--font-weight-medium);
+  }
+
+  &__clip-grid,
+  &__streamer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: var(--space-6);
+  }
+
+  &__join {
+    margin-bottom: calc(var(--section-gap) * -0.5);
+  }
+
+  &__join-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    align-items: flex-start;
+    padding: var(--space-12) var(--space-8);
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 60% 120% at 100% 100%, var(--color-lantern-glow), transparent 60%),
+      radial-gradient(ellipse 50% 100% at 0% 0%, rgb(143 211 255 / 12%), transparent 60%),
+      var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+
+    @include mq('md') {
+      padding: var(--space-16);
+    }
+  }
+
+  &__join-title {
+    font-size: var(--text-2xl);
+  }
+
+  &__join-text {
     max-width: 52ch;
     font-size: var(--text-md);
     color: var(--color-text-muted);
   }
 
-  &__facts {
+  &__join-actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
-    justify-content: center;
-  }
-
-  &__fact {
-    display: flex;
-    gap: var(--space-2);
-    align-items: baseline;
-    padding: var(--space-2) var(--space-4);
-    font-size: var(--text-sm);
-    background: rgb(18 27 58 / 60%);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-pill);
-
-    dt {
-      color: var(--color-text-subtle);
-    }
-
-    dd {
-      margin: 0;
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-frost);
-    }
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    justify-content: center;
-    margin-top: var(--space-2);
-  }
-
-  &__grid {
-    display: grid;
-    gap: var(--space-6);
-
-    @include mq('md') {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  &__card-title {
-    font-size: var(--text-lg);
-  }
-
-  // Ganze Karte klickbar, Link bleibt semantisch im Titel.
-  &__card-link {
-    color: inherit;
-    text-decoration: none;
-
-    &::after {
-      position: absolute;
-      inset: 0;
-      content: '';
-      border-radius: var(--radius-lg);
-    }
-
-    &:hover {
-      color: var(--color-frost);
-    }
-  }
-
-  &__card-icon {
-    color: var(--color-accent);
-    transition: transform var(--duration-base) var(--ease-out);
-  }
-
-  &__card:hover &__card-icon {
-    transform: translateX(4px);
   }
 }
 </style>
