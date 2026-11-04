@@ -1,0 +1,39 @@
+// Layout-Primitive (BEM-Blöcke, global verfügbar).
+.container {
+  width: 100%;
+  max-width: calc(var(--container-max) + 2 * var(--container-padding));
+  padding-inline: var(--container-padding);
+  margin-inline: auto;
+
+  &--narrow {
+    max-width: calc(var(--container-narrow) + 2 * var(--container-padding));
+  }
+}
+
+.section {
+  padding-block: var(--section-gap);
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-10);
+  }
+
+  &__eyebrow {
+    font-family: var(--font-serif);
+    font-size: var(--text-md);
+    font-style: italic;
+    color: var(--color-accent);
+  }
+
+  &__title {
+    font-size: var(--text-2xl);
+  }
+
+  &__lead {
+    max-width: 60ch;
+    font-size: var(--text-md);
+    color: var(--color-text-muted);
+  }
+}

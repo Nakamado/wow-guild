@@ -1,0 +1,43 @@
+// Farbwelt „Ghost Kitsune“: Nachtblau, Eisglühen, Frost-Silber, Kirschblüte, Laternenlicht.
+// Eigene Werte – keine offiziellen Markenfarben von Miinyu oder Blizzard.
+:root {
+  // Flächen
+  --color-bg: #070b1a;
+  --color-bg-deep: #04060f;
+  --color-surface: #0c1329;
+  --color-surface-raised: #121b3a;
+  --color-surface-hover: #172248;
+  --color-overlay: rgb(4 6 15 / 80%);
+
+  // Text (Kontraste gegen --color-bg/--color-surface ≥ 4.5:1)
+  --color-text: #e8eefc;
+  --color-text-muted: #a3b1d1;
+  --color-text-subtle: #7e8cb0;
+  --color-text-inverse: #070b1a;
+
+  // Akzente
+  --color-accent: #8fd3ff; // Eisblau
+  --color-accent-strong: #5bb8f5;
+  --color-accent-glow: rgb(143 211 255 / 35%);
+  --color-frost: #dfe9ff; // Frost-Silber
+  --color-blossom: #f3c4dd; // Kirschblüte
+  --color-lantern: #f5b768; // warmes Laternenlicht, sparsam einsetzen
+  --color-lantern-glow: rgb(245 183 104 / 30%);
+
+  // Linien & Ornamente
+  --color-border: rgb(150 190 255 / 14%);
+  --color-border-strong: rgb(150 190 255 / 28%);
+  --color-ornament: rgb(223 233 255 / 45%);
+  --color-focus: #b8e4ff;
+
+  // Status
+  --color-success: #7ee2a8;
+  --color-warning: #f5c768;
+  --color-danger: #ff8a8a;
+  --color-info: var(--color-accent);
+  --color-live: #ff4d6a;
+
+  // Fraktion
+  --color-alliance: #4a8ff0;
+  --color-horde: #d94b3f;
+}

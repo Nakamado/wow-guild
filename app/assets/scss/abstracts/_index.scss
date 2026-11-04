@@ -1,0 +1,5 @@
+// Wird per `additionalData` in jede SCSS-Datei/Komponente injiziert.
+// Darf KEIN CSS erzeugen – nur Variablen, Funktionen und Mixins.
+@forward 'breakpoints';
+@forward 'functions';
+@forward 'mixins';

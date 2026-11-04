@@ -1,0 +1,5 @@
+// Globaler Stylesheet-Einstieg (in nuxt.config.ts → css).
+// Reihenfolge: Tokens → Base → Layout. Komponentenstyles liegen scoped in den .vue-Dateien.
+@use 'tokens';
+@use 'base';
+@use 'layout';

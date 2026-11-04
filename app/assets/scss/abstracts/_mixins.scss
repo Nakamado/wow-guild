@@ -1,0 +1,79 @@
+/// Sichtbarer, kontrastreicher Fokusring (nur bei Tastaturfokus).
+@mixin focus-ring($offset: 3px) {
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: $offset;
+  }
+}
+
+/// Inhalt visuell ausblenden, für Screenreader aber lesbar lassen.
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/// Animationen nur, wenn der Nutzer keine reduzierte Bewegung wünscht.
+@mixin motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+/// Standard-Kartenfläche des Dashboards.
+@mixin card-surface {
+  background:
+    linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/// Feine Frost-Ornamente an den Ecken eines Elements (zwei Pseudo-Elemente).
+/// Das Element braucht `position: relative`.
+@mixin ornament-border($size: 14px) {
+  &::before,
+  &::after {
+    position: absolute;
+    width: $size;
+    height: $size;
+    pointer-events: none;
+    content: '';
+    border-color: var(--color-ornament);
+    border-style: solid;
+  }
+
+  &::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+    border-top-left-radius: var(--radius-lg);
+  }
+
+  &::after {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 1px 1px 0;
+    border-bottom-right-radius: var(--radius-lg);
+  }
+}
+
+/// Text auf eine Anzahl Zeilen begrenzen.
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+}

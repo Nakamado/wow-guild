@@ -1,0 +1,41 @@
+# Nuxt / Nitro build output
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Vercel
+.vercel
+
+# Dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Tests
+coverage
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# Supabase (lokale CLI-Artefakte)
+supabase/.branches
+supabase/.temp
+
+# Misc
+.DS_Store
+.fleet
+.idea
+*.local
+
+# Env & Zugangsdaten – niemals committen
+.env
+.env.*
+!.env.example
+*.pem
+*.key

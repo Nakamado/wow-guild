@@ -1,0 +1,9 @@
+@use 'sass:map';
+@use '../abstracts/functions' as fn;
+
+// Z-Ebenen als Custom Properties – Quelle ist die Sass-Map in abstracts/_functions.scss.
+:root {
+  @each $name, $value in fn.$z-layers {
+    --z-#{$name}: #{$value};
+  }
+}

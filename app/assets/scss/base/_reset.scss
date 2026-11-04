@@ -1,0 +1,64 @@
+// Schlanker moderner Reset.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  text-size-adjust: none;
+  /* stylelint-disable-next-line property-no-vendor-prefix -- Safari braucht weiterhin das Präfix */
+  -webkit-text-size-adjust: none;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+ul[role='list'],
+ol[role='list'] {
+  padding: 0;
+  list-style: none;
+}
+
+/* stylelint-disable-next-line selector-max-id, selector-id-pattern -- Nuxt-Root-Element */
+#__nuxt {
+  isolation: isolate;
+}

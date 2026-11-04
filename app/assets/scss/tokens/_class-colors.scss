@@ -1,0 +1,16 @@
+// WoW-Klassenfarben (allgemein bekannte Community-Werte).
+// Klassen selbst sind Daten (shared/data, Phase 2); die Farbe wird über den Klassen-Slug
+// als `--class-color: var(--color-class-<slug>)` gesetzt. Neue Forever-Klassen ergänzen
+// hier nur eine Zeile.
+:root {
+  --color-class-warrior: #c69b6d;
+  --color-class-paladin: #f48cba;
+  --color-class-hunter: #aad372;
+  --color-class-rogue: #fff468;
+  --color-class-priest: #fff;
+  --color-class-shaman: #0070dd;
+  --color-class-mage: #3fc7eb;
+  --color-class-warlock: #8788ee;
+  --color-class-druid: #ff7c0a;
+  --color-class-unknown: #a3b1d1;
+}

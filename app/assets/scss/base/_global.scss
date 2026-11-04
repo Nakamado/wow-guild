@@ -1,0 +1,29 @@
+@use '../abstracts' as *;
+
+html {
+  color-scheme: dark;
+  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  background-color: var(--color-bg-deep);
+
+  @include motion-safe {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  // Dezenter Nachthimmel-Verlauf als Grundfläche.
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgb(91 184 245 / 10%), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(243 196 221 / 5%), transparent 70%),
+    var(--color-bg);
+  background-attachment: fixed;
+}
+
+::selection {
+  color: var(--color-text-inverse);
+  background: var(--color-accent);
+}
+
+.visually-hidden {
+  @include visually-hidden;
+}

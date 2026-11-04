@@ -1,0 +1,32 @@
+@use 'sass:map';
+
+// Breakpoints als Sass-Map – CSS Custom Properties funktionieren nicht in Media Queries.
+$breakpoints: (
+  'sm': 480px,
+  'md': 768px,
+  'lg': 1024px,
+  'xl': 1280px,
+  'xxl': 1536px,
+);
+
+/// Mobile-first Media Query.
+/// @example scss
+///   @include mq('md') { … }
+///   @include mq('lg', 'max') { … }
+@mixin mq($name, $direction: 'min') {
+  @if not map.has-key($breakpoints, $name) {
+    @error 'Unbekannter Breakpoint `#{$name}`. Verfügbar: #{map.keys($breakpoints)}';
+  }
+
+  $value: map.get($breakpoints, $name);
+
+  @if $direction == 'max' {
+    @media (width < $value) {
+      @content;
+    }
+  } @else {
+    @media (width >= $value) {
+      @content;
+    }
+  }
+}
