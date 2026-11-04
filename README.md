@@ -4,7 +4,7 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 4 – Dungeon-Finder (Katalog, Gruppenplaner mit Beitreten/Verlassen, Warteliste, Demo).
+> **Status:** Phase 5 – Eventkalender und Raids (Monats- und Listenansicht, Raidgrößen 10/20/40, Warteliste).
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -127,6 +127,16 @@ UI ──► composables ──► server/api ──► useProviders() ──►
   Charakter passen, Mindeststufe blockiert, Levelbereich wird als Hinweis erklärt, volle Rollen → Warteliste
   (falls erlaubt), Nachrücken beim Abmelden. Bearbeiten/Absagen nur Organisation oder Admin.
 - Datum und Uhrzeit werden in Europe/Berlin eingegeben und als UTC gespeichert.
+
+### Eventkalender
+
+- `/kalender` mit Monats- und Listenansicht, Filter nach Art (Dungeon, Raid, Community) und „Abgesagte zeigen“.
+  Monat, Ansicht, Filter und gewählter Tag stehen in der URL.
+- Quellen: Discord Scheduled Events (führend für Community-Events) und Runs dieser Seite (führend für
+  Dungeons/Raids). Per Bot angekündigte Runs erscheinen nur einmal (`discordEventId`).
+- Tage werden in Europe/Berlin zugeordnet (ein Event um 0:30 Uhr gehört zum neuen Tag).
+- Raids (`shared/data/raids.ts`): The Barrow Deeps (10), Hyjal Summit (20), Onyxias Hort (40) – Stufe 60,
+  öffnen am 09.12.2026. Besetzung je Raid frei einstellbar, Warteliste optional.
 
 ### Inhalte bearbeiten
 

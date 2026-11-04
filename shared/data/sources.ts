@@ -24,6 +24,12 @@ export const dataSources = [
     accessedAt: '2026-11-04',
   },
   {
+    id: 'blizzard-forever-raids',
+    title: 'Blizzard – World of Warcraft: Forever Raid Overview (Locations, Raid Sizes, and Attunement)',
+    url: 'https://worldofwarcraft.blizzard.com/news/24303009',
+    accessedAt: '2026-11-04',
+  },
+  {
     id: 'warcrafttavern-forever-race-class',
     title: 'Warcraft Tavern – WoW Forever Race Class Combinations',
     url: 'https://www.warcrafttavern.com/forever/guides/race-class-combos/',

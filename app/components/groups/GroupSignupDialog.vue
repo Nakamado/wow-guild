@@ -23,12 +23,13 @@ const character = computed(() => myCharacters.value.find(entry => entry.id === c
 const slots = computed(() => computeComposition(props.run).slots)
 
 // Beim Öffnen: Hauptcharakter vorauswählen
+// `immediate`: der Dialog kann bereits geöffnet eingeblendet werden (z. B. aus dem Kalender)
 watch(open, (isOpen) => {
   if (!isOpen) return
   submitError.value = null
   const preferred = myCharacters.value.find(entry => entry.isMain) ?? myCharacters.value[0] ?? null
   characterId.value = preferred?.id ?? null
-})
+}, { immediate: true })
 
 // Rolle passend zum Charakter vorauswählen (bevorzugt eine mit freiem Platz)
 watch(character, (current) => {
@@ -38,7 +39,7 @@ watch(character, (current) => {
   }
   if (role.value && current.roles.includes(role.value)) return
   role.value = current.roles.find(entry => (slots.value.find(slot => slot.role === entry)?.open ?? 0) > 0) ?? current.roles[0] ?? null
-})
+}, { immediate: true })
 
 const check = computed(() => {
   if (!character.value || !role.value || !viewer.value.memberId) return null

@@ -1,4 +1,5 @@
 import type { Dungeon } from '../types'
+import { raids } from './raids'
 
 /**
  * Dungeon-Katalog für WoW: Forever.
@@ -115,6 +116,10 @@ export const dungeons: readonly Dungeon[] = [
   classic({ slug: 'scholomance', name: 'Scholomance', nameEn: 'Scholomance', abbreviation: 'Scholo', description: 'Akademie der Nekromantie auf Caer Darrow.', zone: 'Westliche Pestländer', range: [58, 60], minLevel: 45 }),
 ]
 
-export function findDungeon(slug: string, catalog: readonly Dungeon[] = dungeons): Dungeon | undefined {
+/** Alle planbaren Instanzen: Dungeons und Raids */
+export const instances: readonly Dungeon[] = [...dungeons, ...raids]
+
+/** Sucht eine Instanz (Dungeon oder Raid) per Slug. */
+export function findDungeon(slug: string, catalog: readonly Dungeon[] = instances): Dungeon | undefined {
   return catalog.find(dungeon => dungeon.slug === slug)
 }

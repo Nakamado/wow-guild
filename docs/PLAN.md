@@ -188,3 +188,6 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 4 | Eigene Seiten `/gruppen` und `/gruppen/<id>` neben `/dungeons` | Gruppen lassen sich dungeonübergreifend nach Datum und freien Plätzen filtern |
 | 4 | Teilnehmer werden für Besucher serverseitig anonymisiert (Besetzung bleibt sichtbar) | Datenschutz: nur Gildenmitglieder sehen, wer teilnimmt |
 | 4 | Startseite und Kalender zeigen weiterhin die Server-Runs, nicht die lokalen Demo-Änderungen | Kalender-Zusammenführung folgt in Phase 5 |
+| 5 | Raids als eigener Katalog (`shared/data/raids.ts`), Lookup über `instances` | der Dungeon-Katalog bleibt übersichtlich; Raids lassen sich trotzdem planen |
+| 5 | Kalender wird im Browser zusammengeführt (gleiche `mergeEvents`-Logik wie auf dem Server) | so erscheinen auch lokale Demo-Änderungen; `/api/calendar` bleibt für spätere Exporte |
+| 5 | Organisatorische Hinweise zu Raids über die Run-Beschreibung (mehrzeilig) | kein eigenes Feld nötig, bis echte Anforderungen feststehen |

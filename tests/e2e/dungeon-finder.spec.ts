@@ -87,7 +87,7 @@ test.describe('Gruppenplaner (Demo)', () => {
     await page.getByRole('button', { name: 'Gruppe erstellen' }).first().click()
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog.getByLabel('Dungeon')).toHaveValue('the-stockade')
+    await expect(dialog.getByLabel('Dungeon oder Raid')).toHaveValue('the-stockade')
     await dialog.getByLabel('Titel').fill('E2E-Verlies')
     // Zu viele Plätze werden mit Begründung abgelehnt
     await dialog.getByLabel('Schadensverursacher').fill('5')

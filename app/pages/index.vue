@@ -14,12 +14,17 @@ const { can } = useViewer()
 const canViewMembers = computed(() => can('members:view'))
 const requestFetch = useRequestFetch()
 
-const [{ data: guildData }, { data: events, status: eventsStatus, refresh: refreshEvents }, { data: clips }, { data: streamers }] = await Promise.all([
+const [{ data: guildData }, { data: clips }, { data: streamers }] = await Promise.all([
   useFetch('/api/guild', { key: 'guild' }),
-  useFetch('/api/calendar', { key: 'home-events', query: { upcoming: '1', limit: 5 } }),
   useFetch('/api/twitch/clips', { key: 'home-clips', query: { period: '30d', sort: 'popular', limit: 3 } }),
   useFetch('/api/twitch/streamers', { key: 'streamers' }),
 ])
+
+// Gleiche Quelle wie der Kalender – inklusive lokaler Demo-Änderungen
+const calendar = useCalendar()
+const eventsStatus = calendar.status
+const refreshEvents = calendar.refresh
+const events = computed(() => calendar.filterEvents(calendar.events.value, { upcomingOnly: true, includeCancelled: true }).slice(0, 5))
 
 const { data: members } = await useAsyncData(
   'home-members',

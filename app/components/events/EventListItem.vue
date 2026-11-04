@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { CalendarEvent } from '#shared/types'
 
-const props = defineProps<{ event: CalendarEvent }>()
+const props = withDefaults(defineProps<{
+  event: CalendarEvent
+  /** Titel öffnet die Details (Kalender), statt direkt zur Gruppe zu verlinken */
+  clickable?: boolean
+}>(), { clickable: false })
+
+defineEmits<{ open: [event: CalendarEvent] }>()
 
 const date = computed(() => new Date(props.event.startsAt))
 const day = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISPLAY_TIME_ZONE, day: '2-digit' }).format(date.value))
@@ -31,7 +37,24 @@ const isCancelled = computed(() => props.event.status === 'cancelled')
     </time>
     <div class="event-item__body">
       <h3 class="event-item__title">
-        {{ event.title }}
+        <button
+          v-if="clickable"
+          type="button"
+          class="event-item__link event-item__link--button"
+          @click="$emit('open', event)"
+        >
+          {{ event.title }}
+        </button>
+        <NuxtLink
+          v-else-if="event.runId"
+          :to="`/gruppen/${event.runId}`"
+          class="event-item__link"
+        >
+          {{ event.title }}
+        </NuxtLink>
+        <template v-else>
+          {{ event.title }}
+        </template>
       </h3>
       <p class="event-item__meta">
         <span>{{ weekday }}, {{ formatTime(event.startsAt) }} Uhr</span>
@@ -121,6 +144,15 @@ const isCancelled = computed(() => props.event.status === 'cancelled')
     &:hover {
       color: var(--color-frost);
       text-decoration: underline;
+    }
+
+    &--button {
+      padding: 0;
+      font-weight: inherit;
+      text-align: left;
+      border-radius: var(--radius-sm);
+
+      @include focus-ring(2px);
     }
   }
 

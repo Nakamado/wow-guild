@@ -1,6 +1,9 @@
 import type { GroupRun, Participant, RoleId } from '../../shared/types'
 import { at } from './time'
 
+/** Raids öffnen am 09.12.2026 – Demo-Raidtermine liegen nie davor. */
+const RAIDS_OPEN = Date.parse('2026-12-10T18:00:00.000Z')
+
 /**
  * EINDEUTIG FIKTIVE Runs, relativ zum aktuellen Datum erzeugt.
  * Deckt typische Zustände ab: offen, voll, mit Warteliste, abgesagt, abgeschlossen.
@@ -95,6 +98,24 @@ export function createDemoRuns(now: Date): GroupRun[] {
         p('demo-member-04', 'demo-char-06', 'dps'),
       ],
       waitlistEnabled: false,
+    },
+    {
+      ...base,
+      id: 'demo-run-07',
+      dungeonSlug: 'the-barrow-deeps',
+      title: 'Erster Raidabend: Barrow Deeps',
+      description: 'Unser erster Raid! Treffpunkt 15 Minuten vorher am Eingang. Bitte Discord-Sprachkanal „Raid“ betreten.\nLoot: Bedarf vor Gier, Raidleitung entscheidet bei Gleichstand.',
+      startsAt: new Date(Math.max(Date.parse(at(now, 9, 18)), RAIDS_OPEN)).toISOString(),
+      organizerId: 'demo-member-01',
+      status: 'open',
+      capacity: { tank: 2, healer: 3, dps: 5 },
+      participants: [
+        p('demo-member-02', 'demo-char-03', 'tank'),
+        p('demo-member-01', 'demo-char-01', 'healer'),
+        p('demo-member-09', 'demo-char-13', 'healer'),
+        p('demo-member-07', 'demo-char-10', 'dps', 8),
+      ],
+      waitlistEnabled: true,
     },
     {
       ...base,

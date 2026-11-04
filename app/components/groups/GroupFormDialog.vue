@@ -17,7 +17,7 @@ const props = withDefaults(
 const emit = defineEmits<{ saved: [run: GroupRun] }>()
 
 const { isDemo } = useSiteConfig()
-const { createRun, updateRun, dungeons } = useRuns()
+const { createRun, updateRun, dungeons, raids } = useRuns()
 const selectableDungeons = computed(() => [...dungeons].sort((a, b) => a.levelRange.min - b.levelRange.min || a.name.localeCompare(b.name, 'de')))
 
 const ids = { dungeon: useId(), title: useId(), date: useId(), time: useId(), description: useId(), waitlist: useId(), error: useId() }
@@ -131,7 +131,7 @@ function submit() {
           <label
             :for="ids.dungeon"
             class="group-form__label"
-          >Dungeon</label>
+          >Dungeon oder Raid</label>
           <select
             :id="ids.dungeon"
             v-model="form.dungeonSlug"
@@ -142,21 +142,35 @@ function submit() {
               value=""
               disabled
             >
-              Dungeon auswählen
+              Instanz auswählen
             </option>
-            <option
-              v-for="entry in selectableDungeons"
-              :key="entry.slug"
-              :value="entry.slug"
-            >
-              {{ entry.name }} ({{ entry.levelRange.min }}–{{ entry.levelRange.max }})
-            </option>
+            <optgroup label="Dungeons">
+              <option
+                v-for="entry in selectableDungeons"
+                :key="entry.slug"
+                :value="entry.slug"
+              >
+                {{ entry.name }} ({{ entry.levelRange.min }}–{{ entry.levelRange.max }})
+              </option>
+            </optgroup>
+            <optgroup label="Raids">
+              <option
+                v-for="entry in raids"
+                :key="entry.slug"
+                :value="entry.slug"
+              >
+                {{ entry.name }} ({{ entry.groupSize }} Spieler)
+              </option>
+            </optgroup>
           </select>
           <p
             v-if="dungeon"
             class="group-form__hint"
           >
             Empfohlen ab Stufe {{ dungeon.levelRange.min }}, für bis zu {{ dungeon.groupSize }} Spieler.
+            <template v-if="dungeon.note">
+              {{ dungeon.note }}
+            </template>
           </p>
         </div>
       </div>

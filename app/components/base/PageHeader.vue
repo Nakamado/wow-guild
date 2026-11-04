@@ -71,7 +71,7 @@ withDefaults(
   }
 
   &__title {
-    font-size: var(--text-3xl);
+    font-size: clamp(1.75rem, 0.9rem + 4.2vw, 4rem);
     text-transform: uppercase;
     letter-spacing: var(--letter-spacing-caps);
   }

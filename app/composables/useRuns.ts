@@ -1,4 +1,5 @@
 import { dungeons, findDungeon } from '#shared/data/dungeons'
+import { raids } from '#shared/data/raids'
 import { fail, ok, type DomainResult } from '#shared/domain/result'
 import {
   cancelRun as cancelRunRule,
@@ -199,6 +200,7 @@ export function useRuns() {
     characterById,
     hasDemoChanges: computed(() => Object.keys(overrides.value).length > 0),
     dungeons,
+    raids,
     createRun,
     updateRun,
     cancelRun,

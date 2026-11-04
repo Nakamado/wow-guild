@@ -1,12 +1,12 @@
-import { dungeons, findDungeon } from '#shared/data/dungeons'
+import { findDungeon, instances } from '#shared/data/dungeons'
 import type { GuildInfo } from '#shared/types'
 import type { DungeonCatalogProvider, GuildProvider } from '../types'
 
-/** Dungeon-Katalog aus statischen, quellenbelegten Daten (Demo und Live identisch). */
+/** Instanz-Katalog (Dungeons und Raids) aus statischen, quellenbelegten Daten (Demo und Live identisch). */
 export function createStaticDungeonProvider(): DungeonCatalogProvider {
   return {
     async list() {
-      return dungeons.map(dungeon => ({ ...dungeon }))
+      return instances.map(dungeon => ({ ...dungeon }))
     },
     async get(slug) {
       const dungeon = findDungeon(slug)

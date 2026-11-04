@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createDemoDataset } from '../../data/demo'
 import { gameClasses } from '../../shared/data/classes'
-import { dungeons, findDungeon } from '../../shared/data/dungeons'
+import { dungeons, findDungeon, instances } from '../../shared/data/dungeons'
+import { raids } from '../../shared/data/raids'
 import { races } from '../../shared/data/races'
 import { dataSources } from '../../shared/data/sources'
 import { validateCharacter } from '../../shared/domain/characters'
@@ -31,15 +32,15 @@ describe('statische Spieldaten', () => {
     for (const source of dataSources) SourceRefSchema.parse(source)
     for (const gameClass of gameClasses) GameClassSchema.parse(gameClass)
     for (const race of races) RaceSchema.parse(race)
-    for (const dungeon of dungeons) DungeonSchema.parse(dungeon)
+    for (const dungeon of instances) DungeonSchema.parse(dungeon)
 
     expect(unique(gameClasses.map(c => c.id))).toBe(true)
     expect(unique(races.map(r => r.id))).toBe(true)
-    expect(unique(dungeons.map(d => d.slug))).toBe(true)
+    expect(unique(instances.map(d => d.slug))).toBe(true)
   })
 
   it('verweisen nur auf existierende Quellen', () => {
-    const referenced = [...gameClasses, ...races, ...dungeons].flatMap(entry => entry.sourceIds)
+    const referenced = [...gameClasses, ...races, ...instances].flatMap(entry => entry.sourceIds)
     expect(referenced.filter(id => !sourceIds.has(id))).toEqual([])
   })
 
@@ -62,6 +63,16 @@ describe('statische Spieldaten', () => {
     }
     // Alle 9 neuen Forever-Dungeons sind erfasst
     expect(dungeons.filter(d => d.isNewInForever)).toHaveLength(9)
+  })
+
+  it('Raids sind Stufe-60-Instanzen mit offiziellen Raidgrößen', () => {
+    expect(raids.map(raid => [raid.slug, raid.groupSize])).toEqual([
+      ['the-barrow-deeps', 10],
+      ['hyjal-summit', 20],
+      ['onyxias-lair', 40],
+    ])
+    expect(raids.every(raid => raid.kind === 'raid' && raid.minLevel === 60)).toBe(true)
+    expect(dungeons.every(dungeon => dungeon.kind === 'dungeon')).toBe(true)
   })
 })
 
@@ -124,6 +135,12 @@ describe('Demo-Datensatz', () => {
       }
       expect(computeComposition(original).filled).toBe(original.participants.length)
     }
+  })
+
+  it('plant Demo-Raids nie vor der Raid-Öffnung', () => {
+    const raidRuns = data.runs.filter(r => findDungeon(r.dungeonSlug)?.kind === 'raid')
+    expect(raidRuns.length).toBeGreaterThan(0)
+    expect(raidRuns.every(r => Date.parse(r.startsAt) >= Date.parse('2026-12-09T00:00:00Z'))).toBe(true)
   })
 
   it('erzeugt Termine relativ zum aktuellen Datum', () => {
