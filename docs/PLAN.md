@@ -168,3 +168,16 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 - Freigabe von Miinyu für Branding-Assets (Modell-Art, Logo)
 - Offizielle Gildenregeln
 - Impressums-Angaben (Dustin)
+
+## 9. Anpassungen während der Umsetzung
+
+| Phase | Anpassung | Grund |
+|---|---|---|
+| 1 | TypeScript 5.9 statt 7.0 | vue-tsc-Kompatibilität mit dem nativen TS 7 nicht belegt |
+| 1 | Stylelint 17 statt 18 | `stylelint-selector-bem-pattern` unterstützt 18 noch nicht |
+| 1 | Schriften über Fontsource-Pakete statt `@nuxt/fonts` | ebenfalls selbst gehostet, aber deterministisch und ohne Netzabruf beim Build |
+| 1 | `@nuxt/content` und `nuxt-auth-utils` erst in Phase 3 bzw. 6 | erst dann benötigt |
+| 2 | Erlaubte Klassen hängen am **Volk je Fraktion** | Forever hebt die Fraktionsbindung von Paladin/Schamane auf (z. B. Zwerg-Schamane, Untoter Paladin); Himmelsgeborene gibt es für beide Fraktionen mit unterschiedlichen Klassen |
+| 2 | Paladine auch als Tank | Paladine erhalten in Forever eine Spott-Fähigkeit |
+| 2 | Levelbereiche aus der Forever-Übersicht, Mindeststufen aus der Classic-Übersicht; neue Forever-Dungeons ohne belegte Mindeststufe (`null`) | keine erfundenen Werte |
+| 2 | Warteliste bereits in der Domain-Logik | Teil der Anmelderegeln; die UI folgt mit Kalender/Raids |

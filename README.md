@@ -4,7 +4,7 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 1 – Fundament (Projektgerüst, Designsystem, Layout).
+> **Status:** Phase 2 – Domain (Typen, Spieldaten, Demo-Daten, Provider, Geschäftslogik).
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -83,12 +83,37 @@ app/
 ├── layouts/
 ├── pages/
 └── utils/
+server/
+├── providers/     # austauschbare Datenquellen: types, registry, demo/, static/
+└── utils/         # z. B. useProviders()
+shared/            # von app/ und server/ gemeinsam genutzt (Alias #shared)
+├── schemas/       # Zod-Schemas (Laufzeitvalidierung)
+├── types/         # daraus abgeleitete TypeScript-Typen
+├── data/          # Klassen, Völker, Rollen, Dungeons – mit Quellenangaben
+├── domain/        # reine Geschäftslogik (Anmeldung, Levelprüfung, Rechte, Kalender …)
+└── utils/         # z. B. Datumsformatierung (Europe/Berlin)
+data/demo/         # eindeutig fiktive Demo-Daten (relativ zum aktuellen Datum)
 tests/
 ├── unit/          # reine Logik (Node)
 ├── nuxt/          # Komponenten/Composables (Nuxt-Umgebung)
 └── e2e/           # Playwright
 docs/PLAN.md
 ```
+
+### Datenarchitektur
+
+```text
+UI ──► composables ──► server/api ──► useProviders() ──► Demo | Live (Discord, Twitch, Supabase)
+                                         ▲
+                     shared/domain (reine Regeln, in Demo und Live identisch)
+```
+
+- Jede Datenquelle hat ein Interface (`server/providers/types.ts`). Die Registry wählt je Quelle Demo oder
+  Live – fehlende Zugangsdaten betreffen nur die jeweilige Quelle. Beim Start wird protokolliert, welche
+  Quelle aktiv ist (nur Variablennamen, nie Werte).
+- Klassen, Völker und Dungeons sind **Daten**, keine Enums, und verweisen per `sourceIds` auf
+  `shared/data/sources.ts`. Neue Forever-Inhalte = neuer Datensatz.
+- Geschäftsregeln (`shared/domain/`) sind reine Funktionen und vollständig unit-getestet.
 
 ### CSS-Konventionen
 
