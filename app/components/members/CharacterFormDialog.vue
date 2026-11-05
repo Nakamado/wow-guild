@@ -139,6 +139,7 @@ async function submit() {
             <input
               :id="ids.firstName"
               v-model="form.firstName"
+              autofocus
               type="text"
               class="character-form__input"
               autocomplete="off"

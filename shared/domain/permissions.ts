@@ -63,13 +63,21 @@ export function parseIdList(value: string | number | undefined | null): string[]
   return String(value ?? '').split(',').map(id => id.trim()).filter(Boolean)
 }
 
-/** Leitet die Zugriffsstufe aus den (serverseitig verifizierten) Discord-Rollen ab. */
+/** Trägt das Mitglied mindestens eine der (kommagetrennt) konfigurierten Rollen? */
+export function hasAnyRole(roleIds: readonly string[], configured: string | undefined | null): boolean {
+  return parseIdList(configured).some(id => roleIds.includes(id))
+}
+
+/**
+ * Leitet die Zugriffsstufe aus den (serverseitig verifizierten) Discord-Rollen ab.
+ * Rollen-IDs dürfen kommagetrennt mehrere Rollen enthalten (z. B. Admin und MOD).
+ */
 export function accessLevelFromRoles(
   roleIds: readonly string[] | null,
   config: { memberRoleId: string, adminRoleId: string },
 ): AccessLevel {
   if (roleIds === null) return 'user' // angemeldet, aber nicht auf dem Server
-  if (config.adminRoleId && roleIds.includes(config.adminRoleId)) return 'admin'
-  if (config.memberRoleId && roleIds.includes(config.memberRoleId)) return 'member'
+  if (hasAnyRole(roleIds, config.adminRoleId)) return 'admin'
+  if (hasAnyRole(roleIds, config.memberRoleId)) return 'member'
   return 'user'
 }

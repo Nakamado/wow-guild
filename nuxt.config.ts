@@ -75,6 +75,15 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    // Grundlegende Sicherheits-Header für alle Antworten
+    '/**': {
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+      },
+    },
     '/impressum': { prerender: true },
     '/datenschutz': { prerender: true },
     '/regeln': { prerender: true },

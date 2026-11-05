@@ -1,3 +1,4 @@
+import { hasAnyRole } from '#shared/domain/permissions'
 import type { CommunityMember, DiscordEvent, EventStatus } from '#shared/types'
 import type { DiscordGuildMember, DiscordScheduledEvent, DiscordUser } from './schemas'
 
@@ -29,8 +30,8 @@ export function memberToCommunityMember(
     avatarUrl: discordAvatarUrl(user, config.guildId, member.avatar),
     profileUrl: `https://discord.com/users/${user.id}`,
     preferredRoles: [],
-    isGuildMember: Boolean(config.memberRoleId) && member.roles.includes(config.memberRoleId),
-    isAdmin: Boolean(config.adminRoleId) && member.roles.includes(config.adminRoleId),
+    isGuildMember: hasAnyRole(member.roles, config.memberRoleId),
+    isAdmin: hasAnyRole(member.roles, config.adminRoleId),
     source: 'discord',
   }
 }

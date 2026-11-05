@@ -120,16 +120,21 @@ async function onLogout() {
     }
   }
 
+  // Auf kleinen Bildschirmen nur für Screenreader (der Button braucht einen Namen)
   &__name {
-    display: none;
-    max-width: 10rem;
-    overflow: hidden;
-    font-size: var(--text-sm);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    @include visually-hidden;
 
     @include mq('xl') {
-      display: inline;
+      position: static;
+      width: auto;
+      max-width: 10rem;
+      height: auto;
+      overflow: hidden;
+      font-size: var(--text-sm);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin: 0;
+      clip-path: none;
     }
   }
 

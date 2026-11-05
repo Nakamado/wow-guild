@@ -201,3 +201,8 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 6 | Demo-Persona „Neues Mitglied“ (ohne Charaktere) | Onboarding lässt sich in der Demo ausprobieren |
 | 6 | Zusätzliche Admins per Discord-User-ID (`NUXT_ADMIN_USER_IDS`) | Betreiber der Seite brauchen Admin-Rechte, ohne im Discord Moderator zu sein |
 | 6 | Twitch- und Discord-Clients ohne SDK, mit eigenem Zod-Schema und einem Wiederholversuch | wenige Endpunkte; Antworten werden validiert statt blind übernommen |
+| 7 | Ausfälle von Twitch/Discord werden abgefangen (Ersatzdaten, eine Minute Pause bis zum nächsten Versuch) | falsche Zugangsdaten oder Störungen dürfen keine Fehlerseite erzeugen |
+| 7 | Supabase-URL wird bereinigt, öffentliche Keys werden beim Start erkannt und abgelehnt | häufigste Einrichtungsfehler, sonst nur kryptische Datenbankfehler |
+| 7 | Rollen-IDs kommagetrennt (mehrere Admin-/Mitgliedsrollen) | z. B. Admin und MOD als Gildenleitung |
+| 7 | Barrierefreiheit per axe-core in den E2E-Tests statt Lighthouse | reproduzierbar im Test-Lauf, ohne zusätzliche Infrastruktur |
+| 7 | `h3` als direkte Abhängigkeit | für saubere HTTP-Fehler in testbaren Server-Modulen |

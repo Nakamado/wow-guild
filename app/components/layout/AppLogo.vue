@@ -10,7 +10,6 @@ const { guild } = useSiteConfig()
   <NuxtLink
     to="/"
     class="app-logo"
-    :aria-label="`${guild.name} – zur Startseite`"
   >
     <svg
       class="app-logo__emblem"
@@ -103,6 +102,7 @@ const { guild } = useSiteConfig()
     <span class="app-logo__text">
       <span class="app-logo__name">{{ guild.name }}</span>
       <span class="app-logo__tagline">WoW: Forever</span>
+      <span class="visually-hidden">, zur Startseite</span>
     </span>
   </NuxtLink>
 </template>

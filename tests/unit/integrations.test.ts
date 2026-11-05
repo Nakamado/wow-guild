@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createTtlCache, IntegrationError, requestJson } from '../../server/lib/http'
+import { withFallback } from '../../server/lib/resilience'
+import { classifySupabaseKey, normalizeSupabaseUrl } from '../../server/lib/supabase-config'
+import { resilientTwitch } from '../../server/providers/live'
+import { accessLevelFromRoles } from '../../shared/domain/permissions'
 import { createDiscordBotClient, createDiscordEventProvider, createDiscordMemberProvider, fetchOwnGuildMember } from '../../server/providers/discord'
 import { discordAvatarUrl, scheduledEventToDiscordEvent } from '../../server/providers/discord/normalize'
 import { createTwitchClient, createTwitchProvider, streamToStatus } from '../../server/providers/twitch'
@@ -221,5 +225,61 @@ describe('safeReturnPath', () => {
     expect(safeReturnPath('https://evil.example')).toBe('/')
     expect(safeReturnPath('/\\evil.example')).toBe('/')
     expect(safeReturnPath(undefined)).toBe('/')
+  })
+})
+
+describe('Robustheit', () => {
+  it('liefert nach einem Fehler Ersatzdaten und fragt erst nach der Pause erneut an', async () => {
+    let time = 0
+    const action = vi.fn().mockRejectedValueOnce(new Error('twitch 400')).mockResolvedValue('echt')
+    const log = vi.fn()
+    const guarded = withFallback(action, { label: 'test', fallback: () => 'ersatz', cooldownMs: 1000, now: () => time, log })
+
+    expect(await guarded()).toBe('ersatz')
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('[test] nicht erreichbar (twitch 400)'))
+    time = 500
+    expect(await guarded()).toBe('ersatz')
+    expect(action).toHaveBeenCalledTimes(1)
+    time = 1500
+    expect(await guarded()).toBe('echt')
+  })
+
+  it('meldet Twitch-Ausfälle als „offline“ statt als Fehler', async () => {
+    const broken = {
+      getStreamStatus: () => Promise.reject(new Error('down')),
+      listClips: () => Promise.reject(new Error('down')),
+      listStreamers: () => Promise.reject(new Error('down')),
+    }
+    const provider = resilientTwitch(broken, 'miinyu')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(provider.getStreamStatus()).resolves.toMatchObject({ channel: 'miinyu', isLive: false })
+    await expect(provider.listStreamers()).resolves.toEqual([])
+    await expect(provider.listClips({ period: '7d', sort: 'recent', limit: 3 })).rejects.toMatchObject({ statusCode: 503 })
+    warn.mockRestore()
+  })
+})
+
+describe('Supabase-Konfiguration', () => {
+  it('bereinigt die Projekt-URL', () => {
+    expect(normalizeSupabaseUrl('https://abc.supabase.co/rest/v1/')).toBe('https://abc.supabase.co')
+    expect(normalizeSupabaseUrl(' https://abc.supabase.co/ ')).toBe('https://abc.supabase.co')
+  })
+
+  it('erkennt öffentliche und geheime Keys', () => {
+    const jwt = (role: string) => `x.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.y`
+    expect(classifySupabaseKey('sb_secret_abc')).toBe('secret')
+    expect(classifySupabaseKey('sb_publishable_abc')).toBe('public')
+    expect(classifySupabaseKey(jwt('anon'))).toBe('public')
+    expect(classifySupabaseKey(jwt('service_role'))).toBe('secret')
+    expect(classifySupabaseKey('irgendwas')).toBe('unknown')
+  })
+})
+
+describe('Mehrere Rollen-IDs', () => {
+  it('akzeptiert kommagetrennte Admin-Rollen', () => {
+    const config = { memberRoleId: 'wow', adminRoleId: 'admin, mod' }
+    expect(accessLevelFromRoles(['mod'], config)).toBe('admin')
+    expect(accessLevelFromRoles(['wow'], config)).toBe('member')
+    expect(accessLevelFromRoles(['andere'], config)).toBe('user')
   })
 })

@@ -4,8 +4,8 @@ Community- und Gildenwebseite für die **WoW: Forever**-Gilde rund um die Twitch
 [Miinyu](https://www.twitch.tv/miinyu). Mit Gildeninfos, Mitglieder- und Charakterübersicht, Dungeon-Finder samt
 Gruppenplaner, Eventkalender und Twitch-Integration.
 
-> **Status:** Phase 6 – Integrationen (Discord-Login & Rollen, Mitgliederliste per Bot, Scheduled Events, Twitch Helix,
-> Supabase mit atomarer Anmeldung, Charakter-Onboarding & Einstellungen).
+> **Status:** Phase 7 – Qualitätssicherung abgeschlossen (Tests, Barrierefreiheit, Robustheit, Deployment-Anleitung).
+> Alle Funktionen laufen im Demo-Modus; live fehlen nur noch der Discord-Bot auf dem Server und das Vercel-Projekt.
 > Architektur, Entscheidungen und Roadmap: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Tech-Stack
@@ -186,6 +186,13 @@ Gildentexte und Regeln stehen in `content/guild.ts` und `content/rules.ts`. Einf
 die Struktur. Solange `isDraft` bzw. `isExample` auf `true` steht, zeigt die Seite einen Hinweis, dass es sich um
 Platzhalter handelt.
 
+### Qualität
+
+- **Tests:** Unit (Domain, Integrationen mit simulierten APIs, Datenbank-Migration in PGlite), Komponenten, E2E
+  (Desktop und Mobil) inkl. automatischer Barrierefreiheitsprüfung (axe-core, WCAG 2.1 AA).
+- **Sicherheits-Header** für alle Seiten (`nosniff`, Referrer-Policy, Frame-Schutz, Permissions-Policy).
+- Mehrere Rollen-IDs sind kommagetrennt möglich, z. B. `NUXT_DISCORD_ADMIN_ROLE_ID=admin-id,mod-id`.
+
 ### Datenschutz & Berechtigungen
 
 - Mitgliederliste, Profile und Charaktere liefert der Server nur an Gildenmitglieder (`requirePermission`).
@@ -228,8 +235,45 @@ Für Playwright einmalig die Browser installieren: `pnpm exec playwright install
 
 ## Deployment auf Vercel
 
-_Ausführliche Anleitung folgt in Phase 7._ Kurzfassung: Repository in Vercel importieren (Framework-Preset „Nuxt“
-wird erkannt), Umgebungsvariablen aus `.env.example` im Vercel-Dashboard hinterlegen, deployen.
+1. Auf [vercel.com](https://vercel.com) mit GitHub anmelden → **Add New → Project** → Repository
+   `Nakamado/wow-guild` importieren. Das Framework-Preset „Nuxt“ wird erkannt; Build-Einstellungen nicht ändern
+   (pnpm wird über `pnpm-lock.yaml` erkannt).
+2. **Environment Variables** (Settings → Environment Variables) für *Production* und *Preview* anlegen:
+
+   | Variable | Wert |
+   |---|---|
+   | `NUXT_PUBLIC_SITE_URL` | die Vercel-Domain, z. B. `https://wow-guild.vercel.app` (ohne `/` am Ende) |
+   | `NUXT_PUBLIC_DEMO_MODE` | `false` für die echte Seite, `true` für eine reine Demo |
+   | `NUXT_APP_SECRET` | neues Zufalls-Secret, mind. 32 Zeichen (nicht das lokale) |
+   | alle weiteren | wie in deiner lokalen `.env` (Discord, Twitch, Supabase, Gilde) |
+
+   Ein zufälliges Secret erzeugt PowerShell z. B. mit
+   `[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))`.
+3. **Deploy** klicken. Danach in der **Discord-App unter OAuth2 → Redirects** zusätzlich
+   `https://<deine-domain>/auth/discord` eintragen und speichern.
+4. Testen: `/api/me` aufrufen (zeigt `loginAvailable`), dann anmelden. In den Vercel-**Logs** steht beim ersten
+   Aufruf, welche Quellen live sind (`[providers] …`).
+
+**Preview-Deployments:** Jeder Pull Request bekommt eine eigene Vorschau-URL. Der Discord-Login funktioniert dort
+nur, wenn deren Adresse ebenfalls als Redirect eingetragen ist – für Vorschauen am einfachsten
+`NUXT_PUBLIC_DEMO_MODE=true` nur für *Preview* setzen.
+
+**Eigene Domain:** In Vercel unter *Settings → Domains* hinzufügen, dann `NUXT_PUBLIC_SITE_URL` und den
+Discord-Redirect auf die neue Domain umstellen.
+
+## Betrieb & Fehlersuche
+
+| Meldung im Log | Ursache | Lösung |
+|---|---|---|
+| `[providers] … demo (missing-credentials: …)` | Variable fehlt | genannte Variable setzen, neu deployen |
+| `Session nicht lesbar – ist NUXT_APP_SECRET gesetzt?` | Secret fehlt oder ist leer | `NUXT_APP_SECRET` setzen; lokal die Zeile auskommentieren |
+| `[supabase] … ist ein öffentlicher Key` | publishable/anon-Key statt Secret | Secret- bzw. `service_role`-Key eintragen |
+| `[twitch.status] nicht erreichbar (twitch 400 …)` | Twitch-Client-ID/Secret falsch | Werte in der Twitch-Konsole prüfen |
+| `[discord.members] nicht erreichbar (discord 403 …)` | Bot nicht auf dem Server oder Intent fehlt | Bot einladen, „Server Members Intent“ aktivieren |
+| Discord: „Ungültiges OAuth2 redirect_uri“ | Redirect nicht eingetragen | `<SITE_URL>/auth/discord` exakt eintragen und speichern |
+
+Fällt Twitch oder Discord aus, zeigt die Seite Ersatzinhalte (offline, leere Liste, Hinweis) und fragt den Dienst
+erst nach einer Minute erneut an.
 
 ## Rechtliches
 

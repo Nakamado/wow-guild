@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext } from '@playwright/test'
+import { gotoReady } from './support/helpers'
 
 const PERSONA_COOKIE = 'wow-guild-demo-persona'
 
@@ -8,7 +9,7 @@ async function asPersona(context: BrowserContext, baseURL: string | undefined, p
 
 test.describe('Dungeon-Katalog', () => {
   test('sucht und filtert Dungeons', async ({ page }) => {
-    await page.goto('/dungeons')
+    await gotoReady(page, '/dungeons')
     const cards = page.locator('.dungeon-card')
     await expect(cards).toHaveCount(35)
 
@@ -17,11 +18,14 @@ test.describe('Dungeon-Katalog', () => {
     await expect(page).toHaveURL(/q=todesminen/)
 
     await page.getByRole('button', { name: 'Filter zurücksetzen' }).first().click()
+    // Erst weiter, wenn das Zurücksetzen in der URL angekommen ist (sonst überschreibt es die Eingabe)
+    await expect(page).not.toHaveURL(/q=/)
     await page.getByLabel('Für Stufe').fill('60')
     await page.getByLabel('Für Stufe').blur()
     await expect.poll(() => cards.count()).toBeLessThan(35)
 
     await page.getByRole('button', { name: 'Filter zurücksetzen' }).first().click()
+    await expect(page).not.toHaveURL(/stufe=|level=/)
     await page.getByLabel('Nur mit geplanten Gruppen').check()
     await expect(page.getByRole('heading', { name: 'Die Todesminen' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Gnomeregan' })).toHaveCount(0)

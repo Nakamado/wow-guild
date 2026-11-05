@@ -1,3 +1,4 @@
+import { classifySupabaseKey, normalizeSupabaseUrl } from '../lib/supabase-config'
 import { createLiveFactories } from '../providers/live'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
 import type { ProviderKey, Providers, Writers } from '../providers/types'
@@ -55,6 +56,15 @@ export function useWriters(): Writers {
  */
 const text = (value: unknown) => (value === undefined || value === null ? '' : String(value).trim())
 
+/** Öffentliche Keys dürfen dank RLS nichts schreiben – lieber deutlich melden als später scheitern. */
+function checkedSupabaseKey(key: string): string {
+  if (key && classifySupabaseKey(key) === 'public') {
+    console.error('[supabase] NUXT_SUPABASE_SERVICE_ROLE_KEY ist ein öffentlicher Key (publishable/anon). Bitte den Secret- bzw. service_role-Key eintragen – Supabase bleibt bis dahin aus.')
+    return ''
+  }
+  return key
+}
+
 function readProviderConfig(): ProviderConfig {
   const config = useRuntimeConfig()
   return {
@@ -79,8 +89,8 @@ function readProviderConfig(): ProviderConfig {
       channel: text(config.public.twitch.channel),
     },
     supabase: {
-      url: text(config.supabase.url),
-      serviceRoleKey: text(config.supabase.serviceRoleKey),
+      url: normalizeSupabaseUrl(text(config.supabase.url)),
+      serviceRoleKey: checkedSupabaseKey(text(config.supabase.serviceRoleKey)),
     },
   }
 }
