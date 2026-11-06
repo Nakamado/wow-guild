@@ -75,7 +75,7 @@ wow-guild/
 │   │   ├── base/       # BaseButton, BaseCard, BaseDialog, EmptyState, ErrorState, LoadingSkeleton
 │   │   ├── layout/     # AppHeader, AppFooter, AppNav, DemoBanner
 │   │   ├── home/       # HeroSection, GuildStats
-│   │   ├── members/    # MemberCard, CharacterCard, ClassBadge, RoleBadge, MemberFilters, CharacterOnboardingDialog
+│   │   ├── members/    # CharacterTable, CharacterCard, ClassBadge, RoleBadge, CharacterOnboarding
 │   │   ├── dungeons/   # DungeonCard, DungeonFilters
 │   │   ├── groups/     # GroupCard, GroupComposition, GroupSignupDialog, GroupForm
 │   │   ├── events/     # EventCalendar, EventList, EventDetails
