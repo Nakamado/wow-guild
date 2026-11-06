@@ -124,4 +124,10 @@ export default defineNuxtConfig({
     // ESLint übernimmt auch die Formatierung (kein zusätzlicher Prettier)
     config: { stylistic: true },
   },
+
+  // Externe Bilder über den eigenen Server/Hoster ausliefern (Datenschutz: kein direkter Kontakt zu Discord/Twitch,
+  // besonders Twitch-Vorschaubilder vor der 2-Klick-Zustimmung)
+  image: {
+    domains: ['cdn.discordapp.com', 'static-cdn.jtvnw.net', 'clips-media-assets2.twitch.tv'],
+  },
 })
