@@ -2,5 +2,5 @@
 export default defineEventHandler(async (event) => {
   const viewer = await requirePermission(event, 'runs:join')
   if (!viewer.memberId) return []
-  return sortCharacters(await useProviders().characters.listByMember(viewer.memberId))
+  return sortCharacters(await withGameData(await useProviders().characters.listByMember(viewer.memberId)))
 })

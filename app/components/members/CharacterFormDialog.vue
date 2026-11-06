@@ -3,7 +3,7 @@ import { gameClasses, findClass } from '#shared/data/classes'
 import { races } from '#shared/data/races'
 import { roles as roleDefinitions } from '#shared/data/roles'
 import { MAX_LEVEL } from '#shared/schemas/common'
-import { CharacterInputSchema, splitCharacterName } from '#shared/schemas/community'
+import { CharacterInputSchema, QuickCharacterInputSchema, splitCharacterName } from '#shared/schemas/community'
 import type { Character, Faction, RoleId } from '#shared/types'
 
 /**
@@ -24,7 +24,7 @@ const props = withDefaults(
 const emit = defineEmits<{ saved: [character: Character] }>()
 
 const { guild, isDemo } = useSiteConfig()
-const { create, update } = useCharacters()
+const { create, createFromGame, update } = useCharacters()
 
 const ids = { firstName: useId(), lastName: useId(), faction: useId(), race: useId(), class: useId(), level: useId(), roles: useId(), error: useId() }
 const isEdit = computed(() => Boolean(props.character))
@@ -41,10 +41,13 @@ const form = reactive({
 })
 const errorMessage = ref<string | null>(null)
 const saving = ref(false)
+/** Live beim Anlegen: nur Name + Rollen, den Rest liefert die Blizzard-API */
+const quick = ref(false)
 
 watch(open, (isOpen) => {
   if (!isOpen) return
   errorMessage.value = null
+  quick.value = !isDemo && !props.character
   const source = props.character
   const name = splitCharacterName(source?.name ?? '')
   form.firstName = name.firstName
@@ -63,6 +66,8 @@ const availableClasses = computed(() => {
   return gameClasses.filter(entry => allowed.includes(entry.id))
 })
 const classRoles = computed(() => findClass(form.classId)?.roles ?? [])
+/** Im Schnellmodus ist die Klasse noch unbekannt – alle Rollen wählbar, der Server filtert */
+const selectableRoles = computed<readonly RoleId[]>(() => (quick.value ? roleDefinitions.map(role => role.id) : classRoles.value))
 
 // Ungültig gewordene Auswahl zurücksetzen, sobald sich eine Ebene darüber ändert
 watch(() => form.faction, () => {
@@ -99,7 +104,37 @@ async function submit() {
   if (saving.value) return
   errorMessage.value = null
   const { firstName, lastName, ...rest } = form
-  const parsed = CharacterInputSchema.safeParse({ ...rest, name: `${firstName} ${lastName}` })
+  const name = `${firstName} ${lastName}`
+
+  if (quick.value) {
+    const parsed = QuickCharacterInputSchema.safeParse({ name, roles: rest.roles })
+    if (!parsed.success) {
+      errorMessage.value = describeIssue(parsed.error.issues[0]?.path[0])
+      return
+    }
+    saving.value = true
+    const result = await createFromGame(parsed.data)
+    saving.value = false
+    if (result.ok) {
+      open.value = false
+      emit('saved', result.value)
+      return
+    }
+    // Blizzard nicht erreichbar oder unvollständig: volles Formular, soweit bekannt vorausgefüllt
+    if (result.error.code === 'game-data-unavailable' || result.error.code === 'game-data-incomplete') {
+      quick.value = false
+      const prefill = 'prefill' in result ? result.prefill : undefined
+      if (prefill?.faction) form.faction = prefill.faction
+      if (prefill?.raceId) form.raceId = prefill.raceId
+      await nextTick()
+      if (prefill?.classId) form.classId = prefill.classId
+      if (prefill?.level) form.level = prefill.level
+    }
+    errorMessage.value = result.error.message
+    return
+  }
+
+  const parsed = CharacterInputSchema.safeParse({ ...rest, name })
   if (!parsed.success) {
     errorMessage.value = describeIssue(parsed.error.issues[0]?.path[0])
     return
@@ -170,111 +205,137 @@ async function submit() {
         </p>
       </div>
 
-      <fieldset class="character-form__fieldset">
-        <legend
-          :id="ids.faction"
-          class="character-form__label"
-        >
-          Fraktion
-        </legend>
-        <div class="character-form__choices">
-          <label class="character-form__choice">
-            <input
-              v-model="form.faction"
-              type="radio"
-              value="alliance"
-              class="character-form__radio"
-            >
-            Allianz
-          </label>
-          <label class="character-form__choice">
-            <input
-              v-model="form.faction"
-              type="radio"
-              value="horde"
-              class="character-form__radio"
-            >
-            Horde
-          </label>
-        </div>
-      </fieldset>
+      <p
+        v-if="quick"
+        class="character-form__quick"
+      >
+        <BaseIcon
+          name="sparkle"
+          :size="16"
+        />
+        <span>
+          Stufe, Klasse und Volk holen wir automatisch von Blizzard – und halten sie aktuell.
+          <button
+            type="button"
+            class="character-form__switch"
+            @click="quick = false"
+          >Lieber selbst eintragen</button>
+        </span>
+      </p>
 
-      <div class="character-form__row">
+      <template v-else>
+        <p
+          v-if="!isDemo && isEdit"
+          class="character-form__hint"
+        >
+          Stufe, Klasse und Volk übernimmt die Seite automatisch von Blizzard, sobald der Charakter dort zu finden ist.
+        </p>
+        <fieldset class="character-form__fieldset">
+          <legend
+            :id="ids.faction"
+            class="character-form__label"
+          >
+            Fraktion
+          </legend>
+          <div class="character-form__choices">
+            <label class="character-form__choice">
+              <input
+                v-model="form.faction"
+                type="radio"
+                value="alliance"
+                class="character-form__radio"
+              >
+              Allianz
+            </label>
+            <label class="character-form__choice">
+              <input
+                v-model="form.faction"
+                type="radio"
+                value="horde"
+                class="character-form__radio"
+              >
+              Horde
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="character-form__row">
+          <div class="character-form__field">
+            <label
+              :for="ids.race"
+              class="character-form__label"
+            >Volk</label>
+            <select
+              :id="ids.race"
+              v-model="form.raceId"
+              class="character-form__input"
+              required
+            >
+              <option
+                value=""
+                disabled
+              >
+                Volk wählen
+              </option>
+              <option
+                v-for="race in availableRaces"
+                :key="race.id"
+                :value="race.id"
+              >
+                {{ race.name }}
+              </option>
+            </select>
+          </div>
+          <div class="character-form__field">
+            <label
+              :for="ids.class"
+              class="character-form__label"
+            >Klasse</label>
+            <select
+              :id="ids.class"
+              v-model="form.classId"
+              class="character-form__input"
+              :disabled="!form.raceId"
+              required
+            >
+              <option
+                value=""
+                disabled
+              >
+                {{ form.raceId ? 'Klasse wählen' : 'Erst Volk wählen' }}
+              </option>
+              <option
+                v-for="entry in availableClasses"
+                :key="entry.id"
+                :value="entry.id"
+              >
+                {{ entry.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
         <div class="character-form__field">
           <label
-            :for="ids.race"
+            :for="ids.level"
             class="character-form__label"
-          >Volk</label>
-          <select
-            :id="ids.race"
-            v-model="form.raceId"
-            class="character-form__input"
+          >Stufe</label>
+          <input
+            :id="ids.level"
+            v-model.number="form.level"
+            type="number"
+            min="1"
+            :max="MAX_LEVEL"
+            inputmode="numeric"
+            class="character-form__input character-form__input--number"
             required
           >
-            <option
-              value=""
-              disabled
-            >
-              Volk wählen
-            </option>
-            <option
-              v-for="race in availableRaces"
-              :key="race.id"
-              :value="race.id"
-            >
-              {{ race.name }}
-            </option>
-          </select>
         </div>
-        <div class="character-form__field">
-          <label
-            :for="ids.class"
-            class="character-form__label"
-          >Klasse</label>
-          <select
-            :id="ids.class"
-            v-model="form.classId"
-            class="character-form__input"
-            :disabled="!form.raceId"
-            required
-          >
-            <option
-              value=""
-              disabled
-            >
-              {{ form.raceId ? 'Klasse wählen' : 'Erst Volk wählen' }}
-            </option>
-            <option
-              v-for="entry in availableClasses"
-              :key="entry.id"
-              :value="entry.id"
-            >
-              {{ entry.name }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="character-form__field">
-        <label
-          :for="ids.level"
-          class="character-form__label"
-        >Stufe</label>
-        <input
-          :id="ids.level"
-          v-model.number="form.level"
-          type="number"
-          min="1"
-          :max="MAX_LEVEL"
-          inputmode="numeric"
-          class="character-form__input character-form__input--number"
-          required
-        >
-      </div>
+      </template>
 
       <fieldset
         class="character-form__fieldset"
-        :disabled="!form.classId"
+        :disabled="!quick && !form.classId"
       >
         <legend
           :id="ids.roles"
@@ -287,20 +348,20 @@ async function submit() {
             v-for="role in roleDefinitions"
             :key="role.id"
             class="character-form__choice"
-            :class="{ 'character-form__choice--unavailable': !classRoles.includes(role.id) }"
+            :class="{ 'character-form__choice--unavailable': !selectableRoles.includes(role.id) }"
           >
             <input
               type="checkbox"
               class="character-form__checkbox"
               :checked="form.roles.includes(role.id)"
-              :disabled="!classRoles.includes(role.id)"
+              :disabled="!selectableRoles.includes(role.id)"
               @change="toggleRole(role.id)"
             >
             {{ role.name }}
           </label>
         </div>
         <p class="character-form__hint">
-          {{ form.classId ? 'Welche Rollen möchtest du mit diesem Charakter übernehmen?' : 'Wähle zuerst eine Klasse.' }}
+          {{ quick || form.classId ? 'Welche Rollen möchtest du mit diesem Charakter übernehmen?' : 'Wähle zuerst eine Klasse.' }}
         </p>
       </fieldset>
 
@@ -431,6 +492,35 @@ async function submit() {
     width: 1.125rem;
     height: 1.125rem;
     accent-color: var(--color-accent);
+  }
+
+  &__quick {
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    background: rgb(143 211 255 / 6%);
+    border: 1px solid rgb(143 211 255 / 25%);
+    border-radius: var(--radius-md);
+
+    :deep(svg) {
+      flex-shrink: 0;
+      margin-top: 2px;
+      color: var(--color-frost);
+    }
+  }
+
+  &__switch {
+    display: inline;
+    padding: 0;
+    color: var(--color-frost);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    @include focus-ring(2px);
   }
 
   &__hint {

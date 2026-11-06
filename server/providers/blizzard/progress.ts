@@ -1,5 +1,6 @@
 import type { BlizzardClient } from './client'
 import { matchBlizzardProfession } from '#shared/data/professions'
+import { races } from '#shared/data/races'
 import type { Profession } from '#shared/types'
 
 /**
@@ -28,6 +29,42 @@ type Json = Record<string, unknown>
 const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null)
 const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
+
+/** Blizzard-Volks-IDs → Volks-Slugs (neue Forever-Völker werden über den Namen zugeordnet) */
+const raceIds: Record<number, string> = {
+  1: 'human', 2: 'orc', 3: 'dwarf', 4: 'night-elf', 5: 'undead', 6: 'tauren', 7: 'gnome', 8: 'troll',
+}
+
+export interface GameCharacterProfile {
+  name: string
+  level: number
+  /** null, wenn Blizzard eine unbekannte Klasse bzw. ein unbekanntes Volk liefert */
+  classId: string | null
+  raceId: string | null
+  faction: 'alliance' | 'horde' | null
+}
+
+/** Stammdaten aus dem Charakterprofil lesen (Stufe, Klasse, Volk, Fraktion) */
+export function parseCharacterProfile(body: unknown, fallbackName: string): GameCharacterProfile | null {
+  if (!isObject(body)) return null
+  const level = num(body.level)
+  if (level === null) return null
+  const classNumber = isObject(body.character_class) ? num(body.character_class.id) : null
+  const race = isObject(body.race) ? body.race : null
+  const raceNumber = race ? num(race.id) : null
+  const raceName = race ? text(race.name)?.toLocaleLowerCase('de-DE') : null
+  const raceId = (raceNumber !== null && raceIds[raceNumber])
+    || (raceName ? races.find(entry => [entry.name, entry.nameEn].some(value => value.toLocaleLowerCase('de-DE') === raceName))?.id : undefined)
+    || null
+  const factionType = isObject(body.faction) ? text(body.faction.type) : null
+  return {
+    name: [text(body.name), text(body.surname)].filter(Boolean).join(' ') || fallbackName,
+    level,
+    classId: (classNumber !== null && classIds[classNumber]) || null,
+    raceId,
+    faction: factionType === 'ALLIANCE' ? 'alliance' : factionType === 'HORDE' ? 'horde' : null,
+  }
+}
 
 /** „Nak Totembart“ → „nak-totembart“ (Pfad der realmlosen Profil-Endpunkte) */
 export function characterSlug(name: string): string {

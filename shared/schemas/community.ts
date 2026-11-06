@@ -87,6 +87,16 @@ export const CharacterSchema = z.object({
 
 export const MAX_CHARACTERS_PER_MEMBER = 12
 
+/**
+ * Schnelles Eintragen: nur Name und Rollen – Stufe, Klasse, Volk und Fraktion holt der Server
+ * aus der Blizzard-API. Rollen, die die Klasse nicht spielen kann, werden dabei verworfen.
+ */
+export const QuickCharacterInputSchema = z.object({
+  name: z.string().transform(normalizeCharacterName).pipe(CharacterNameSchema),
+  roles: z.array(RoleIdSchema).min(1, 'Wähle mindestens eine Rolle.').max(3)
+    .refine(roles => new Set(roles).size === roles.length, 'Jede Rolle nur einmal.'),
+})
+
 /** Eingabe beim Anlegen/Bearbeiten eines eigenen Charakters (Regelsatz setzt der Server) */
 export const CharacterInputSchema = z.object({
   name: z.string().transform(normalizeCharacterName).pipe(CharacterNameSchema),

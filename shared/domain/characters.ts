@@ -117,3 +117,37 @@ export function withMainCharacter<T extends Pick<Character, 'id' | 'isMain'>>(ch
 export function sortCharacters<T extends Pick<Character, 'isMain' | 'level' | 'name'>>(characters: readonly T[]): T[] {
   return [...characters].sort((a, b) => Number(b.isMain) - Number(a.isMain) || b.level - a.level || a.name.localeCompare(b.name, 'de'))
 }
+
+/** Stammdaten eines Charakters, wie sie die Blizzard-API liefert */
+export interface GameProfileData {
+  level: number
+  classId: string | null
+  raceId: string | null
+  faction: Faction | null
+}
+
+/**
+ * Schnelles Eintragen: aus Name + Wunschrollen und den Blizzard-Daten einen vollständigen Charakter bauen.
+ * Rollen, die die Klasse nicht kann, fallen weg; bleibt keine übrig, gelten alle Rollen der Klasse.
+ * Fehlen Klasse oder Volk (unbekannt), muss man die Angaben selbst eintragen.
+ */
+export function characterFromGame(
+  input: { name: string, roles: readonly RoleId[] },
+  profile: GameProfileData,
+  defaultFaction: Faction,
+  catalog: GameCatalog = defaultCatalog,
+): DomainResult<CharacterInput, 'game-data-incomplete'> {
+  const classRoles = profile.classId ? rolesForClass(profile.classId, catalog) : []
+  if (!profile.classId || !profile.raceId || !classRoles.length) {
+    return fail('game-data-incomplete', 'Blizzard liefert für diesen Charakter nicht alle Angaben – bitte ergänze Volk und Klasse selbst.')
+  }
+  const wanted = input.roles.filter(role => classRoles.includes(role))
+  return ok({
+    name: input.name,
+    faction: profile.faction ?? defaultFaction,
+    classId: profile.classId,
+    raceId: profile.raceId,
+    level: Math.min(Math.max(profile.level, 1), 60),
+    roles: wanted.length ? wanted : [...classRoles],
+  })
+}

@@ -13,7 +13,9 @@ export default defineEventHandler(async (event) => {
   const { characterId, role } = await readValidatedBody(event, JoinInputSchema.parse)
 
   const dungeon = findDungeon(run.dungeonSlug)
-  const character = await useProviders().characters.get(characterId)
+  // Stufe/Klasse live aus der Blizzard-API, damit die Mindeststufe am aktuellen Stand gemessen wird
+  const stored = await useProviders().characters.get(characterId)
+  const character = stored ? (await withGameData([stored]))[0] ?? stored : null
   if (!dungeon) rejectWith({ code: 'unknown-dungeon', message: 'Dieser Dungeon ist unbekannt.' })
   if (!character || character.memberId !== viewer.memberId) {
     rejectWith({ code: 'character-not-owned', message: 'Bitte wähle einen deiner Charaktere aus.' }, 403)

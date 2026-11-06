@@ -13,7 +13,7 @@ export async function loadMembersWithCharacters(): Promise<MemberWithCharacters[
   const [members, rawCharacters] = await Promise.all([providers.members.listGuildMembers(), providers.characters.list()])
   const memberIds = new Set(members.map(member => member.id))
   // Berufe nur für Charaktere von Gildenmitgliedern abrufen
-  const characters = await withGameProfessions(rawCharacters.filter(character => memberIds.has(character.memberId)))
+  const characters = await withGameData(rawCharacters.filter(character => memberIds.has(character.memberId)))
   return members
     .map(member => ({ ...member, characters: sortCharacters(characters.filter(character => character.memberId === member.id)) }))
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'de'))

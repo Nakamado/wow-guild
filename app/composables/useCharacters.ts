@@ -1,7 +1,7 @@
 import { checkCharacterInput, sortCharacters, withMainCharacter } from '#shared/domain/characters'
 import { fail, ok, type DomainResult } from '#shared/domain/result'
 import { MAX_CHARACTERS_PER_MEMBER } from '#shared/schemas/community'
-import type { Character, CharacterInput } from '#shared/types'
+import type { Character, CharacterInput, QuickCharacterInput } from '#shared/types'
 
 export const DEMO_CHARACTERS_STORAGE_KEY = 'wow-guild:demo-characters'
 
@@ -74,6 +74,29 @@ export function useCharacters() {
     return ok(character)
   }
 
+  /**
+   * Live: nur Name + Rollen – Stufe, Klasse, Volk und Fraktion holt der Server von Blizzard.
+   * Bei `game-data-unavailable`/`game-data-incomplete` zeigt das Formular die vollen Felder
+   * (bei unvollständigen Daten mit den bekannten Werten vorausgefüllt).
+   */
+  async function createFromGame(input: QuickCharacterInput): Promise<DomainResult<Character> & { prefill?: Partial<CharacterInput> }> {
+    const allowed = guard()
+    if (!allowed.ok) return allowed
+    if (isDemo) return fail('game-data-unavailable', 'Im Demo-Modus gibt es keine Blizzard-Daten.')
+    try {
+      const character = await $fetch<Character>('/api/me/characters/from-game', { method: 'POST', body: input })
+      await afterLiveChange()
+      return ok(character)
+    }
+    catch (error) {
+      const body = error as { data?: { message?: string, data?: { code?: string, prefill?: Partial<CharacterInput> } }, statusCode?: number }
+      if (body.statusCode === 401) return fail('unauthorized', 'Bitte melde dich erneut mit Discord an.')
+      const prefill = body.data?.data?.prefill
+      const result = fail(body.data?.data?.code ?? 'request-failed', body.data?.message ?? 'Das hat leider nicht geklappt. Bitte versuche es später erneut.')
+      return prefill ? { ...result, prefill } : result
+    }
+  }
+
   async function update(id: string, input: CharacterInput): Promise<DomainResult<Character>> {
     const allowed = guard()
     if (!allowed.ok) return allowed
@@ -123,5 +146,5 @@ export function useCharacters() {
     return ok(true)
   }
 
-  return { mine, main, loaded, canManage, create, update, remove, setMain }
+  return { mine, main, loaded, canManage, create, createFromGame, update, remove, setMain }
 }
