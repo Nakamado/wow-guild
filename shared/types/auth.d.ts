@@ -18,6 +18,8 @@ declare module '#auth-utils' {
      */
     accessToken?: string
     accessTokenExpiresAt?: number
+    /** Optional verknüpftes Battle.net (nur für die API-Probe; läuft nach Blizzard-Vorgabe ab) */
+    battlenet?: { accessToken: string, expiresAt: number, battletag: string | null }
   }
 }
 

@@ -50,6 +50,14 @@ export default defineNuxtConfig({
       memberRoleId: '',
       adminRoleId: '',
     },
+    // Blizzard Battle.net (WoW: Forever) – vorerst nur für die API-Probe der Gildenleitung
+    blizzard: {
+      clientId: '',
+      clientSecret: '',
+      region: 'eu',
+      /** Gilden-Slug in der Blizzard-API (noch offen) */
+      guildSlug: '',
+    },
     twitch: {
       clientId: '',
       clientSecret: '',

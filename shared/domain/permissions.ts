@@ -20,6 +20,8 @@ export type Action
     | 'runs:edit'
     | 'runs:cancel'
     | 'runs:moderate'
+    /** Admin-Werkzeuge (z. B. Blizzard-API-Probe) – nur Gildenleitung */
+    | 'admin:tools'
 
 export interface PermissionResource {
   /** Organisator eines Runs */
@@ -50,6 +52,7 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
     case 'runs:cancel':
       return hasLevel(viewer, 'member') && isSelf(viewer, resource.organizerId)
     case 'runs:moderate':
+    case 'admin:tools':
       return false
   }
 }
