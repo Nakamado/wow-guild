@@ -20,6 +20,7 @@ export const characterSubresources: { id: string, label: string, path: string }[
   { id: 'achievements', label: 'Erfolge', path: 'achievements' },
   { id: 'statistics', label: 'Statistiken', path: 'statistics' },
   { id: 'reputations', label: 'Ruf', path: 'reputations' },
+  { id: 'character-media', label: 'Charakterbild', path: 'character-media' },
 ]
 
 type Json = Record<string, unknown>
@@ -40,6 +41,7 @@ const SAMPLE_FIELDS: Record<string, string[] | null> = {
   'character-encounters-dungeons': null,
   'character-encounters-raids': null,
   'character-professions': null,
+  'character-character-media': null,
   'guild-roster': null,
 }
 

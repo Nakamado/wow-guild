@@ -50,11 +50,13 @@ export function useCharacters() {
     return ok(memberId)
   }
 
-  async function create(input: CharacterInput): Promise<DomainResult<Character>> {
+  /** `allowUnknown`: speichern, obwohl Blizzard den Namen (noch) nicht kennt – nach bewusster Bestätigung */
+  async function create(input: CharacterInput, options: { allowUnknown?: boolean } = {}): Promise<DomainResult<Character>> {
     const allowed = guard()
     if (!allowed.ok) return allowed
     if (!isDemo) {
-      const result = await apiResult(() => $fetch<Character>('/api/me/characters', { method: 'POST', body: input }))
+      const query = options.allowUnknown ? { allowUnknown: '1' } : undefined
+      const result = await apiResult(() => $fetch<Character>('/api/me/characters', { method: 'POST', body: input, query }))
       if (result.ok) await afterLiveChange()
       return result
     }
@@ -97,11 +99,12 @@ export function useCharacters() {
     }
   }
 
-  async function update(id: string, input: CharacterInput): Promise<DomainResult<Character>> {
+  async function update(id: string, input: CharacterInput, options: { allowUnknown?: boolean } = {}): Promise<DomainResult<Character>> {
     const allowed = guard()
     if (!allowed.ok) return allowed
     if (!isDemo) {
-      const result = await apiResult(() => $fetch<Character>(`/api/me/characters/${id}` as string, { method: 'PATCH', body: input }))
+      const query = options.allowUnknown ? { allowUnknown: '1' } : undefined
+      const result = await apiResult(() => $fetch<Character>(`/api/me/characters/${id}` as string, { method: 'PATCH', body: input, query }))
       if (result.ok) await afterLiveChange()
       return result
     }
