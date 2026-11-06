@@ -16,3 +16,9 @@ export interface StreamerEntry {
 export const guildStreamers: StreamerEntry[] = [
   // { login: 'beispielkanal', discordId: '123456789012345678' },
 ]
+
+/**
+ * Clips auf der Webseite: nur aus diesen Twitch-Kategorien (exakte Namen wie auf Twitch).
+ * Leere Liste = alle Clips. Wird keine Kategorie gefunden, erscheinen ebenfalls alle Clips.
+ */
+export const clipGames: string[] = ['World of Warcraft', 'World of Warcraft: Forever']

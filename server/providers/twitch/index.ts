@@ -10,6 +10,9 @@ export { createTwitchClient } from './client'
 const STATUS_TTL = 60_000
 const CLIPS_TTL = 15 * 60_000
 const STREAMERS_TTL = 60_000
+const GAMES_TTL = 24 * 60 * 60_000
+/** höchstens so viele Clip-Seiten (je 100) durchsuchen, um genug passende Clips zu finden */
+const MAX_CLIP_PAGES = 5
 const DAY = 86_400_000
 const periodDays = { '7d': 7, '30d': 30, 'all': null } as const
 
@@ -17,6 +20,8 @@ export interface TwitchProviderConfig {
   broadcasterId: string
   channel: string
   streamers: StreamerEntry[]
+  /** Nur Clips aus diesen Twitch-Kategorien (exakte Namen); leer = alle Clips */
+  clipGames?: string[]
 }
 
 export function streamToStatus(channel: string, stream: HelixStream | undefined, checkedAt: Date): StreamStatus {
@@ -50,6 +55,18 @@ export function helixClipToClip(clip: HelixClip): Clip {
 export function createTwitchProvider(client: TwitchClient, config: TwitchProviderConfig, now = () => new Date()): TwitchProvider {
   const cache = createTtlCache()
 
+  /** Kategorie-Namen → IDs; `null` = nicht filtern (keine Namen oder keiner gefunden) */
+  async function resolveClipGames(): Promise<Set<string> | null> {
+    const names = config.clipGames ?? []
+    if (!names.length) return null
+    const ids = await cache.get('clip-games', GAMES_TTL, async () => (await client.getGames(names)).map(game => game.id))
+    if (!ids.length) {
+      console.warn('[twitch] Keine der Clip-Kategorien gefunden – zeige alle Clips:', names.join(', '))
+      return null
+    }
+    return new Set(ids)
+  }
+
   return {
     getStreamStatus() {
       return cache.get('status', STATUS_TTL, async () => {
@@ -62,8 +79,18 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
       const days = periodDays[query.period]
       const clips = await cache.get(`clips:${query.period}`, CLIPS_TTL, async () => {
         const startedAt = days === null ? undefined : new Date(now().getTime() - days * DAY).toISOString()
-        // 100 = Maximum pro Seite; reicht für „neueste“ und „beliebteste“ Auswahl
-        return (await client.getClips(config.broadcasterId, { first: 100, startedAt })).map(helixClipToClip)
+        const endedAt = days === null ? undefined : now().toISOString()
+        const gameIds = await resolveClipGames()
+        // Ohne Kategorie-Filter reicht eine Seite (100 = Maximum); mit Filter weitere Seiten, bis 100 passen
+        const matching: HelixClip[] = []
+        let after: string | undefined
+        for (let page = 0; page < (gameIds ? MAX_CLIP_PAGES : 1); page++) {
+          const result = await client.getClipsPage(config.broadcasterId, { first: 100, startedAt, endedAt, after })
+          matching.push(...result.clips.filter(clip => !gameIds || gameIds.has(clip.game_id)))
+          if (!result.cursor || matching.length >= 100) break
+          after = result.cursor
+        }
+        return matching.slice(0, 100).map(helixClipToClip)
       })
       return [...clips]
         .sort((a, b) => query.sort === 'popular' ? b.viewCount - a.viewCount : Date.parse(b.createdAt) - Date.parse(a.createdAt))

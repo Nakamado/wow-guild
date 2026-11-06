@@ -1,5 +1,5 @@
 import { IntegrationError, requestJson, type FetchLike } from '../../lib/http'
-import { HelixClipSchema, HelixStreamSchema, HelixUserSchema, TwitchTokenSchema, helixList } from './schemas'
+import { HelixClipSchema, HelixGameSchema, HelixStreamSchema, HelixUserSchema, TwitchTokenSchema, helixList, helixPage } from './schemas'
 
 const HELIX = 'https://api.twitch.tv/helix'
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
@@ -49,6 +49,17 @@ export function createTwitchClient(clientId: string, clientSecret: string, optio
     }
   }
 
+  /** Clips eines Kanals (Twitch sortiert nach Aufrufen), eine Seite; `after` = Seitenzeiger */
+  async function getClipsPage(broadcasterId: string, options: { first: number, startedAt?: string, endedAt?: string, after?: string }) {
+    const params: [string, string][] = [['broadcaster_id', broadcasterId], ['first', String(options.first)]]
+    if (options.startedAt) params.push(['started_at', options.startedAt])
+    // Ohne ended_at liefert Twitch nur die Woche ab started_at – bei „30 Tage“ fehlten sonst die neuesten Clips
+    if (options.endedAt) params.push(['ended_at', options.endedAt])
+    if (options.after) params.push(['after', options.after])
+    const page = helixPage(HelixClipSchema).parse(await helix('/clips', params))
+    return { clips: page.data, cursor: page.pagination.cursor ?? null }
+  }
+
   return {
     async getStreams(query: { userIds?: string[], logins?: string[] }) {
       const params: [string, string][] = [
@@ -59,11 +70,17 @@ export function createTwitchClient(clientId: string, clientSecret: string, optio
       return helixList(HelixStreamSchema).parse(await helix('/streams', params)).data
     },
 
+    getClipsPage,
+
     /** Clips eines Kanals (Twitch sortiert nach Aufrufen). */
-    async getClips(broadcasterId: string, options: { first: number, startedAt?: string }) {
-      const params: [string, string][] = [['broadcaster_id', broadcasterId], ['first', String(options.first)]]
-      if (options.startedAt) params.push(['started_at', options.startedAt])
-      return helixList(HelixClipSchema).parse(await helix('/clips', params)).data
+    async getClips(broadcasterId: string, options: { first: number, startedAt?: string, endedAt?: string }) {
+      return (await getClipsPage(broadcasterId, options)).clips
+    },
+
+    /** Twitch-Kategorien über ihren exakten Namen nachschlagen */
+    async getGames(names: string[]) {
+      if (!names.length) return []
+      return helixList(HelixGameSchema).parse(await helix('/games', names.map(name => ['name', name]))).data
     },
 
     async getUsers(logins: string[]) {
