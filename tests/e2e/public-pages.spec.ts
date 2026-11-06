@@ -64,7 +64,7 @@ test.describe('Startseite', () => {
     await expect(page.getByText('Charaktere nach Klasse')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Beliebte Clips' })).toBeVisible()
     // Discord-Duplikat des angekündigten Runs erscheint nicht doppelt
-    await expect(page.getByRole('heading', { name: 'Hall of Thanes – Gilden-Run' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Halle der Thane – Gilden-Run' })).toHaveCount(0)
   })
 
   test('Livestatus ist ehrlich und lässt sich in der Demo simulieren', async ({ page }) => {

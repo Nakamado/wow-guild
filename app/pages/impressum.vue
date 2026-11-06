@@ -1,20 +1,15 @@
 <template>
   <LegalPage title="Impressum">
-    <template #notice>
-      <strong>Platzhalter:</strong> Die markierten Angaben werden vor dem Livegang von Dustin Clever
-      ergänzt. Diese Vorlage ersetzt keine Rechtsberatung.
-    </template>
-
     <h2>Angaben gemäß § 5 DDG</h2>
     <p>
       Dustin Clever<br>
-      <mark>[Straße und Hausnummer]</mark><br>
-      <mark>[PLZ]</mark> Odenthal<br>
+      Rotdornweg 1<br>
+      51519 Odenthal<br>
       Deutschland
     </p>
 
     <h2>Kontakt</h2>
-    <p>E-Mail: <mark>[E-Mail-Adresse]</mark></p>
+    <p>E-Mail:dustin.clever@gmail.com</p>
 
     <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
     <p>Dustin Clever, Anschrift wie oben</p>

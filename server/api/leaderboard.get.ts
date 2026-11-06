@@ -1,7 +1,7 @@
 import { pointsRules } from '../../content/points'
 import { createDemoProgress } from '../../data/demo/progress'
 import { createBlizzardClient } from '../providers/blizzard/client'
-import { fetchCharacterProgress, type BlizzardCharacterProgress } from '../providers/blizzard/progress'
+import { characterSlug, fetchCharacterProgress, parsePreviewCharacters, type BlizzardCharacterProgress } from '../providers/blizzard/progress'
 import { instances } from '#shared/data/dungeons'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
 import type { ProgressEvent } from '#shared/schemas/points'
@@ -117,7 +117,9 @@ export default defineEventHandler(async (event) => {
     )
   }
 
-  const names = String(config.blizzard.previewCharacters ?? '').split(',').map(name => name.trim()).filter(Boolean)
+  // „Vorname Nachname“ oder „Vorname Nachname=DiscordID“ (verknüpft den Charakter mit dem Discord-Konto)
+  const entries = parsePreviewCharacters(String(config.blizzard.previewCharacters ?? ''))
+  const names = entries.map(entry => entry.name)
   const clientId = String(config.blizzard.clientId ?? '')
   const clientSecret = String(config.blizzard.clientSecret ?? '')
   if (!names.length || !clientId || !clientSecret) {
@@ -129,15 +131,27 @@ export default defineEventHandler(async (event) => {
     console.warn('[leaderboard] Testlauf nicht abrufbar:', error instanceof Error ? error.message : 'unbekannt')
     return [] as BlizzardCharacterProgress[]
   })
-  // Jeder Testcharakter zählt vorerst als eigene Person mit sich selbst als Main
-  const members = preview.map(character => ({ id: `preview:${character.slug}`, displayName: character.name, avatarUrl: null }))
-  const characters = preview.map(character => ({ id: character.characterId, memberId: `preview:${character.slug}`, name: character.name, classId: character.classId, level: character.level }))
+  // Mit Discord-ID: Person = Discord-Konto (Name + Profilbild aus Discord); sonst der Charakter selbst
+  const providers = useProviders()
+  const ownerOf = (character: BlizzardCharacterProgress) =>
+    entries.find(entry => characterSlug(entry.name) === character.slug)?.discordId ?? `preview:${character.slug}`
+  const ownerIds = [...new Set(preview.map(ownerOf))]
+  const members = await Promise.all(ownerIds.map(async (id) => {
+    const fallback = preview.find(character => ownerOf(character) === id)!.name
+    if (id.startsWith('preview:')) return { id, displayName: fallback, avatarUrl: null }
+    const member = await providers.members.getMember(id).catch(() => null)
+    return { id, displayName: member?.displayName ?? fallback, avatarUrl: member?.avatarUrl ?? null }
+  }))
+  const characters = preview.map(character => ({ id: character.characterId, memberId: ownerOf(character), name: character.name, classId: character.classId, level: character.level }))
   const events = preview.flatMap(character => retroactiveEvents({
-    memberId: `preview:${character.slug}`,
+    memberId: ownerOf(character),
     characterId: character.characterId,
     level: character.level,
     professions: character.professions,
   }, pointsRules))
+  // Main je Person: der erste eingetragene Charakter
+  const mainIds = new Map<string, string>()
+  for (const character of characters) if (!mainIds.has(character.memberId)) mainIds.set(character.memberId, character.id)
   const professionNamesById = Object.fromEntries(preview.flatMap(character => character.professions.map(profession => [profession.id, profession.name])))
   const updatedAt = preview.map(character => character.lastLoginAt).filter(Boolean).sort().at(-1) ?? null
 
@@ -146,7 +160,7 @@ export default defineEventHandler(async (event) => {
     events,
     members,
     characters,
-    new Map(characters.map(character => [character.memberId, character.id])),
+    mainIds,
     professionNamesById,
   )
 })

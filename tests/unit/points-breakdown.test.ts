@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { pointsRules } from '../../content/points'
 import { explainScore, retroactiveEvents, scoreEvents } from '../../shared/domain/points'
 import type { ProgressEvent } from '../../shared/schemas/points'
-import { characterSlug, parseCharacterProgress, parseProfessions } from '../../server/providers/blizzard/progress'
+import { characterSlug, parseCharacterProgress, parsePreviewCharacters, parseProfessions } from '../../server/providers/blizzard/progress'
 
 const base = { memberId: 'm1', characterId: 'c1' }
 
@@ -40,6 +40,14 @@ describe('Aufschlüsselung der Punkte', () => {
 describe('Blizzard-Fortschritt lesen', () => {
   it('bildet den realmlosen Slug', () => {
     expect(characterSlug('  Nak   Totembart ')).toBe('nak-totembart')
+  })
+
+  it('liest die Testcharaktere mit optionaler Discord-ID', () => {
+    expect(parsePreviewCharacters(' Nak Totembart = 591736149647687697 , Zweiter Char,, Dritter=abc')).toEqual([
+      { name: 'Nak Totembart', discordId: '591736149647687697' },
+      { name: 'Zweiter Char', discordId: null },
+      { name: 'Dritter', discordId: null },
+    ])
   })
 
   it('liest Berufe mit und ohne Stufen', () => {

@@ -32,6 +32,17 @@ export function characterSlug(name: string): string {
   return name.trim().toLocaleLowerCase('de-DE').split(/\s+/).join('-')
 }
 
+/**
+ * NUXT_BLIZZARD_PREVIEW_CHARACTERS lesen: „Nak Totembart=591736149647687697, Zweiter Char“.
+ * Die optionale Discord-ID ordnet den Charakter einer Person zu (manuell durch einen Admin – nur mit Einverständnis).
+ */
+export function parsePreviewCharacters(value: string): { name: string, discordId: string | null }[] {
+  return value.split(',').map((entry) => {
+    const [name = '', id = ''] = entry.split('=').map(part => part.trim())
+    return { name, discordId: /^\d{17,20}$/.test(id) ? id : null }
+  }).filter(entry => entry.name)
+}
+
 const professionSlug = (name: string) =>
   name.toLocaleLowerCase('de-DE').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 

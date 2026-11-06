@@ -7,7 +7,7 @@
     </template>
 
     <h2>1. Verantwortlicher</h2>
-    <p>Dustin Clever, <mark>[Anschrift]</mark>, E-Mail: <mark>[E-Mail-Adresse]</mark></p>
+    <p>Dustin Clever, Rotdornweg 1, 51519 Odenthal, E-Mail: dustin.clever@gmail.com</p>
 
     <h2>2. Hosting</h2>
     <p>

@@ -117,7 +117,7 @@ describe('filterDungeons', () => {
     const atLevel = filterDungeons(dungeons, { level: 60 })
     expect(atLevel.every(d => d.levelRange.max === 60)).toBe(true)
 
-    const forCharacter = filterDungeons(dungeons, { characterLevel: 16 })
+    const forCharacter = filterDungeons(dungeons, { characterLevel: 17 })
     expect(forCharacter.map(d => d.slug)).toEqual(expect.arrayContaining(['the-deadmines', 'ragefire-chasm']))
 
     const withRuns = filterDungeons(dungeons, { onlyWithRuns: true }, {

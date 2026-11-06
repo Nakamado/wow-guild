@@ -6,6 +6,12 @@ import type { SourceRef } from '../types'
  */
 export const dataSources = [
   {
+    id: 'ingame-dungeon-journal-de',
+    title: 'WoW: Forever – Dungeon-Journal im Spiel (deutscher Client, Screenshots der Gildenleitung): Namen und Levelbereiche',
+    url: 'https://worldofwarcraft.blizzard.com/de-de/',
+    accessedAt: '2026-11-06',
+  },
+  {
     id: 'warcrafttavern-forever-dungeons',
     title: 'Warcraft Tavern – WoW Forever Dungeons',
     url: 'https://www.warcrafttavern.com/forever/guides/dungeons/',

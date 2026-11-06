@@ -33,7 +33,7 @@ export function createDemoDiscordEvents(now: Date): DiscordEvent[] {
     }),
     event({
       id: 'demo-event-03',
-      title: 'Hall of Thanes – Gilden-Run',
+      title: 'Halle der Thane – Gilden-Run',
       description: 'Ankündigung des Runs von der Webseite.',
       startsAt: at(now, 3, 19),
       status: 'scheduled',

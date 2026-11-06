@@ -28,9 +28,9 @@ export const guildContent: GuildContent = {
     raids: 'Raidplanung startet mit den ersten Stufe-60-Charakteren. Termine stehen im Kalender.',
   },
   contacts: [
-    { role: 'Gildenleitung', name: 'Ansprechpartner folgt', isPlaceholder: true },
+    { role: 'Gildenleitung', name: 'Minyu', isPlaceholder: false, discordUserId: '291187664994959360' },
     { role: 'Raidleitung', name: 'Ansprechpartner folgt', isPlaceholder: true },
-    // discordUserId ergänzen (Discord → Rechtsklick aufs eigene Profil → „Nutzer-ID kopieren“), dann wird der Name verlinkt
-    { role: 'Webseite', name: 'Nakamado', isPlaceholder: false },
+    // discordUserId: Discord → Rechtsklick aufs Profil → „Nutzer-ID kopieren“ – der Name verlinkt dann aufs Profil
+    { role: 'Webseite', name: 'Nakamado', isPlaceholder: false, discordUserId: '591736149647687697' },
   ],
 }

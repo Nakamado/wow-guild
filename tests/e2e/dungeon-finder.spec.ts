@@ -33,11 +33,11 @@ test.describe('Dungeon-Katalog', () => {
 
   test('Dungeon-Detail zeigt Quellen und geplante Gruppen', async ({ page }) => {
     await page.goto('/dungeons/hall-of-thanes')
-    await expect(page.getByRole('heading', { level: 1, name: 'Hall of Thanes' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Halle der Thane' })).toBeVisible()
     await expect(page.getByText('Neu in WoW: Forever')).toBeVisible()
     await expect(page.getByText('nicht belegt')).toBeVisible()
     await expect(page.getByRole('link', { name: /Warcraft Tavern/ }).first()).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Erstbesuch: Hall of Thanes' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Erstbesuch: Halle der Thane' })).toBeVisible()
   })
 
   test('unbekannte Dungeons liefern 404', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Gruppenplaner (Demo)', () => {
     await page.getByRole('button', { name: 'Gruppe beitreten' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByRole('radio', { name: /Raureif/ }).check()
-    await expect(dialog.getByText('Für Stratholme – Lebendige Seite ist mindestens Stufe 45 nötig (aktuell 34).')).toBeVisible()
+    await expect(dialog.getByText('Für Stratholme: Lebend ist mindestens Stufe 45 nötig (aktuell 34).')).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Beitreten' })).toBeDisabled()
   })
 
