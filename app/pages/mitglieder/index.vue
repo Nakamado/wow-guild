@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { filterMembers, type MemberFilter } from '#shared/domain/members'
-import type { RoleId } from '#shared/types'
+import { characterSortKeys, defaultCharacterSort, type CharacterSort, type CharacterSortKey } from '#shared/domain/character-table'
 
 useSeoMeta({ title: 'Mitglieder', robots: 'noindex' })
 
@@ -14,88 +13,89 @@ const { data: members, status, refresh } = await useAsyncData(
   { watch: [canView] },
 )
 
-// Filter ↔ URL-Query (teilbare, wiederherstellbare Ansicht)
+// Sortierung ↔ URL-Query (teilbare, wiederherstellbare Ansicht, ohne Neuladen)
 const route = useRoute()
 const router = useRouter()
-const asString = (value: unknown) => (typeof value === 'string' && value ? value : null)
-const asNumber = (value: unknown) => {
-  const parsed = Number.parseInt(asString(value) ?? '', 10)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-const filter = computed<MemberFilter>({
-  get: () => ({
-    query: asString(route.query.q) ?? undefined,
-    classId: asString(route.query.klasse),
-    role: asString(route.query.rolle) as RoleId | null,
-    minLevel: asNumber(route.query.von),
-    maxLevel: asNumber(route.query.bis),
-  }),
+const sort = computed<CharacterSort>({
+  get: (): CharacterSort => {
+    const key = route.query.sortierung
+    const direction = route.query.richtung
+    return characterSortKeys.includes(key as CharacterSortKey)
+      ? { key: key as CharacterSortKey, direction: direction === 'absteigend' ? 'desc' as const : 'asc' as const }
+      : defaultCharacterSort
+  },
   set: (value) => {
-    router.replace({
-      query: {
-        q: value.query || undefined,
-        klasse: value.classId || undefined,
-        rolle: value.role || undefined,
-        von: value.minLevel ?? undefined,
-        bis: value.maxLevel ?? undefined,
-      },
-    })
+    router.replace({ query: { ...route.query, sortierung: value.key, richtung: value.direction === 'asc' ? 'aufsteigend' : 'absteigend' } })
   },
 })
 
-const results = computed(() => (members.value ? filterMembers(members.value, filter.value) : []))
+const rows = computed(() => (members.value ?? []).flatMap(member => member.characters.map(character => ({
+  character,
+  playerName: member.displayName,
+  player: { id: member.id, displayName: member.displayName, avatarUrl: member.avatarUrl },
+}))))
+const withoutCharacters = computed(() => (members.value ?? []).filter(member => !member.characters.length))
+const hasDemoProfessions = computed(() => rows.value.some(row => row.character.professions.some(profession => profession.source === 'demo')))
 </script>
 
 <template>
   <div class="members-page">
     <PageHeader
       title="Mitglieder"
-      lead="Alle Gildenmitglieder mit ihren Charakteren. Neue Mitglieder hinterlegen ihren Hauptcharakter nach der ersten Anmeldung."
+      lead="Alle Charaktere der Gilde auf einen Blick – ein Klick auf eine Spaltenüberschrift sortiert die Tabelle."
     />
 
     <div class="members-page__body container">
       <MembersLocked v-if="!canView" />
 
       <template v-else>
-        <MemberFilters
-          v-model="filter"
-          :result-count="results.length"
-        />
-
         <ErrorState
           v-if="status === 'error'"
           @retry="refresh()"
         />
 
-        <ul
+        <LoadingSkeleton
           v-else-if="status === 'pending'"
-          class="members-page__grid"
-          role="list"
-        >
-          <li
-            v-for="index in 6"
-            :key="index"
-          >
-            <LoadingSkeleton
-              variant="card"
-              :lines="2"
-            />
-          </li>
-        </ul>
+          variant="card"
+          :lines="6"
+        />
 
-        <ul
-          v-else-if="results.length"
-          class="members-page__grid"
-          role="list"
-        >
-          <li
-            v-for="member in results"
-            :key="member.id"
+        <template v-else-if="rows.length">
+          <p
+            v-if="hasDemoProfessions"
+            class="members-page__demo"
           >
-            <MemberCard :member="member" />
-          </li>
-        </ul>
+            <BaseIcon
+              name="info"
+              :size="18"
+            />
+            Beispieldaten: Berufe und Skillwerte sind fiktiv.
+          </p>
+          <CharacterTable
+            v-model:sort="sort"
+            :rows="rows"
+          />
+          <p class="members-page__hint">
+            Berufe kommen automatisch aus der Blizzard-API und hinken dem Spiel einige Stunden hinterher.
+          </p>
+          <p
+            v-if="withoutCharacters.length"
+            class="members-page__hint"
+          >
+            Noch ohne Charakter:
+            <template
+              v-for="(member, index) in withoutCharacters"
+              :key="member.id"
+            >
+              <NuxtLink
+                :to="`/mitglieder/${member.id}`"
+                class="members-page__link"
+              >{{ member.displayName }}</NuxtLink><template v-if="index < withoutCharacters.length - 1">
+                ,
+              </template>
+            </template>
+          </p>
+        </template>
 
         <EmptyState
           v-else-if="!members?.length"
@@ -107,17 +107,9 @@ const results = computed(() => (members.value ? filterMembers(members.value, fil
         <EmptyState
           v-else
           icon="users"
-          title="Niemand passt auf diese Filter"
-          description="Lockere die Stufen- oder Klassenauswahl, um mehr Mitglieder zu sehen."
-        >
-          <BaseButton
-            size="sm"
-            variant="secondary"
-            @click="filter = {}"
-          >
-            Filter zurücksetzen
-          </BaseButton>
-        </EmptyState>
+          title="Noch keine Charaktere"
+          description="Sobald Mitglieder ihre Charaktere eintragen, erscheinen sie hier in der Tabelle."
+        />
       </template>
     </div>
   </div>
@@ -128,13 +120,29 @@ const results = computed(() => (members.value ? filterMembers(members.value, fil
   &__body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
+    gap: var(--space-5);
   }
 
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    gap: var(--space-5);
+  &__demo {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-lantern);
+    border: 1px dashed rgb(245 183 104 / 40%);
+    border-radius: var(--radius-md);
+  }
+
+  &__hint {
+    font-size: var(--text-sm);
+    color: var(--color-text-subtle);
+  }
+
+  &__link {
+    color: var(--color-frost);
+
+    @include focus-ring(2px);
   }
 }
 </style>

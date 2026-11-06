@@ -58,7 +58,7 @@ export function createDemoRuns(now: Date): GroupRun[] {
       ...base,
       id: 'demo-run-03',
       dungeonSlug: 'hall-of-thanes',
-      title: 'Erstbesuch: Hall of Thanes',
+      title: 'Erstbesuch: Halle der Thane',
       description: 'Neuer Forever-Dungeon – wir erkunden ihn gemeinsam. Wird auch auf Discord angekündigt.',
       startsAt: at(now, 3, 19),
       organizerId: 'demo-member-01',

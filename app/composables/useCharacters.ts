@@ -68,6 +68,7 @@ export function useCharacters() {
       isMain: mine.value.length === 0,
       source: 'demo',
       updatedAt: new Date().toISOString(),
+      professions: [],
     }
     saveDemo([...mine.value, character])
     return ok(character)

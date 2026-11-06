@@ -13,8 +13,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', message: 'Diesen Charakter gibt es nicht (mehr).' })
   }
   const siblings = sortCharacters(await providers.characters.listByMember(member.id)).filter(entry => entry.id !== id)
+  const [withProfessions] = await withGameProfessions([character])
   return {
-    character,
+    character: withProfessions ?? character,
     member: { id: member.id, displayName: member.displayName, avatarUrl: member.avatarUrl },
     otherCharacters: siblings,
   }

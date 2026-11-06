@@ -9,6 +9,7 @@ useSeoMeta({
 })
 
 const { data: guildData } = await useFetch('/api/guild', { key: 'guild' })
+const { data: milestones } = await useFetch('/api/chronicle', { key: 'chronicle', default: () => [] })
 
 const focus = [
   { title: 'PvE', text: guildContent.focus.pve },
@@ -185,7 +186,18 @@ const focus = [
               class="guild-page__contact"
             >
               <span class="guild-page__contact-role">{{ contact.role }}</span>
+              <a
+                v-if="contact.url || contact.discordUserId"
+                class="guild-page__contact-name guild-page__contact-name--link"
+                :href="contact.url ?? `https://discord.com/users/${contact.discordUserId}`"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ contact.name }}
+                <span class="visually-hidden">({{ contact.url ? 'Discord-Kanal' : 'Discord-Profil' }}, öffnet in neuem Tab)</span>
+              </a>
               <span
+                v-else
                 class="guild-page__contact-name"
                 :class="{ 'guild-page__contact-name--placeholder': contact.isPlaceholder }"
               >
@@ -194,15 +206,55 @@ const focus = [
             </li>
           </ul>
           <p class="guild-page__hint">
-            Am schnellsten erreichst du uns im Discord.
+            Fragen stellst du am besten in #wow-forever – so können alle mitlesen und helfen.
+            Noch nicht auf dem Server?
+            <a
+              :href="guild.discordInvite"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="guild-page__hint-link"
+            >Discord beitreten<span class="visually-hidden"> (öffnet in neuem Tab)</span></a>
           </p>
         </div>
+      </section>
+
+      <section
+        id="chronik"
+        class="guild-page__chronicle"
+        aria-labelledby="guild-chronicle"
+      >
+        <header class="guild-page__chronicle-header">
+          <h2
+            id="guild-chronicle"
+            class="guild-page__title"
+          >
+            Unsere Geschichte
+          </h2>
+          <p class="guild-page__chronicle-lead">
+            Gemeinsam schreiben wir Gildengeschichte.
+          </p>
+        </header>
+        <GuildChronicle :milestones="milestones ?? []" />
       </section>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
+.guild-page__chronicle {
+  max-width: 48rem;
+  scroll-margin-top: var(--space-16);
+}
+
+.guild-page__chronicle-header {
+  margin-bottom: var(--space-6);
+}
+
+.guild-page__chronicle-lead {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 .guild-page {
   &__body {
     display: flex;
@@ -364,6 +416,16 @@ const focus = [
     font-weight: var(--font-weight-semibold);
     color: var(--color-frost);
 
+    &--link {
+      text-decoration: underline;
+      text-decoration-color: rgb(255 255 255 / 25%);
+      text-underline-offset: 3px;
+
+      @include focus-ring(2px);
+
+      &:hover { text-decoration-color: currentcolor; }
+    }
+
     &--placeholder {
       font-weight: var(--font-weight-regular);
       font-style: italic;
@@ -375,6 +437,13 @@ const focus = [
     margin-top: var(--space-4);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__hint-link {
+    color: var(--color-frost);
+    text-underline-offset: 3px;
+
+    @include focus-ring(2px);
   }
 }
 </style>

@@ -9,8 +9,8 @@ test.describe('Eventkalender', () => {
     // Discord-Event und Webseiten-Run sichtbar; das per Bot angekündigte Duplikat nicht
     await page.getByRole('button', { name: 'Liste' }).click()
     await expect(page.getByRole('button', { name: 'Gildentreffen in Eisenschmiede' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Erstbesuch: Hall of Thanes' })).toBeVisible()
-    await expect(page.getByText('Hall of Thanes – Gilden-Run')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Erstbesuch: Halle der Thane' })).toBeVisible()
+    await expect(page.getByText('Halle der Thane – Gilden-Run')).toHaveCount(0)
   })
 
   test('Filter nach Art und Abgesagte', async ({ page }) => {

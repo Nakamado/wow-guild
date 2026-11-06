@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
   const existing = await useProviders().characters.listByMember(viewer.memberId)
   const check = checkCharacterInput(input, existing, { editingId: character.id, maxCharacters: MAX_CHARACTERS_PER_MEMBER })
   if (!check.ok) rejectWith(check.error)
+  if (check.value.name !== character.name) await assertCharacterExistsInGame(event, check.value.name)
 
   return persist(() => writers.characters.update(character.id, check.value))
 })

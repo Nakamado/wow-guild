@@ -47,6 +47,7 @@ const embedSrc = computed(() => {
         <BaseButton
           size="sm"
           icon-left="play"
+          class="consent-embed__button"
           @click="consent = true"
         >
           Twitch-Inhalte laden
@@ -90,11 +91,22 @@ const embedSrc = computed(() => {
     flex-direction: column;
     gap: var(--space-3);
     align-items: center;
-    max-width: 24ch;
+    max-width: 28ch;
     padding: var(--space-4);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
+    line-height: var(--line-height-snug);
     color: var(--color-text);
     text-align: center;
+    text-shadow: 0 1px 3px rgb(4 6 15 / 90%);
+  }
+
+  // Kleine Fläche über dem Vorschaubild: gut lesbare Schrift statt der kursiven Zierschrift
+  &__button {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-style: normal;
+    letter-spacing: 0;
+    text-shadow: none;
   }
 }
 </style>

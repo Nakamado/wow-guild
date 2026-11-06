@@ -58,6 +58,8 @@ export function rowToCharacter(row: CharacterRow): Character {
     isMain: row.is_main,
     source: 'self',
     updatedAt: iso(row.updated_at),
+    // Berufe kommen nicht aus der Datenbank, sondern werden aus der Blizzard-API ergänzt
+    professions: [],
   }
 }
 

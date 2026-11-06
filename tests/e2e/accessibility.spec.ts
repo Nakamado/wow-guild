@@ -8,9 +8,11 @@ import { asPersona, gotoReady } from './support/helpers'
  */
 const pages = [
   { path: '/', persona: 'visitor' },
+  { path: '/', persona: 'admin' },
   { path: '/gilde', persona: 'visitor' },
   { path: '/regeln', persona: 'visitor' },
   { path: '/mitglieder', persona: 'member' },
+  { path: '/rangliste', persona: 'visitor' },
   { path: '/dungeons', persona: 'member' },
   { path: '/dungeons/the-deadmines', persona: 'member' },
   { path: '/gruppen', persona: 'member' },

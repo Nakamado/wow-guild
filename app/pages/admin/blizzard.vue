@@ -89,7 +89,7 @@ async function copy() {
 <template>
   <div class="probe-page">
     <PageHeader
-      eyebrow="Gildenleitung"
+      eyebrow="Admin"
       title="Blizzard-API-Probe"
       lead="Prüft, welche Daten die Blizzard-API für WoW: Forever liefert. Es wird nichts gespeichert."
     />

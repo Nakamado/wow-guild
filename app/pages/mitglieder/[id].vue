@@ -68,7 +68,7 @@ useSeoMeta({ title: () => member.value?.displayName ?? 'Mitglied', robots: 'noin
             v-if="member.isAdmin"
             class="member-page__tag"
           >
-            Gildenleitung
+            Admin
           </p>
           <div
             v-if="member.preferredRoles.length"

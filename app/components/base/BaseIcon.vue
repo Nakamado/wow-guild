@@ -31,6 +31,7 @@ const icons = {
   plus: 'M12 5v14M5 12h14',
   edit: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  pin: 'M9 3h6l-1 6 3 3H7l3-3-1-6zM12 12v9',
   star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z',
   chevronDown: 'M6 9l6 6 6-6',
 } as const

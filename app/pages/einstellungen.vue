@@ -9,7 +9,7 @@ const { signedIn, displayName, avatarUrl, viewer } = useViewer()
 const { mine, loaded, canManage, remove, setMain } = useCharacters()
 const { runs } = useRuns()
 
-const levelLabels = { visitor: 'Besucher', user: 'Angemeldet (ohne Gildenrolle)', member: 'Gildenmitglied', admin: 'Gildenleitung' } as const
+const levelLabels = { visitor: 'Besucher', user: 'Angemeldet (ohne Gildenrolle)', member: 'Gildenmitglied', admin: 'Admin' } as const
 
 const formOpen = ref(false)
 const editing = ref<Character | null>(null)

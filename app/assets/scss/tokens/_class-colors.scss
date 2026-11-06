@@ -13,4 +13,7 @@
   --color-class-warlock: #8788ee;
   --color-class-druid: #ff7c0a;
   --color-class-unknown: #a3b1d1;
+
+  // Hellere Textvariante, wo die Originalfarbe auf dunklem Grund zu wenig Kontrast hat (WCAG AA).
+  --color-class-shaman-text: #5aa9ff;
 }

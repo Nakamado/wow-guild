@@ -1,5 +1,7 @@
 import { classifySupabaseKey, normalizeSupabaseUrl } from '../lib/supabase-config'
 import { createLiveFactories } from '../providers/live'
+import { createSupabase } from '../repositories/supabase'
+import { createSupabaseBoardStore, type BoardStore } from '../repositories/supabase/board'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
 import type { ProviderKey, Providers, Writers } from '../providers/types'
 
@@ -65,6 +67,20 @@ export function useWriters(): Writers {
       ? 'Im Demo-Modus werden Änderungen nur im Browser gespeichert.'
       : 'Speichern ist gerade nicht möglich: Die Datenbank ist nicht eingerichtet.',
   })
+}
+
+let boardStore: { key: string, store: BoardStore } | null = null
+
+/**
+ * Schwarzes Brett in Supabase – null im Demo-Modus oder ohne Datenbank
+ * (dann zeigt die Seite Beispiel-Aushänge bzw. nichts).
+ */
+export function useBoardStore(): BoardStore | null {
+  const config = readProviderConfig()
+  if (config.demoMode || !config.supabase.url || !config.supabase.serviceRoleKey) return null
+  const key = `${config.supabase.url}:${config.supabase.serviceRoleKey.slice(-6)}`
+  if (boardStore?.key !== key) boardStore = { key, store: createSupabaseBoardStore(createSupabase(config.supabase.url, config.supabase.serviceRoleKey)) }
+  return boardStore.store
 }
 
 /**
