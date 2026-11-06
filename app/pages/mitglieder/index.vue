@@ -98,6 +98,13 @@ const results = computed(() => (members.value ? filterMembers(members.value, fil
         </ul>
 
         <EmptyState
+          v-else-if="!members?.length"
+          icon="users"
+          title="Noch keine Mitglieder"
+          description="Sobald sich Gildenmitglieder mit Discord anmelden, erscheinen sie hier mit ihren Charakteren."
+        />
+
+        <EmptyState
           v-else
           icon="users"
           title="Niemand passt auf diese Filter"
