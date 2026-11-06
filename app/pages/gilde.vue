@@ -9,6 +9,7 @@ useSeoMeta({
 })
 
 const { data: guildData } = await useFetch('/api/guild', { key: 'guild' })
+const { data: milestones } = await useFetch('/api/chronicle', { key: 'chronicle', default: () => [] })
 
 const focus = [
   { title: 'PvE', text: guildContent.focus.pve },
@@ -198,11 +199,44 @@ const focus = [
           </p>
         </div>
       </section>
+
+      <section
+        id="chronik"
+        class="guild-page__chronicle"
+        aria-labelledby="guild-chronicle"
+      >
+        <header class="guild-page__chronicle-header">
+          <h2
+            id="guild-chronicle"
+            class="guild-page__title"
+          >
+            Unsere Geschichte
+          </h2>
+          <p class="guild-page__chronicle-lead">
+            Gemeinsam schreiben wir Gildengeschichte.
+          </p>
+        </header>
+        <GuildChronicle :milestones="milestones ?? []" />
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
+.guild-page__chronicle {
+  max-width: 48rem;
+  scroll-margin-top: var(--space-16);
+}
+
+.guild-page__chronicle-header {
+  margin-bottom: var(--space-6);
+}
+
+.guild-page__chronicle-lead {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 .guild-page {
   &__body {
     display: flex;

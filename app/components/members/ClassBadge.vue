@@ -8,7 +8,10 @@ const gameClass = computed(() => findClass(props.classId))
 <template>
   <span
     class="class-badge"
-    :style="{ '--class-color': `var(--color-class-${classId}, var(--color-class-unknown))` }"
+    :style="{
+      '--class-color': `var(--color-class-${classId}, var(--color-class-unknown))`,
+      '--class-text-color': `var(--color-class-${classId}-text, var(--class-color))`,
+    }"
   >
     <span
       class="class-badge__swatch"
@@ -27,7 +30,7 @@ const gameClass = computed(() => findClass(props.classId))
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.4;
-  color: var(--class-color);
+  color: var(--class-text-color, var(--class-color));
   white-space: nowrap;
   background: color-mix(in srgb, var(--class-color) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--class-color) 35%, transparent);

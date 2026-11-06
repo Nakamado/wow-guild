@@ -1,3 +1,4 @@
+import { gotoReady } from './support/helpers'
 import { expect, test } from '@playwright/test'
 
 const PERSONA_COOKIE = 'wow-guild-demo-persona'
@@ -93,5 +94,40 @@ test.describe('Clips & Regeln', () => {
     await page.goto('/regeln')
     await expect(page.getByRole('note')).toContainText('Beispielregeln')
     await expect(page.getByRole('heading', { level: 2, name: 'Miteinander' })).toBeVisible()
+  })
+})
+
+test.describe('Chronik & Rangliste', () => {
+  test('Gilden-Chronik zeigt markierte Beispiel-Meilensteine, neueste zuerst', async ({ page }) => {
+    await page.goto('/gilde')
+    const chronicle = page.locator('#chronik')
+    await expect(chronicle.getByRole('heading', { name: 'Unsere Geschichte' })).toBeVisible()
+    await expect(chronicle.getByText(/Beispieldaten/)).toBeVisible()
+    const titles = chronicle.getByRole('listitem').getByRole('heading')
+    await expect(titles.first()).toHaveText('Erster gemeinsamer Raid')
+    await expect(titles.last()).toHaveText('Die Gilde wurde gegründet')
+    await expect(chronicle.getByText(/erkannt am/i)).toBeVisible()
+  })
+
+  test('Rangliste wechselt zwischen Main und Gesamt', async ({ page }) => {
+    await page.goto('/rangliste')
+    const main = page.getByRole('button', { name: 'Main-Charakter' })
+    const total = page.getByRole('button', { name: 'Gesamt' })
+    await expect(main).toHaveAttribute('aria-pressed', 'true')
+    await total.click()
+    await expect(total).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByText('Main und alle Twinks einer Person zusammen.')).toBeVisible()
+  })
+
+  test('Eintrag aufklappen zeigt, wie die Punkte zustande kommen', async ({ page }) => {
+    await gotoReady(page, '/rangliste')
+    const first = page.getByRole('list').getByRole('listitem').filter({ hasText: 'Punkte' }).first()
+    const toggle = first.getByRole('button').first()
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(first.getByRole('heading', { name: 'So kommen die Punkte zustande' })).toBeVisible()
+    await expect(first.getByText(/Stufe 2 bis \d+/)).toBeVisible()
+    await toggle.click()
+    await expect(first.getByRole('heading', { name: 'So kommen die Punkte zustande' })).toBeHidden()
   })
 })

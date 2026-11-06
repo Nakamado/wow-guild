@@ -11,6 +11,7 @@ const pages = [
   { path: '/gilde', persona: 'visitor' },
   { path: '/regeln', persona: 'visitor' },
   { path: '/mitglieder', persona: 'member' },
+  { path: '/rangliste', persona: 'visitor' },
   { path: '/dungeons', persona: 'member' },
   { path: '/dungeons/the-deadmines', persona: 'member' },
   { path: '/gruppen', persona: 'member' },

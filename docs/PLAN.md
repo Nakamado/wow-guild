@@ -210,3 +210,9 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 7 | Discord-Bot optional: Mitgliederliste ohne Bot aus angemeldeten Mitgliedern (Tabelle `members`) | Bot erst nötig, wenn Discord-Events oder vollständige Rollenliste gebraucht werden |
 | 7 | Rollen-Nachprüfung ohne Bot mit dem Discord-Token des Nutzers (nur im verschlüsselten Cookie) | sonst müssten sich Mitglieder ohne Bot alle 12 Stunden neu anmelden |
 | 7 | „Realm“ wird als Regelsatz angezeigt, Standard „PvE“ | WoW: Forever hat keine Realms, sondern Regelsätze |
+| 8 | Gilden-Chronik v1: manuelle Meilensteine in `content/chronicle.ts`, Beispiele klar markiert, Erkennung automatischer Meilensteine nur als vorbereitete Logik | automatische Quellen (Blizzard-API, Addon) docken später an `mergeMilestones` an, ohne UI-Umbau |
+| 8 | Chronik unterscheidet Ereignisdatum (`occurredAt`) und Erkennungsdatum (`detectedAt`) | historische Daten werden nie erfunden; automatisch Erkanntes zeigt „erkannt am …“ |
+| 8 | Rangliste `/rangliste` vorbereitet: Regeln in `content/points.ts`, Berechnung nur serverseitig; live vorerst leer | echte Punkte erst mit API-Sync (Schritt 1 des Addon-Plans) |
+| 8 | Hellere Textfarbe für die Schamanen-Klassenplakette | Originalblau erreicht auf dunklem Grund kein WCAG-AA |
+| 8 | Rangliste: jede Zeile aufklappbar mit Aufschlüsselung je Punkteart und Posten | Punkte sollen für alle nachvollziehbar sein |
+| 8 | Testlauf: `NUXT_BLIZZARD_PREVIEW_CHARACTERS` holt einzelne Charaktere live aus der API (Stufe, Berufe; Cache 30 Min.) | echte Daten ausprobieren, bevor Verknüpfung und Opt-in stehen |

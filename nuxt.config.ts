@@ -57,6 +57,8 @@ export default defineNuxtConfig({
       region: 'eu',
       /** Gilden-Slug in der Blizzard-API (noch offen) */
       guildSlug: '',
+      /** Testlauf Rangliste: Charaktere (kommagetrennt, „Vorname Nachname“), die live direkt aus der API kommen */
+      previewCharacters: '',
     },
     twitch: {
       clientId: '',

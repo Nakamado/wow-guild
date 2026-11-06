@@ -112,6 +112,10 @@ testet, welche Endpunkte antworten, und zeigt Status und Feldnamen an – gespei
    Bericht (ohne Tokens) teilen. Das Battle.net-Token liegt nur im verschlüsselten Session-Cookie und wird mit
    „Battle.net trennen“ entfernt.
 
+**Testlauf Rangliste:** Mit `NUXT_BLIZZARD_PREVIEW_CHARACTERS="Vorname Nachname"` (kommagetrennt, nur mit
+Einverständnis der Spieler) zeigt `/rangliste` im Live-Modus diese Charaktere mit Punkten für Stufe und Berufe direkt
+aus der API (alle 30 Minuten neu abgerufen; die API hinkt dem Spiel rund 13 Stunden hinterher).
+
 Der weitere Plan (API-first + Addon, Punkte, Verifizierung) steht in `docs/ADDON-PLAN.md`.
 
 ### Twitch-Integration
@@ -161,7 +165,7 @@ shared/            # von app/ und server/ gemeinsam genutzt (Alias #shared)
 ├── domain/        # reine Geschäftslogik (Anmeldung, Levelprüfung, Rechte, Kalender …)
 └── utils/         # z. B. Datumsformatierung (Europe/Berlin)
 data/demo/         # eindeutig fiktive Demo-Daten (relativ zum aktuellen Datum) und Demo-Personas
-content/           # redaktionelle Texte: guild.ts (Gildentexte), rules.ts (Regeln) – per Schema geprüft
+content/           # redaktionelle Texte: guild.ts, rules.ts, chronicle.ts (manuelle Chronik-Meilensteine), points.ts (Punkteregeln) – per Schema geprüft
 tests/
 ├── unit/          # reine Logik (Node)
 ├── nuxt/          # Komponenten/Composables (Nuxt-Umgebung)
