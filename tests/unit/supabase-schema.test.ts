@@ -27,7 +27,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await db.exec('delete from run_participants; delete from runs; delete from characters;')
+  await db.exec('delete from run_participants; delete from runs; delete from characters; delete from members;')
 })
 
 async function character(memberId: string, firstName: string, options: { isMain?: boolean, roles?: string[] } = {}) {
@@ -158,11 +158,22 @@ describe('Constraints', () => {
     expect(rows).toHaveLength(0)
   })
 
+  it('speichert Mitgliederprofile per Upsert und prüft Werte', async () => {
+    const upsert = `insert into members (id, display_name, avatar_url, is_guild_member) values ($1, $2, $3, $4)
+      on conflict (id) do update set display_name = excluded.display_name, is_guild_member = excluded.is_guild_member`
+    await db.query(upsert, [ALICE, 'Alice', 'https://cdn.discordapp.com/a.png', true])
+    await db.query(upsert, [ALICE, 'Alice Neu', null, false])
+    const { rows } = await db.query<{ display_name: string, is_guild_member: boolean }>('select display_name, is_guild_member from members')
+    expect(rows).toEqual([{ display_name: 'Alice Neu', is_guild_member: false }])
+    await expect(db.query(upsert, ['keine-id', 'X', null, true])).rejects.toThrow()
+    await expect(db.query(upsert, [BOB, 'Bob', 'http://unsicher.example', true])).rejects.toThrow()
+  })
+
   it('hat RLS auf allen Tabellen aktiv', async () => {
     const { rows } = await db.query<{ relname: string, relrowsecurity: boolean }>(
-      `select relname, relrowsecurity from pg_class where relname in ('characters', 'runs', 'run_participants') order by relname`,
+      `select relname, relrowsecurity from pg_class where relname in ('characters', 'runs', 'run_participants', 'members') order by relname`,
     )
     expect(rows.every(row => row.relrowsecurity)).toBe(true)
-    expect(rows).toHaveLength(3)
+    expect(rows).toHaveLength(4)
   })
 })

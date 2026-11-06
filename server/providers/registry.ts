@@ -7,7 +7,7 @@ import {
   createDemoMemberProvider,
   createDemoTwitchProvider,
 } from './demo'
-import { createConfigGuildProvider, createStaticDungeonProvider } from './static'
+import { createConfigGuildProvider, createOffProviders, createStaticDungeonProvider } from './static'
 import type { ProviderKey, Providers } from './types'
 
 /** Server-Konfiguration, unabhängig von Nuxt – damit die Registry rein testbar bleibt. */
@@ -19,7 +19,13 @@ export interface ProviderConfig {
   supabase: { url: string, serviceRoleKey: string }
 }
 
-export type ProviderMode = 'static' | 'demo' | 'live'
+/**
+ * - static: gleiche Daten in Demo und Live (Dungeons, Gildeninfos)
+ * - demo:   fiktive Beispieldaten (nur im Demo-Modus)
+ * - live:   echte Quelle
+ * - off:    Live-Betrieb ohne Zugangsdaten → leer statt Beispieldaten (nie Fake-Daten auf der echten Seite)
+ */
+export type ProviderMode = 'static' | 'demo' | 'live' | 'off'
 
 export type ProviderModeReason
   = | 'static-data' // gleiche Daten in Demo und Live
@@ -39,30 +45,48 @@ export type LiveFactories = { [K in ProviderKey]?: (config: ProviderConfig) => P
 
 const staticProviders: ProviderKey[] = ['dungeons', 'guild']
 
-/** Welche Zugangsdaten braucht welcher Live-Provider? (Variablenname → Wert) */
-function requirements(config: ProviderConfig): Record<Exclude<ProviderKey, 'dungeons' | 'guild'>, Record<string, string>> {
+type Requirement = Record<string, string>
+
+/**
+ * Welche Zugangsdaten braucht welcher Live-Provider? (Variablenname → Wert)
+ * Mehrere Einträge = Alternativen; die erste vollständige gewinnt.
+ */
+function requirements(config: ProviderConfig): Record<Exclude<ProviderKey, 'dungeons' | 'guild'>, Requirement[]> {
   const supabase = {
     NUXT_SUPABASE_URL: config.supabase.url,
     NUXT_SUPABASE_SERVICE_ROLE_KEY: config.supabase.serviceRoleKey,
   }
   return {
-    members: {
+    members: [
+      // Vollständige Liste über den Discord-Bot …
+      {
+        NUXT_DISCORD_BOT_TOKEN: config.discord.botToken,
+        NUXT_DISCORD_GUILD_ID: config.discord.guildId,
+        NUXT_DISCORD_MEMBER_ROLE_ID: config.discord.memberRoleId,
+      },
+      // … oder ohne Bot: alle, die sich schon einmal angemeldet haben (Supabase)
+      supabase,
+    ],
+    discordEvents: [{
       NUXT_DISCORD_BOT_TOKEN: config.discord.botToken,
       NUXT_DISCORD_GUILD_ID: config.discord.guildId,
-      NUXT_DISCORD_MEMBER_ROLE_ID: config.discord.memberRoleId,
-    },
-    discordEvents: {
-      NUXT_DISCORD_BOT_TOKEN: config.discord.botToken,
-      NUXT_DISCORD_GUILD_ID: config.discord.guildId,
-    },
-    twitch: {
+    }],
+    twitch: [{
       NUXT_TWITCH_CLIENT_ID: config.twitch.clientId,
       NUXT_TWITCH_CLIENT_SECRET: config.twitch.clientSecret,
       NUXT_PUBLIC_TWITCH_BROADCASTER_ID: config.twitch.broadcasterId,
-    },
-    characters: supabase,
-    groups: supabase,
+    }],
+    characters: [supabase],
+    groups: [supabase],
   }
+}
+
+const missingIn = (requirement: Requirement) =>
+  Object.entries(requirement).filter(([, value]) => !String(value ?? '').trim()).map(([name]) => name)
+
+/** Ist die Discord-Bot-Variante für Mitglieder vollständig? (sonst Supabase) */
+export function hasDiscordBot(config: ProviderConfig): boolean {
+  return missingIn(requirements(config).members[0]!).length === 0
 }
 
 /**
@@ -79,10 +103,12 @@ export function resolveProviderModes(
   for (const key of staticProviders) result[key] = { mode: 'static', reason: 'static-data', missing: [] }
 
   for (const key of Object.keys(required) as (keyof typeof required)[]) {
-    const missing = Object.entries(required[key]).filter(([, value]) => !String(value ?? '').trim()).map(([name]) => name)
+    const options = required[key].map(missingIn)
+    const complete = options.some(list => list.length === 0)
+    const missing = complete ? [] : options[0]!
     if (config.demoMode) result[key] = { mode: 'demo', reason: 'demo-mode', missing }
-    else if (missing.length) result[key] = { mode: 'demo', reason: 'missing-credentials', missing }
-    else if (!liveAvailable.includes(key)) result[key] = { mode: 'demo', reason: 'not-implemented', missing }
+    else if (!complete) result[key] = { mode: 'off', reason: 'missing-credentials', missing }
+    else if (!liveAvailable.includes(key)) result[key] = { mode: 'off', reason: 'not-implemented', missing }
     else result[key] = { mode: 'live', reason: 'configured', missing }
   }
 
@@ -105,9 +131,13 @@ export function createProviders(config: ProviderConfig, options: CreateProviders
     ? createDemoDataset(options.now, { twitchChannel: config.twitch.channel, simulateLive: options.simulateLive })
     : null
 
+  const off = createOffProviders(config.twitch.channel)
+
   function pick<K extends ProviderKey>(key: K, demoFactory: () => Providers[K]): Providers[K] {
     const factory = liveFactories[key]
-    return modes[key].mode === 'live' && factory ? factory(config) : demoFactory()
+    if (modes[key].mode === 'live' && factory) return factory(config)
+    if (modes[key].mode === 'off') return off[key as keyof typeof off] as Providers[K]
+    return demoFactory()
   }
 
   const providers: Providers = {

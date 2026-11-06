@@ -25,7 +25,7 @@ const inputs: CharacterInput[] = [
   { id: 'demo-char-15', memberId: 'demo-member-10', name: 'Federkiel Ackermann', classId: 'warrior', raceId: 'human', level: 9, roles: ['dps'], isMain: false },
 ]
 
-export const DEMO_REALM = 'Demo-Realm'
+export const DEMO_REALM = 'PvE'
 
 export function createDemoCharacters(now: Date): Character[] {
   return inputs.map((input, index) => ({

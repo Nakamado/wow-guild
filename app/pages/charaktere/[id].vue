@@ -128,7 +128,7 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
             </dd>
           </div>
           <div class="character-page__detail">
-            <dt>Realm</dt>
+            <dt>Regelsatz</dt>
             <dd>{{ character.realm }}</dd>
           </div>
           <div class="character-page__detail">

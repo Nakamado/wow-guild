@@ -19,7 +19,7 @@ const year = new Date().getFullYear()
         <AppLogo />
         <p class="app-footer__about">
           Community-Seite der WoW:&nbsp;Forever-Gilde aus Miinyus Community.
-          Wir spielen {{ guild.factionLabel }} auf {{ guild.realm }}.
+          Wir spielen {{ guild.factionLabel }} ({{ guild.realm }}).
         </p>
       </div>
 

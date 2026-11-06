@@ -71,7 +71,7 @@ export const CharacterSchema = z.object({
 
 export const MAX_CHARACTERS_PER_MEMBER = 12
 
-/** Eingabe beim Anlegen/Bearbeiten eines eigenen Charakters (Realm setzt der Server) */
+/** Eingabe beim Anlegen/Bearbeiten eines eigenen Charakters (Regelsatz setzt der Server) */
 export const CharacterInputSchema = z.object({
   name: z.string().transform(normalizeCharacterName).pipe(CharacterNameSchema),
   faction: FactionSchema,

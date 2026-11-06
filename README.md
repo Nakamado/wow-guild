@@ -67,7 +67,7 @@ Laufzeit eingelesen. Nur Werte mit `NUXT_PUBLIC_`-Präfix gelangen in den Browse
 ### Live-Betrieb einschalten
 
 `NUXT_PUBLIC_DEMO_MODE=false` setzen. Jede Quelle schaltet nur live, wenn ihre Zugangsdaten vollständig sind; sonst
-bleibt sie bei Demo-Daten und das Server-Log nennt die fehlenden Variablen. Für Logins wird zusätzlich
+bleibt der Bereich leer (nie Beispieldaten) und das Server-Log nennt die fehlenden Variablen. Für Logins wird zusätzlich
 `NUXT_APP_SECRET` gebraucht (versiegelt die Session-Cookies, z. B. `openssl rand -base64 32`; lokal erzeugt Nuxt
 ihn automatisch).
 
@@ -88,9 +88,17 @@ ihn automatisch).
    kommagetrennt in `NUXT_ADMIN_USER_IDS`. Sie brauchen dafür keine Discord-Rolle.
 
 Ablauf: Login mit Scopes `identify` + `guilds.members.read`, danach liest die Seite die eigenen Rollen auf dem
-Gilden-Server und speichert sie (nur serverseitig lesbar) in der versiegelten Session. Das Discord-Token wird
-nicht gespeichert. Rollen werden spätestens alle 10 Minuten per Bot nachgeprüft – wer die Rolle verliert, verliert
-damit die Mitgliedsrechte. Die Mitgliederliste zeigt nur Träger der Rolle „WoW Forever“.
+Gilden-Server und speichert sie (nur serverseitig lesbar) in der verschlüsselten Session. Rollen werden spätestens
+alle 10 Minuten nachgeprüft – per Bot, oder ohne Bot mit dem Discord-Token des Nutzers (Scopes `identify` +
+`guilds.members.read`, nur im verschlüsselten Session-Cookie, nie in der Datenbank). Wer die Rolle verliert,
+verliert damit die Mitgliedsrechte.
+
+**Mitgliederliste:** Mit Bot zeigt sie alle Träger der Rolle „WoW Forever“. **Ohne Bot** zeigt sie alle, die sich
+schon einmal auf der Seite angemeldet haben und die Rolle tragen (Tabelle `members` in Supabase: Discord-ID,
+Anzeigename, Avatar, Rollenstand – keine E-Mail). Der Bot ist also optional; ohne ihn fehlen nur die
+Discord-Events im Kalender.
+
+**Live-Betrieb ohne Zugangsdaten** für eine Quelle zeigt dort leere Inhalte, niemals Beispieldaten.
 
 ### Twitch-Integration
 
@@ -108,6 +116,7 @@ Zuordnung zum Mitglied).
 1. Projekt auf [supabase.com](https://supabase.com) anlegen (Region EU, z. B. Frankfurt).
 2. **SQL Editor** → jede Datei aus `supabase/migrations/` **einmal und in Reihenfolge** (nach Dateiname)
    ausführen (oder mit der Supabase-CLI: `supabase db push`). Neue Dateien in späteren Updates ebenso.
+   Aktuell: `…_initial_schema.sql`, `…_two_part_names.sql`, `…_members.sql`.
 3. **Project Settings → API**: Projekt-URL → `NUXT_SUPABASE_URL`, `service_role`-Key →
    `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Der Key bleibt auf dem Server und darf nie im Client landen.
 
@@ -265,7 +274,7 @@ Discord-Redirect auf die neue Domain umstellen.
 
 | Meldung im Log | Ursache | Lösung |
 |---|---|---|
-| `[providers] … demo (missing-credentials: …)` | Variable fehlt | genannte Variable setzen, neu deployen |
+| `[providers] … off (missing-credentials: …)` | Variable fehlt – der Bereich bleibt leer | genannte Variable setzen, neu deployen |
 | `Session nicht lesbar – ist NUXT_APP_SECRET gesetzt?` | Secret fehlt oder ist leer | `NUXT_APP_SECRET` setzen; lokal die Zeile auskommentieren |
 | `[supabase] … ist ein öffentlicher Key` | publishable/anon-Key statt Secret | Secret- bzw. `service_role`-Key eintragen |
 | `[twitch.status] nicht erreichbar (twitch 400 …)` | Twitch-Client-ID/Secret falsch | Werte in der Twitch-Konsole prüfen |

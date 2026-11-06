@@ -8,6 +8,7 @@ import { createDiscordBotClient, createDiscordEventProvider, createDiscordMember
 import { discordAvatarUrl, scheduledEventToDiscordEvent } from '../../server/providers/discord/normalize'
 import { createTwitchClient, createTwitchProvider, streamToStatus } from '../../server/providers/twitch'
 import { rowToRun, type RunRow } from '../../server/repositories/supabase/mappers'
+import { rowToMember } from '../../server/repositories/supabase/members'
 import { fromPostgresError } from '../../server/repositories/errors'
 import { safeReturnPath } from '../../shared/utils/return-path'
 import { CommunityMemberSchema } from '../../shared/schemas/community'
@@ -281,5 +282,13 @@ describe('Mehrere Rollen-IDs', () => {
     expect(accessLevelFromRoles(['mod'], config)).toBe('admin')
     expect(accessLevelFromRoles(['wow'], config)).toBe('member')
     expect(accessLevelFromRoles(['andere'], config)).toBe('user')
+  })
+})
+
+describe('Mitglieder aus Supabase', () => {
+  it('normalisiert Profile auf CommunityMember', () => {
+    const member = rowToMember({ id: '100000000000000001', display_name: 'Nakamado', avatar_url: null, is_guild_member: true, is_admin: true })
+    expect(member).toMatchObject({ discordId: '100000000000000001', profileUrl: 'https://discord.com/users/100000000000000001', isAdmin: true })
+    expect(() => CommunityMemberSchema.parse(member)).not.toThrow()
   })
 })

@@ -63,7 +63,8 @@ export default defineNuxtConfig({
       demoMode: true,
       guild: {
         name: 'Gildenname folgt',
-        realm: 'Realm folgt',
+        // WoW: Forever hat keine Realms, sondern Regelsätze (PvE, PvP, RP …)
+        realm: 'PvE',
         faction: 'alliance',
         discordInvite: 'https://discord.gg/tWnAgUK',
       },

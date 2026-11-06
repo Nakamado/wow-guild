@@ -1,5 +1,5 @@
 /**
- * Öffentliche, konfigurierbare Seitenwerte (Gildenname, Realm, Discord-Link …).
+ * Öffentliche, konfigurierbare Seitenwerte (Gildenname, Regelsatz, Discord-Link …).
  * Quelle: runtimeConfig.public → überschreibbar per NUXT_PUBLIC_* Umgebungsvariablen.
  */
 export function useSiteConfig() {

@@ -206,3 +206,7 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 7 | Rollen-IDs kommagetrennt (mehrere Admin-/Mitgliedsrollen) | z. B. Admin und MOD als Gildenleitung |
 | 7 | Barrierefreiheit per axe-core in den E2E-Tests statt Lighthouse | reproduzierbar im Test-Lauf, ohne zusätzliche Infrastruktur |
 | 7 | `h3` als direkte Abhängigkeit | für saubere HTTP-Fehler in testbaren Server-Modulen |
+| 7 | Live ohne Zugangsdaten: Bereich bleibt leer (Modus `off`) statt Demo-Daten | auf der echten Seite dürfen nie fiktive Mitglieder, Clips oder Events erscheinen |
+| 7 | Discord-Bot optional: Mitgliederliste ohne Bot aus angemeldeten Mitgliedern (Tabelle `members`) | Bot erst nötig, wenn Discord-Events oder vollständige Rollenliste gebraucht werden |
+| 7 | Rollen-Nachprüfung ohne Bot mit dem Discord-Token des Nutzers (nur im verschlüsselten Cookie) | sonst müssten sich Mitglieder ohne Bot alle 12 Stunden neu anmelden |
+| 7 | „Realm“ wird als Regelsatz angezeigt, Standard „PvE“ | WoW: Forever hat keine Realms, sondern Regelsätze |

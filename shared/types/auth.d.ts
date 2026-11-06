@@ -12,6 +12,12 @@ declare module '#auth-utils' {
     roles: string[] | null
     /** Zeitpunkt der letzten erfolgreichen Rollenprüfung (ms) */
     rolesCheckedAt: number
+    /**
+     * Discord-Zugriffstoken (nur Scopes identify + guilds.members.read), damit die Rollen
+     * auch ohne Bot nachgeprüft werden können. Liegt nur im verschlüsselten Session-Cookie.
+     */
+    accessToken?: string
+    accessTokenExpiresAt?: number
   }
 }
 

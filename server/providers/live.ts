@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { guildStreamers, type StreamerEntry } from '../../content/streamers'
 import { createSupabase, createSupabaseCharacterRepository, createSupabaseGroupRepository } from '../repositories/supabase'
 import { createDiscordBotClient, createDiscordEventProvider, createDiscordMemberProvider } from './discord'
-import type { LiveFactories, ProviderConfig } from './registry'
+import { createSupabaseMemberRepository, type MemberSnapshot } from '../repositories/supabase/members'
+import { hasDiscordBot, type LiveFactories, type ProviderConfig } from './registry'
 import { createTwitchClient, createTwitchProvider } from './twitch'
 import type { DiscordEventProvider, DiscordMemberProvider, TwitchProvider, Writers } from './types'
 import { serviceUnavailable, withFallback } from '../lib/resilience'
@@ -19,9 +20,14 @@ export function createLiveFactories(options: { streamers?: StreamerEntry[] } = {
   const getDb = (config: ProviderConfig) => (db ??= createSupabase(config.supabase.url, config.supabase.serviceRoleKey))
 
   const writers: Partial<Writers> = {}
+  let memberStore: ReturnType<typeof createSupabaseMemberRepository> | null = null
+  const getMemberStore = (config: ProviderConfig) => (memberStore ??= createSupabaseMemberRepository(getDb(config)))
 
   const factories: LiveFactories = {
-    members: config => resilientMembers(createDiscordMemberProvider(getBot(config), config.discord)),
+    // Mit Bot: komplette Rollenliste von Discord. Ohne Bot: angemeldete Mitglieder aus Supabase.
+    members: config => resilientMembers(hasDiscordBot(config)
+      ? createDiscordMemberProvider(getBot(config), config.discord)
+      : getMemberStore(config)),
     discordEvents: config => resilientEvents(createDiscordEventProvider(getBot(config), config.discord)),
     twitch: config => resilientTwitch(createTwitchProvider(
       createTwitchClient(config.twitch.clientId, config.twitch.clientSecret),
@@ -30,6 +36,7 @@ export function createLiveFactories(options: { streamers?: StreamerEntry[] } = {
     characters: (config) => {
       const repository = createSupabaseCharacterRepository(getDb(config))
       writers.characters = repository
+      getMemberStore(config)
       return repository
     },
     groups: (config) => {
@@ -43,6 +50,8 @@ export function createLiveFactories(options: { streamers?: StreamerEntry[] } = {
     factories,
     /** null, solange Charaktere und Runs nicht beide live gespeichert werden */
     writers: (): Writers | null => (writers.characters && writers.groups ? (writers as Writers) : null),
+    /** Profil-Speicher (Supabase) für Login und Rollenprüfung – null ohne Datenbank */
+    memberStore: (): { save(snapshot: MemberSnapshot): Promise<void> } | null => memberStore,
   }
 }
 

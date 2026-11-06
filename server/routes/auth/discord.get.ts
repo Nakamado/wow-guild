@@ -33,15 +33,27 @@ export default defineEventHandler(async (event) => {
       const discordUser = DiscordUserSchema.parse(user)
       const member = await fetchOwnGuildMember(tokens.access_token, config.discord.guildId)
 
+      const profile = {
+        id: discordUser.id,
+        displayName: discordDisplayName(discordUser, member?.nick),
+        avatarUrl: discordAvatarUrl(discordUser, config.discord.guildId, member?.avatar),
+      }
+      const roles = member?.roles ?? null
       await replaceUserSession(event, {
-        user: {
-          id: discordUser.id,
-          displayName: discordDisplayName(discordUser, member?.nick),
-          avatarUrl: discordAvatarUrl(discordUser, config.discord.guildId, member?.avatar),
+        user: profile,
+        secure: {
+          roles,
+          rolesCheckedAt: Date.now(),
+          // Für die Rollen-Nachprüfung ohne Bot (nur im verschlüsselten Cookie)
+          accessToken: tokens.access_token,
+          accessTokenExpiresAt: Date.now() + Number(tokens.expires_in ?? 0) * 1000,
         },
-        secure: { roles: member?.roles ?? null, rolesCheckedAt: Date.now() },
         loggedInAt: new Date().toISOString(),
       })
+
+      // In der Mitgliederliste erscheinen (ohne Bot ist das die einzige Quelle)
+      const level = accessLevelFor(event, profile.id, roles)
+      await rememberMember({ ...profile, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: true })
 
       const returnTo = safeReturnPath(getCookie(event, RETURN_COOKIE))
       deleteCookie(event, RETURN_COOKIE, { path: '/' })

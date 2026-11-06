@@ -9,7 +9,7 @@ import {
   type DemoPersonaId,
 } from '../../data/demo/personas'
 import { accessLevelFromRoles, can, parseIdList, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
-import { createDiscordBotClient } from '../providers/discord'
+import { createDiscordBotClient, fetchOwnGuildMember } from '../providers/discord'
 
 export interface ResolvedViewer extends Viewer {
   /** Nur im Demo-Modus gesetzt */
@@ -64,31 +64,55 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
   let { roles, rolesCheckedAt } = session.secure
   const age = Date.now() - rolesCheckedAt
   if (age > ROLE_RECHECK_MS) {
-    const fresh = await recheckRoles(event, session.user.id)
+    const fresh = await recheckRoles(event, session.user.id, session.secure)
     if (fresh !== undefined) {
       roles = fresh
       rolesCheckedAt = Date.now()
-      await replaceUserSession(event, { ...session, secure: { roles, rolesCheckedAt } })
+      await replaceUserSession(event, { ...session, secure: { ...session.secure, roles, rolesCheckedAt } })
+      const level = accessLevelFor(event, session.user.id, roles)
+      await rememberMember({ ...session.user, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: false })
     }
     else if (age > ROLE_MAX_AGE_MS) {
       roles = null // veraltet und nicht prüfbar → nur noch „angemeldet“
     }
   }
 
-  // Betreiber der Seite (NUXT_ADMIN_USER_IDS) sind immer Admin – auch ohne Discord-Rolle
-  const isConfiguredAdmin = parseIdList(config.adminUserIds).includes(session.user.id)
-  const roleConfig = { memberRoleId: String(config.discord.memberRoleId ?? ''), adminRoleId: String(config.discord.adminRoleId ?? '') }
-  const level = isConfiguredAdmin ? 'admin' : accessLevelFromRoles(roles, roleConfig)
+  const level = accessLevelFor(event, session.user.id, roles)
   return { level, memberId: session.user.id, persona: null, user: session.user }
 }
 
-/** undefined = Prüfung nicht möglich (kein Bot, Discord nicht erreichbar) */
-async function recheckRoles(event: H3Event, userId: string): Promise<string[] | null | undefined> {
+/**
+ * Zugriffsstufe eines angemeldeten Discord-Nutzers. Betreiber der Seite
+ * (NUXT_ADMIN_USER_IDS) sind immer Admin – auch ohne Discord-Rolle.
+ */
+export function accessLevelFor(event: H3Event, userId: string, roles: string[] | null): Exclude<Viewer['level'], 'visitor'> {
+  const config = useRuntimeConfig(event)
+  if (parseIdList(config.adminUserIds).includes(userId)) return 'admin'
+  const roleConfig = { memberRoleId: String(config.discord.memberRoleId ?? ''), adminRoleId: String(config.discord.adminRoleId ?? '') }
+  return accessLevelFromRoles(roles, roleConfig) as Exclude<Viewer['level'], 'visitor'>
+}
+
+/**
+ * Rollen erneut bei Discord abfragen: per Bot, sonst mit dem Token des Nutzers.
+ * undefined = Prüfung nicht möglich (kein Bot/Token, Discord nicht erreichbar).
+ */
+async function recheckRoles(
+  event: H3Event,
+  userId: string,
+  secure: { accessToken?: string, accessTokenExpiresAt?: number },
+): Promise<string[] | null | undefined> {
   const { botToken, guildId } = useRuntimeConfig(event).discord
-  if (!botToken || !guildId) return undefined
+  if (!guildId) return undefined
   try {
-    const member = await createDiscordBotClient(botToken).getGuildMember(guildId, userId)
-    return member ? member.roles : null
+    if (botToken) {
+      const member = await createDiscordBotClient(botToken).getGuildMember(guildId, userId)
+      return member ? member.roles : null
+    }
+    if (secure.accessToken && (secure.accessTokenExpiresAt ?? 0) > Date.now()) {
+      const member = await fetchOwnGuildMember(secure.accessToken, guildId)
+      return member ? member.roles : null
+    }
+    return undefined
   }
   catch (error) {
     console.warn(`[auth] Rollenprüfung fehlgeschlagen: ${error instanceof Error ? error.message : 'unbekannt'}`)

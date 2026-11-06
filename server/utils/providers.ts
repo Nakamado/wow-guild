@@ -14,6 +14,7 @@ let cache: {
   providers: Providers
   modes: Record<ProviderKey, ProviderModeInfo>
   writers: Writers | null
+  memberStore: ReturnType<ReturnType<typeof createLiveFactories>['memberStore']>
 } | null = null
 let loggedModes = false
 
@@ -23,7 +24,7 @@ export function useProviders(): Providers {
   if (cache?.day !== day) {
     const live = createLiveFactories()
     const { providers, modes } = createProviders(readProviderConfig(), { now, liveFactories: live.factories })
-    cache = { day, providers, modes, writers: live.writers() }
+    cache = { day, providers, modes, writers: live.writers(), memberStore: live.memberStore() }
     logModes(modes)
   }
   return cache.providers
@@ -32,6 +33,22 @@ export function useProviders(): Providers {
 export function useProviderModes(): Record<ProviderKey, ProviderModeInfo> {
   useProviders()
   return cache!.modes
+}
+
+/**
+ * Angemeldete Mitglieder speichern (Name, Avatar, Gildenrolle). Fehler werden nur geloggt –
+ * der Login darf daran nicht scheitern.
+ */
+export async function rememberMember(snapshot: Parameters<NonNullable<NonNullable<typeof cache>['memberStore']>['save']>[0]) {
+  useProviders()
+  const store = cache!.memberStore
+  if (!store) return
+  try {
+    await store.save(snapshot)
+  }
+  catch (error) {
+    console.warn(`[members] Profil nicht gespeichert: ${error instanceof Error ? error.message : 'unbekannt'}`)
+  }
 }
 
 /**
@@ -100,7 +117,7 @@ function logModes(modes: Record<ProviderKey, ProviderModeInfo>) {
   if (loggedModes) return
   loggedModes = true
   const summary = Object.entries(modes)
-    .map(([key, info]) => `${key}=${info.mode}${info.mode === 'demo' && info.reason !== 'demo-mode' ? ` (${info.reason}${info.missing.length ? `: ${info.missing.join(', ')}` : ''})` : ''}`)
+    .map(([key, info]) => `${key}=${info.mode}${info.mode === 'off' ? ` (${info.reason}${info.missing.length ? `: ${info.missing.join(', ')}` : ''})` : ''}`)
     .join(' · ')
   console.info(`[providers] ${summary}`)
 }

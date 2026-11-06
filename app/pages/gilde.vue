@@ -64,7 +64,7 @@ const focus = [
             <dd>{{ guild.factionLabel }}</dd>
           </div>
           <div class="guild-page__fact">
-            <dt>Realm</dt>
+            <dt>Regelsatz</dt>
             <dd>{{ guild.realm }}</dd>
           </div>
           <div class="guild-page__fact">

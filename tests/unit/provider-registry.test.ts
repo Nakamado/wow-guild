@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createProviders, resolveProviderModes, type ProviderConfig } from '../../server/providers/registry'
+import { createProviders, hasDiscordBot, resolveProviderModes, type ProviderConfig } from '../../server/providers/registry'
 import { filterClips } from '../../server/providers/demo'
 import { createDemoDataset } from '../../data/demo'
 import type { DiscordEventProvider } from '../../server/providers/types'
@@ -29,10 +29,10 @@ describe('resolveProviderModes', () => {
     expect(modes.twitch).toMatchObject({ mode: 'demo', reason: 'demo-mode' })
   })
 
-  it('fällt nur für Provider mit fehlenden Zugangsdaten auf Demo zurück', () => {
+  it('schaltet live nur Provider mit fehlenden Zugangsdaten ab – ohne Beispieldaten', () => {
     const config: ProviderConfig = { ...liveConfig, twitch: { ...liveConfig.twitch, clientSecret: '' } }
     const modes = resolveProviderModes(config, ['members', 'discordEvents', 'twitch', 'characters', 'groups'])
-    expect(modes.twitch).toEqual({ mode: 'demo', reason: 'missing-credentials', missing: ['NUXT_TWITCH_CLIENT_SECRET'] })
+    expect(modes.twitch).toEqual({ mode: 'off', reason: 'missing-credentials', missing: ['NUXT_TWITCH_CLIENT_SECRET'] })
     expect(modes.members.mode).toBe('live')
     expect(modes.groups.mode).toBe('live')
   })
@@ -42,9 +42,27 @@ describe('resolveProviderModes', () => {
     expect(resolveProviderModes(config, ['twitch']).twitch.mode).toBe('live')
   })
 
-  it('fällt auf Demo zurück, solange kein Live-Provider implementiert ist', () => {
+  it('bleibt live aus, solange kein Live-Provider implementiert ist', () => {
     const modes = resolveProviderModes(liveConfig, [])
-    expect(modes.members).toMatchObject({ mode: 'demo', reason: 'not-implemented' })
+    expect(modes.members).toMatchObject({ mode: 'off', reason: 'not-implemented' })
+  })
+
+  it('nutzt für Mitglieder ohne Bot die angemeldeten Mitglieder aus Supabase', () => {
+    const config: ProviderConfig = { ...liveConfig, discord: { ...liveConfig.discord, botToken: '' } }
+    const modes = resolveProviderModes(config, ['members', 'discordEvents'])
+    expect(modes.members.mode).toBe('live')
+    expect(modes.discordEvents).toMatchObject({ mode: 'off', missing: ['NUXT_DISCORD_BOT_TOKEN'] })
+    expect(hasDiscordBot(config)).toBe(false)
+    expect(hasDiscordBot(liveConfig)).toBe(true)
+  })
+
+  it('zeigt live ohne Zugangsdaten leere Daten statt Beispieldaten', async () => {
+    const config: ProviderConfig = { ...liveConfig, discord: { ...liveConfig.discord, botToken: '' }, supabase: { url: '', serviceRoleKey: '' } }
+    const { providers, modes } = createProviders(config)
+    expect(modes.members.mode).toBe('off')
+    expect(await providers.members.listGuildMembers()).toEqual([])
+    expect(await providers.groups.list()).toEqual([])
+    expect(await providers.discordEvents.listScheduledEvents()).toEqual([])
   })
 
   it('gibt nur Variablennamen aus, nie geheime Werte', () => {
@@ -71,7 +89,7 @@ describe('createProviders', () => {
     const { providers, modes } = createProviders(liveConfig, { liveFactories: { discordEvents: () => live } })
     expect(modes.discordEvents.mode).toBe('live')
     expect(providers.discordEvents).toBe(live)
-    expect(modes.members.mode).toBe('demo')
+    expect(modes.members.mode).toBe('off')
   })
 
   it('gibt Kopien zurück, damit der Demo-Datensatz unverändert bleibt', async () => {

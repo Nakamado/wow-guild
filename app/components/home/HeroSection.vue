@@ -56,7 +56,7 @@ onBeforeUnmount(() => {
           <dd>{{ guild.factionLabel }}</dd>
         </div>
         <div class="hero__fact">
-          <dt>Realm</dt>
+          <dt>Regelsatz</dt>
           <dd>{{ guild.realm }}</dd>
         </div>
       </dl>
