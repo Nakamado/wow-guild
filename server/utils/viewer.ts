@@ -10,6 +10,8 @@ import {
 } from '../../data/demo/personas'
 import { accessLevelFromRoles, can, parseIdList, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
 import { createDiscordBotClient, fetchOwnGuildMember } from '../providers/discord'
+import { discordAvatarUrl, discordDisplayName } from '../providers/discord/normalize'
+import type { DiscordGuildMember } from '../providers/discord/schemas'
 
 export interface ResolvedViewer extends Viewer {
   /** Nur im Demo-Modus gesetzt */
@@ -60,25 +62,36 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
     return { ...visitor, persona: null, user: null }
   }
   if (!session.user || !session.secure) return { ...visitor, persona: null, user: null }
+  let currentUser = session.user
 
   let { roles, rolesCheckedAt } = session.secure
   const age = Date.now() - rolesCheckedAt
   if (age > ROLE_RECHECK_MS) {
     const fresh = await recheckRoles(event, session.user.id, session.secure)
     if (fresh !== undefined) {
-      roles = fresh
+      roles = fresh?.roles ?? null
       rolesCheckedAt = Date.now()
-      await replaceUserSession(event, { ...session, secure: { ...session.secure, roles, rolesCheckedAt } })
-      const level = accessLevelFor(event, session.user.id, roles)
-      await rememberMember({ ...session.user, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: false })
+      // Name und Profilbild aus Discord mitziehen – Änderungen erscheinen so spätestens nach ~10 Minuten
+      const { guildId } = useRuntimeConfig(event).discord
+      const user = fresh?.member.user
+        ? {
+            ...currentUser,
+            displayName: discordDisplayName(fresh.member.user, fresh.member.nick),
+            avatarUrl: discordAvatarUrl(fresh.member.user, guildId, fresh.member.avatar),
+          }
+        : currentUser
+      await replaceUserSession(event, { ...session, user, secure: { ...session.secure, roles, rolesCheckedAt } })
+      currentUser = user
+      const level = accessLevelFor(event, user.id, roles)
+      await rememberMember({ ...user, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: false })
     }
     else if (age > ROLE_MAX_AGE_MS) {
       roles = null // veraltet und nicht prüfbar → nur noch „angemeldet“
     }
   }
 
-  const level = accessLevelFor(event, session.user.id, roles)
-  return { level, memberId: session.user.id, persona: null, user: session.user }
+  const level = accessLevelFor(event, currentUser.id, roles)
+  return { level, memberId: currentUser.id, persona: null, user: currentUser }
 }
 
 /**
@@ -100,17 +113,17 @@ async function recheckRoles(
   event: H3Event,
   userId: string,
   secure: { accessToken?: string, accessTokenExpiresAt?: number },
-): Promise<string[] | null | undefined> {
+): Promise<{ roles: string[], member: DiscordGuildMember } | null | undefined> {
   const { botToken, guildId } = useRuntimeConfig(event).discord
   if (!guildId) return undefined
   try {
     if (botToken) {
       const member = await createDiscordBotClient(botToken).getGuildMember(guildId, userId)
-      return member ? member.roles : null
+      return member ? { roles: member.roles, member } : null
     }
     if (secure.accessToken && (secure.accessTokenExpiresAt ?? 0) > Date.now()) {
       const member = await fetchOwnGuildMember(secure.accessToken, guildId)
-      return member ? member.roles : null
+      return member ? { roles: member.roles, member } : null
     }
     return undefined
   }

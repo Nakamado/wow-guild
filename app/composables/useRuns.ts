@@ -119,7 +119,7 @@ export function useRuns() {
   async function updateRun(id: string, input: RunInput): Promise<DomainResult<GroupRun>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
-    if (!can('runs:edit', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder die Gildenleitung kann diese Gruppe bearbeiten.')
+    if (!can('runs:edit', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder ein Admin kann diese Gruppe bearbeiten.')
     if (run.status !== 'open') return fail('run-not-open', 'Abgesagte oder abgeschlossene Gruppen lassen sich nicht mehr bearbeiten.')
     if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}`, { method: 'PATCH', body: input }))
     const dungeon = findDungeon(input.dungeonSlug)
@@ -144,7 +144,7 @@ export function useRuns() {
   async function cancelRun(id: string): Promise<DomainResult<GroupRun>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
-    if (!can('runs:cancel', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder die Gildenleitung kann diese Gruppe absagen.')
+    if (!can('runs:cancel', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder ein Admin kann diese Gruppe absagen.')
     if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}/cancel`, { method: 'POST' }))
     const result = cancelRunRule(run, new Date())
     if (result.ok) persist(result.value)

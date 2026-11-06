@@ -30,6 +30,7 @@ export const guildContent: GuildContent = {
   contacts: [
     { role: 'Gildenleitung', name: 'Ansprechpartner folgt', isPlaceholder: true },
     { role: 'Raidleitung', name: 'Ansprechpartner folgt', isPlaceholder: true },
-    { role: 'Webseite', name: 'Dustin', isPlaceholder: false },
+    // discordUserId ergänzen (Discord → Rechtsklick aufs eigene Profil → „Nutzer-ID kopieren“), dann wird der Name verlinkt
+    { role: 'Webseite', name: 'Nakamado', isPlaceholder: false },
   ],
 }

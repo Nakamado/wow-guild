@@ -51,12 +51,12 @@ function onSaved(run: { id: string }) {
       <h1 class="dungeon-page__title">
         {{ dungeon.name }}
       </h1>
-      <p
-        v-if="dungeon.nameEn !== dungeon.name"
-        class="dungeon-page__name-en"
-        lang="en"
-      >
-        {{ dungeon.nameEn }}
+      <p class="dungeon-page__name-en">
+        <span
+          v-if="dungeon.nameEn !== dungeon.name"
+          lang="en"
+        >{{ dungeon.nameEn }}</span>
+        <span class="dungeon-page__abbr"><span class="visually-hidden">Kürzel: </span>{{ dungeon.abbreviation }}</span>
       </p>
       <p class="dungeon-page__description">
         {{ dungeon.description }}
@@ -226,10 +226,25 @@ function onSaved(run: { id: string }) {
   }
 
   &__name-en {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
     font-family: var(--font-serif);
     font-size: var(--text-lg);
     font-style: italic;
     color: var(--color-text-muted);
+  }
+
+  &__abbr {
+    padding: 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-style: normal;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
   }
 
   &__description {

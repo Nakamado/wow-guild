@@ -26,12 +26,12 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
             class="dungeon-card__link"
           >{{ dungeon.name }}</NuxtLink>
         </h2>
-        <p
-          v-if="showEnglish"
-          class="dungeon-card__name-en"
-          lang="en"
-        >
-          {{ dungeon.nameEn }}
+        <p class="dungeon-card__name-en">
+          <span
+            v-if="showEnglish"
+            lang="en"
+          >{{ dungeon.nameEn }}</span>
+          <span class="dungeon-card__abbr"><span class="visually-hidden">Kürzel: </span>{{ dungeon.abbreviation }}</span>
         </p>
       </div>
       <span
@@ -141,9 +141,22 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
   }
 
   &__name-en {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
     margin-top: var(--space-1);
     font-size: var(--text-xs);
     color: var(--color-text-subtle);
+  }
+
+  &__abbr {
+    padding: 0 var(--space-1);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-muted);
+    letter-spacing: 0.04em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
   }
 
   &__badge {

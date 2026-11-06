@@ -60,6 +60,9 @@ const views = computed(() => new Intl.NumberFormat('de-DE').format(props.clip.vi
 .clip-card {
   display: flex;
   flex-direction: column;
+
+  // in Rastern gleich hoch, egal ob der Titel ein- oder zweizeilig ist
+  height: 100%;
   overflow: hidden;
 
   @include card-surface;
@@ -99,6 +102,7 @@ const views = computed(() => new Intl.NumberFormat('de-DE').format(props.clip.vi
   &__body {
     display: flex;
     flex-direction: column;
+    flex: 1;
     gap: var(--space-2);
     padding: var(--space-4) var(--space-5) var(--space-5);
   }
@@ -123,6 +127,9 @@ const views = computed(() => new Intl.NumberFormat('de-DE').format(props.clip.vi
 
   &__meta {
     display: flex;
+
+    // Metazeile unten ausrichten, damit sie in einer Reihe auf gleicher Höhe steht
+    margin-top: auto;
     flex-wrap: wrap;
     gap: var(--space-1) var(--space-3);
     font-size: var(--text-xs);

@@ -10,6 +10,10 @@ const props = withDefaults(
 
 const initial = computed(() => props.name.trim().charAt(0).toLocaleUpperCase('de-DE') || '?')
 const sizes = { sm: 32, md: 44, lg: 88 }
+
+// Veraltete Discord-Bild-URL (Bild inzwischen geändert) → Initiale statt kaputtem Bild
+const failed = ref(false)
+watch(() => props.src, () => (failed.value = false))
 </script>
 
 <template>
@@ -18,13 +22,14 @@ const sizes = { sm: 32, md: 44, lg: 88 }
     :class="`member-avatar--${size}`"
   >
     <NuxtImg
-      v-if="src"
+      v-if="src && !failed"
       :src="src"
       :alt="`Avatar von ${name}`"
       :width="sizes[size]"
       :height="sizes[size]"
       class="member-avatar__image"
       loading="lazy"
+      @error="failed = true"
     />
     <span
       v-else

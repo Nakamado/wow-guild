@@ -15,6 +15,8 @@ export const GuildContentSchema = z.object({
     name: z.string().min(1),
     /** Platzhalter, bis echte Ansprechpartner feststehen */
     isPlaceholder: z.boolean(),
+    /** Discord-Nutzer-ID (Zahl als Text) – dann wird der Name zum Link aufs Discord-Profil */
+    discordUserId: z.string().regex(/^\d{17,20}$/).optional(),
   })),
 })
 

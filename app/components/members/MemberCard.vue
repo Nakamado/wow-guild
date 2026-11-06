@@ -25,7 +25,7 @@ const alts = computed(() => props.member.characters.filter(character => characte
           v-if="member.isAdmin"
           class="member-card__tag"
         >
-          Gildenleitung
+          Admin
         </p>
       </div>
     </header>

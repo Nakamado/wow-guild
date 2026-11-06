@@ -127,14 +127,23 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
                 size="sm"
               />
               <span class="ranking-page__who">
-                <span class="ranking-page__name">{{ row.mainCharacter?.name ?? row.displayName }}</span>
-                <span class="ranking-page__detail">
+                <!-- Main: Charaktername · Gesamt: Discord-Name der Person (gleiches Profilbild verbindet beide Listen) -->
+                <span class="ranking-page__name">{{ board === 'main' ? (row.mainCharacter?.name ?? row.displayName) : row.displayName }}</span>
+                <span
+                  v-if="board === 'main'"
+                  class="ranking-page__detail"
+                >
                   <ClassBadge
                     v-if="row.mainCharacter"
                     :class-id="row.mainCharacter.classId"
                   />
                   <span v-if="row.mainCharacter">Stufe {{ row.mainCharacter.level }}</span>
-                  <span v-if="board === 'total' && row.characterCount > 1">· {{ row.characterCount }} Charaktere</span>
+                </span>
+                <span
+                  v-else
+                  class="ranking-page__detail"
+                >
+                  {{ row.characterCount === 1 ? '1 Charakter' : `${row.characterCount} Charaktere` }}
                 </span>
               </span>
               <span class="ranking-page__points">

@@ -186,7 +186,18 @@ const focus = [
               class="guild-page__contact"
             >
               <span class="guild-page__contact-role">{{ contact.role }}</span>
+              <a
+                v-if="contact.discordUserId"
+                class="guild-page__contact-name guild-page__contact-name--link"
+                :href="`https://discord.com/users/${contact.discordUserId}`"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ contact.name }}
+                <span class="visually-hidden">(Discord-Profil, öffnet in neuem Tab)</span>
+              </a>
               <span
+                v-else
                 class="guild-page__contact-name"
                 :class="{ 'guild-page__contact-name--placeholder': contact.isPlaceholder }"
               >
@@ -397,6 +408,16 @@ const focus = [
   &__contact-name {
     font-weight: var(--font-weight-semibold);
     color: var(--color-frost);
+
+    &--link {
+      text-decoration: underline;
+      text-decoration-color: rgb(255 255 255 / 25%);
+      text-underline-offset: 3px;
+
+      @include focus-ring(2px);
+
+      &:hover { text-decoration-color: currentcolor; }
+    }
 
     &--placeholder {
       font-weight: var(--font-weight-regular);
