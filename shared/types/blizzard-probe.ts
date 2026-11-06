@@ -11,6 +11,8 @@ export interface ProbeCheck {
   /** Feldnamen der Antwort (bzw. des ersten Listeneintrags) – zeigt, was Blizzard liefert */
   fields: string[]
   note?: string
+  /** Kurzer Ausschnitt der Antwort für ausgewählte Endpunkte (ohne Gold/Position) */
+  sample?: string
 }
 
 export interface ProbeRealm {

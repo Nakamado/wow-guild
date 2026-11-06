@@ -169,6 +169,10 @@ async function copy() {
                       >
                         {{ check.note }}
                       </p>
+                      <code
+                        v-if="check.sample"
+                        class="probe-page__fields"
+                      >{{ check.sample }}</code>
                       <details v-if="check.fields.length">
                         <summary>{{ check.fields.length }} Felder</summary>
                         <code class="probe-page__fields">{{ check.fields.join(', ') }}</code>

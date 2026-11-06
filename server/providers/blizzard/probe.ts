@@ -33,6 +33,30 @@ const text = (value: unknown): string | null => {
 }
 const num = (value: unknown): number | null => (typeof value === 'number' ? value : null)
 
+/** Für diese Tests zeigen wir einen kurzen Ausschnitt – sie entscheiden über API vs. Addon */
+const SAMPLE_FIELDS: Record<string, string[] | null> = {
+  'character-realmless': ['level', 'ruleset', 'faction', 'race', 'character_class', 'last_login_timestamp', 'realm', 'guild'],
+  'character-realm': ['level', 'ruleset', 'realm', 'guild'],
+  'character-encounters-dungeons': null,
+  'character-encounters-raids': null,
+  'character-professions': null,
+  'guild-roster': null,
+}
+
+/** Ausschnitt: ausgewählte Felder bzw. die ganze Antwort, gekürzt */
+export function sampleOf(id: string, body: unknown): string | undefined {
+  if (!(id in SAMPLE_FIELDS) || body === null || body === undefined) return undefined
+  const fields = SAMPLE_FIELDS[id]
+  let value: unknown = body
+  if (fields && isObject(body)) value = Object.fromEntries(fields.filter(key => key in body).map(key => [key, body[key]]))
+  else if (isObject(body)) {
+    const { character: _character, _links, ...rest } = body
+    value = rest
+  }
+  const json = JSON.stringify(value)
+  return json.length > 800 ? `${json.slice(0, 800)} …` : json
+}
+
 function resultOf(status: number): ProbeResult {
   if (status >= 200 && status < 300) return 'ok'
   if (status === 404) return 'missing'
@@ -97,7 +121,7 @@ export async function runBlizzardProbe(client: BlizzardClient, options: ProbeOpt
 
   const record = (id: string, label: string, response: (BlizzardResponse & { url: string }) | null, note?: string): ProbeCheck => {
     const check: ProbeCheck = response
-      ? { id, label, url: response.url, status: response.status, result: resultOf(response.status), fields: describeFields(response.body), note }
+      ? { id, label, url: response.url, status: response.status, result: resultOf(response.status), fields: describeFields(response.body), note, sample: sampleOf(id, response.body) }
       : { id, label, url: null, status: null, result: 'skipped', fields: [], note }
     checks.push(check)
     return check

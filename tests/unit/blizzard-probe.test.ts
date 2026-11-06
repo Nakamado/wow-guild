@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createBlizzardClient } from '../../server/providers/blizzard/client'
-import { describeFields, findStaticNamespace, runBlizzardProbe, toProbeCharacter } from '../../server/providers/blizzard/probe'
+import { describeFields, findStaticNamespace, runBlizzardProbe, sampleOf, toProbeCharacter } from '../../server/providers/blizzard/probe'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
@@ -83,5 +83,8 @@ describe('Blizzard-API-Probe', () => {
     expect(findStaticNamespace(account)).toBe('static-1.60.1_70399-forever-eu')
     expect(describeFields({ members: [{ a: 1 }], _links: {} })).toEqual(['members', 'members[].a'])
     expect(toProbeCharacter({ name: { de_DE: 'Ana' }, surname: 'Forever' }).name).toBe('Ana Forever')
+    expect(sampleOf('character-realmless', { level: 14, ruleset: 'normal', money: 99 })).toBe('{"level":14,"ruleset":"normal"}')
+    expect(sampleOf('character-encounters-dungeons', { character: {}, expansions: [] })).toBe('{"expansions":[]}')
+    expect(sampleOf('character-equipment', { a: 1 })).toBeUndefined()
   })
 })
