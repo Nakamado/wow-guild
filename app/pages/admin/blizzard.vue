@@ -20,13 +20,46 @@ const error = ref<string | null>(null)
 const copied = ref(false)
 const failedLink = computed(() => route.query.battlenet === 'fehlgeschlagen')
 
+// Einzelnen Endpunkt abrufen
+const raw = reactive({ path: '/profile/wow/character/nak-totembart/encounters/dungeons', namespace: 'profile' as 'profile' | 'dynamic' | 'static' })
+const rawResult = ref<{ url: string, status: number, body: unknown } | null>(null)
+const rawError = ref<string | null>(null)
+const rawLoading = ref(false)
+const rawPresets = [
+  { label: 'Profil', path: '/profile/wow/character/nak-totembart' },
+  { label: 'Dungeons', path: '/profile/wow/character/nak-totembart/encounters/dungeons' },
+  { label: 'Raids', path: '/profile/wow/character/nak-totembart/encounters/raids' },
+  { label: 'Berufe', path: '/profile/wow/character/nak-totembart/professions' },
+  { label: 'Quests', path: '/profile/wow/character/nak-totembart/quests/completed' },
+]
+
+async function fetchRaw() {
+  rawLoading.value = true
+  rawError.value = null
+  try {
+    rawResult.value = await $fetch<{ url: string, status: number, body: unknown }>('/api/admin/blizzard-raw' as string, { query: { ...raw } })
+  }
+  catch (err) {
+    rawResult.value = null
+    rawError.value = (err as { data?: { message?: string } }).data?.message ?? 'Abruf fehlgeschlagen.'
+  }
+  finally {
+    rawLoading.value = false
+  }
+}
+
+const lastLogin = computed(() => {
+  const body = rawResult.value?.body as { last_login_timestamp?: number } | null
+  return typeof body?.last_login_timestamp === 'number' ? new Date(body.last_login_timestamp).toLocaleString('de-DE') : null
+})
+
 const resultLabels: Record<string, string> = { ok: 'OK', missing: '404', forbidden: 'gesperrt', error: 'Fehler', skipped: 'übersprungen' }
 
 async function run() {
   running.value = true
   error.value = null
   try {
-    report.value = await $fetch<Report>('/api/admin/blizzard-probe')
+    report.value = await $fetch<Report>('/api/admin/blizzard-probe' as string)
   }
   catch (err) {
     error.value = (err as { data?: { message?: string } }).data?.message ?? 'Die Probe ist fehlgeschlagen.'
@@ -41,7 +74,7 @@ function connect() {
 }
 
 async function disconnect() {
-  await $fetch('/api/admin/battlenet', { method: 'DELETE' })
+  await $fetch<unknown>('/api/admin/battlenet' as string, { method: 'DELETE' })
   await run()
 }
 
@@ -117,6 +150,82 @@ async function copy() {
           >
             {{ error }}
           </p>
+        </BaseCard>
+
+        <BaseCard class="probe-page__controls">
+          <h2 class="probe-page__title">
+            Einzelnen Endpunkt abrufen
+          </h2>
+          <p class="probe-page__note">
+            Zeigt die komplette Antwort. Den Charakternamen im Pfad kannst du anpassen (vorname-nachname, klein).
+          </p>
+          <div class="probe-page__actions">
+            <BaseButton
+              v-for="preset in rawPresets"
+              :key="preset.label"
+              size="sm"
+              variant="ghost"
+              @click="raw.path = preset.path; raw.namespace = 'profile'; fetchRaw()"
+            >
+              {{ preset.label }}
+            </BaseButton>
+          </div>
+          <form
+            class="probe-page__raw-form"
+            @submit.prevent="fetchRaw"
+          >
+            <label
+              class="visually-hidden"
+              for="probe-raw-path"
+            >Pfad</label>
+            <input
+              id="probe-raw-path"
+              v-model="raw.path"
+              class="probe-page__input"
+              spellcheck="false"
+            >
+            <label
+              class="visually-hidden"
+              for="probe-raw-ns"
+            >Namespace</label>
+            <select
+              id="probe-raw-ns"
+              v-model="raw.namespace"
+              class="probe-page__input probe-page__input--select"
+            >
+              <option value="profile">
+                profile
+              </option>
+              <option value="dynamic">
+                dynamic
+              </option>
+              <option value="static">
+                static
+              </option>
+            </select>
+            <BaseButton
+              type="submit"
+              :loading="rawLoading"
+            >
+              Abrufen
+            </BaseButton>
+          </form>
+          <p
+            v-if="rawError"
+            class="probe-page__error"
+            role="alert"
+          >
+            {{ rawError }}
+          </p>
+          <template v-if="rawResult">
+            <p class="probe-page__note">
+              Status {{ rawResult.status }} · <code>{{ rawResult.url }}</code>
+              <template v-if="lastLogin">
+                · letzter Login laut Blizzard: {{ lastLogin }}
+              </template>
+            </p>
+            <pre class="probe-page__json">{{ JSON.stringify(rawResult.body, null, 2) }}</pre>
+          </template>
         </BaseCard>
 
         <template v-if="report">
@@ -351,6 +460,40 @@ async function copy() {
     &--skipped {
       color: var(--color-text-subtle);
     }
+  }
+
+  &__raw-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  &__input {
+    flex: 1 1 20rem;
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color-scheme: dark;
+
+    &--select {
+      flex: 0 0 auto;
+    }
+  }
+
+  &__json {
+    max-height: 32rem;
+    padding: var(--space-3);
+    overflow: auto;
+    font-size: var(--text-xs);
+    white-space: pre;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
   }
 
   &__realms {
