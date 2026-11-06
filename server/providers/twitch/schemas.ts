@@ -31,6 +31,19 @@ export const HelixClipSchema = z.object({
   created_at: z.string(),
   thumbnail_url: z.string(),
   duration: z.number().nonnegative(),
+  /** Twitch-Kategorie des Clips (leer bei sehr alten Clips) */
+  game_id: z.string().default(''),
+})
+
+export const HelixGameSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+
+/** Helix-Antwort mit Seitenzeiger (für mehrere Seiten Clips) */
+export const helixPage = <T extends z.ZodType>(item: T) => z.object({
+  data: z.array(item),
+  pagination: z.object({ cursor: z.string().optional() }).partial().default({}),
 })
 
 export const HelixUserSchema = z.object({

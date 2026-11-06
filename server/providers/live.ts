@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { guildStreamers, type StreamerEntry } from '../../content/streamers'
+import { clipGames, guildStreamers, type StreamerEntry } from '../../content/streamers'
 import { createSupabase, createSupabaseCharacterRepository, createSupabaseGroupRepository } from '../repositories/supabase'
 import { createDiscordBotClient, createDiscordEventProvider, createDiscordMemberProvider } from './discord'
 import { createSupabaseMemberRepository, type MemberSnapshot } from '../repositories/supabase/members'
@@ -31,7 +31,7 @@ export function createLiveFactories(options: { streamers?: StreamerEntry[] } = {
     discordEvents: config => resilientEvents(createDiscordEventProvider(getBot(config), config.discord)),
     twitch: config => resilientTwitch(createTwitchProvider(
       createTwitchClient(config.twitch.clientId, config.twitch.clientSecret),
-      { broadcasterId: config.twitch.broadcasterId, channel: config.twitch.channel, streamers: options.streamers ?? guildStreamers },
+      { broadcasterId: config.twitch.broadcasterId, channel: config.twitch.channel, streamers: options.streamers ?? guildStreamers, clipGames },
     ), config.twitch.channel),
     characters: (config) => {
       const repository = createSupabaseCharacterRepository(getDb(config))

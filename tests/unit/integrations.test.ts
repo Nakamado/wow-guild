@@ -165,6 +165,8 @@ describe('Twitch', () => {
 
     const recent = await provider.listClips({ period: '7d', sort: 'recent', limit: 10 })
     expect(calls[1]!.url).toContain('started_at=2026-10-28T12%3A00%3A00.000Z')
+    // ohne ended_at würde Twitch nur eine Woche ab started_at liefern
+    expect(calls[1]!.url).toContain('ended_at=2026-11-04T12%3A00%3A00.000Z')
     expect(recent.map(entry => entry.id)).toEqual(['a', 'b'])
     expect(recent[0]!.title).toBe('Clip a')
     for (const entry of recent) expect(() => ClipSchema.parse(entry)).not.toThrow()
@@ -173,6 +175,32 @@ describe('Twitch', () => {
     const popular = await provider.listClips({ period: '7d', sort: 'popular', limit: 1 })
     expect(popular.map(entry => entry.id)).toEqual(['b'])
     expect(calls).toHaveLength(2)
+  })
+
+  it('zeigt nur Clips aus den konfigurierten Kategorien und blättert dafür weiter', async () => {
+    const wow = (id: string, views: number) => ({ ...clip(id, views, '2026-11-03T10:00:00Z'), game_id: '18122' })
+    const other = (id: string) => ({ ...clip(id, 999, '2026-11-03T10:00:00Z'), game_id: '509658' })
+    const { fetch, calls } = mockFetch(
+      token(),
+      json({ data: [{ id: '18122', name: 'World of Warcraft' }] }),
+      json({ data: [other('x'), wow('a', 10)], pagination: { cursor: 'next' } }),
+      json({ data: [wow('b', 50), other('y')], pagination: {} }),
+    )
+    const provider = createTwitchProvider(createTwitchClient('cid', 's', { fetch, sleep: noSleep }), {
+      broadcasterId: '1', channel: 'miinyu', streamers: [], clipGames: ['World of Warcraft', 'World of Warcraft: Forever'],
+    })
+    const clips = await provider.listClips({ period: 'all', sort: 'popular', limit: 10 })
+    expect(calls[1]!.url).toBe('https://api.twitch.tv/helix/games?name=World+of+Warcraft&name=World+of+Warcraft%3A+Forever')
+    expect(calls[3]!.url).toContain('after=next')
+    expect(clips.map(entry => entry.id)).toEqual(['b', 'a'])
+  })
+
+  it('zeigt alle Clips, wenn keine Kategorie gefunden wird', async () => {
+    const { fetch } = mockFetch(token(), json({ data: [] }), json({ data: [clip('a', 1, '2026-11-03T10:00:00Z')], pagination: { cursor: 'next' } }))
+    const provider = createTwitchProvider(createTwitchClient('cid', 's', { fetch, sleep: noSleep }), {
+      broadcasterId: '1', channel: 'miinyu', streamers: [], clipGames: ['Gibt es nicht'],
+    })
+    expect((await provider.listClips({ period: 'all', sort: 'recent', limit: 10 })).map(entry => entry.id)).toEqual(['a'])
   })
 
   it('verknüpft Streamer nur über die Konfiguration mit Mitgliedern', async () => {

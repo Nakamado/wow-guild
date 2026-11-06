@@ -28,6 +28,30 @@ export const ROLE_MAX_AGE_MS = 12 * 60 * 60_000
 let warnedSession = false
 
 /**
+ * Eine Seite löst viele API-Anfragen gleichzeitig aus. Ohne Bündelung prüft jede davon die Rollen
+ * bei Discord – das endet in „429 Too Many Requests“. Daher: eine laufende Prüfung pro Nutzer teilen
+ * und nach einem Fehler kurz pausieren (die Rollen aus der Session gelten so lange weiter).
+ */
+const ROLE_RECHECK_BACKOFF_MS = 2 * 60_000
+const recheckInFlight = new Map<string, Promise<Awaited<ReturnType<typeof recheckRoles>>>>()
+const recheckPausedUntil = new Map<string, number>()
+
+function recheckRolesOnce(event: H3Event, userId: string, secure: Parameters<typeof recheckRoles>[2]) {
+  if ((recheckPausedUntil.get(userId) ?? 0) > Date.now()) return Promise.resolve(undefined)
+  const running = recheckInFlight.get(userId)
+  if (running) return running
+  const pending = recheckRoles(event, userId, secure)
+    .then((result) => {
+      if (result === undefined) recheckPausedUntil.set(userId, Date.now() + ROLE_RECHECK_BACKOFF_MS)
+      else recheckPausedUntil.delete(userId)
+      return result
+    })
+    .finally(() => recheckInFlight.delete(userId))
+  recheckInFlight.set(userId, pending)
+  return pending
+}
+
+/**
  * Wer stellt die Anfrage?
  * - Demo-Modus: Persona aus dem Demo-Cookie (sichtbar markierte Rollenauswahl).
  * - Live: Discord-Session. Rollen älter als 10 Minuten werden per Bot nachgeprüft;
@@ -67,7 +91,7 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
   let { roles, rolesCheckedAt } = session.secure
   const age = Date.now() - rolesCheckedAt
   if (age > ROLE_RECHECK_MS) {
-    const fresh = await recheckRoles(event, session.user.id, session.secure)
+    const fresh = await recheckRolesOnce(event, session.user.id, session.secure)
     if (fresh !== undefined) {
       roles = fresh?.roles ?? null
       rolesCheckedAt = Date.now()
