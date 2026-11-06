@@ -28,6 +28,8 @@ export const guildContent: GuildContent = {
     raids: 'Raidplanung startet mit den ersten Stufe-60-Charakteren. Termine stehen im Kalender.',
   },
   contacts: [
+    // Erste Anlaufstelle: Kanal #wow-forever auf Miinyus Discord (Link funktioniert nur für Server-Mitglieder)
+    { role: 'Fragen zur Gilde', name: '#wow-forever', isPlaceholder: false, url: 'https://discord.com/channels/723275162971275335/1562460291672051822' },
     { role: 'Gildenleitung', name: 'Minyu', isPlaceholder: false, discordUserId: '291187664994959360' },
     { role: 'Raidleitung', name: 'Ansprechpartner folgt', isPlaceholder: true },
     // discordUserId: Discord → Rechtsklick aufs Profil → „Nutzer-ID kopieren“ – der Name verlinkt dann aufs Profil

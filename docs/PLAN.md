@@ -216,3 +216,5 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 8 | Hellere Textfarbe für die Schamanen-Klassenplakette | Originalblau erreicht auf dunklem Grund kein WCAG-AA |
 | 8 | Rangliste: jede Zeile aufklappbar mit Aufschlüsselung je Punkteart und Posten | Punkte sollen für alle nachvollziehbar sein |
 | 8 | Testlauf: `NUXT_BLIZZARD_PREVIEW_CHARACTERS` holt einzelne Charaktere live aus der API (Stufe, Berufe; Cache 30 Min.) | echte Daten ausprobieren, bevor Verknüpfung und Opt-in stehen |
+| 8 | Charaktere auf Vertrauensbasis: beim Eintragen nur prüfen, ob es den Charakter in der Blizzard-API gibt (kein Eigentumsnachweis); bei API-Störung nicht blockieren | Schummeln ist unwahrscheinlich; Battle.net-Login bleibt optional |
+| 8 | Ansprechpartner: Kanal #wow-forever als erste Anlaufstelle | Fragen öffentlich statt per Privatnachricht |

@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const existing = await useProviders().characters.listByMember(viewer.memberId)
   const check = checkCharacterInput(input, existing, { maxCharacters: MAX_CHARACTERS_PER_MEMBER })
   if (!check.ok) rejectWith(check.error)
+  await assertCharacterExistsInGame(event, check.value.name)
 
   const realm = useRuntimeConfig(event).public.guild.realm
   setResponseStatus(event, 201)

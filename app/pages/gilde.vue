@@ -187,14 +187,14 @@ const focus = [
             >
               <span class="guild-page__contact-role">{{ contact.role }}</span>
               <a
-                v-if="contact.discordUserId"
+                v-if="contact.url || contact.discordUserId"
                 class="guild-page__contact-name guild-page__contact-name--link"
-                :href="`https://discord.com/users/${contact.discordUserId}`"
+                :href="contact.url ?? `https://discord.com/users/${contact.discordUserId}`"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 {{ contact.name }}
-                <span class="visually-hidden">(Discord-Profil, öffnet in neuem Tab)</span>
+                <span class="visually-hidden">({{ contact.url ? 'Discord-Kanal' : 'Discord-Profil' }}, öffnet in neuem Tab)</span>
               </a>
               <span
                 v-else
@@ -206,7 +206,14 @@ const focus = [
             </li>
           </ul>
           <p class="guild-page__hint">
-            Am schnellsten erreichst du uns im Discord.
+            Fragen stellst du am besten in #wow-forever – so können alle mitlesen und helfen.
+            Noch nicht auf dem Server?
+            <a
+              :href="guild.discordInvite"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="guild-page__hint-link"
+            >Discord beitreten<span class="visually-hidden"> (öffnet in neuem Tab)</span></a>
           </p>
         </div>
       </section>
@@ -430,6 +437,13 @@ const focus = [
     margin-top: var(--space-4);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__hint-link {
+    color: var(--color-frost);
+    text-underline-offset: 3px;
+
+    @include focus-ring(2px);
   }
 }
 </style>
