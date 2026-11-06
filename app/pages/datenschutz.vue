@@ -48,7 +48,7 @@
 
     <h2>6. Gespeicherte Daten (Datenbank)</h2>
     <p>
-      Gespeichert werden in einer Datenbank bei Supabase Inc.: dein Profil (Discord-ID, Anzeigename,
+      Gespeichert werden in einer Datenbank bei Supabase Inc. (Rechenzentrum in Irland, EU): dein Profil (Discord-ID, Anzeigename,
       Avatar, Stand der Gildenrolle, Zeitpunkt der letzten Anmeldung), die Charaktere, die du selbst
       einträgst, sowie deine Gruppenanmeldungen. Andere angemeldete Gildenmitglieder sehen diese
       Angaben; Besucher ohne Anmeldung nicht. Charaktere kannst du jederzeit in den Einstellungen
