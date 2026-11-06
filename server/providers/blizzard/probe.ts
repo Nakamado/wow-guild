@@ -118,7 +118,7 @@ export async function runBlizzardProbe(client: BlizzardClient, options: ProbeOpt
     checks,
     realms: [],
     accountCharacters: [],
-    guild: { slug: options.guildSlug || null, source: options.guildSlug ? 'config' : null, memberCount: null },
+    guild: { slug: options.guildSlug?.trim().toLowerCase() || null, source: options.guildSlug ? 'config' : null, memberCount: null },
   }
 
   const record = (id: string, label: string, response: (BlizzardResponse & { url: string }) | null, note?: string): ProbeCheck => {
@@ -178,12 +178,23 @@ export async function runBlizzardProbe(client: BlizzardClient, options: ProbeOpt
     ? (accountBody.wow_accounts as Json[]).flatMap(entry => (Array.isArray(entry.characters) ? entry.characters as Json[] : []))[0]
     : undefined
   let profileBase: string | null = null
+  // Gilden-Slug aus dem Charakterprofil übernehmen (guild.slug bzw. Link „/data/wow/guild/{slug}“)
+  const detectGuild = (body: unknown) => {
+    if (report.guild.slug || !isObject(body) || !isObject(body.guild)) return
+    const guildKey = hrefOf(body.guild.key)
+    const slug = (typeof body.guild.slug === 'string' ? body.guild.slug : null)
+      ?? guildKey?.match(/\/guild\/(?:[^/]+\/)?([^/?]+)/)?.[1] ?? null
+    if (slug) report.guild = { slug: slug.toLowerCase(), source: 'character', memberCount: null }
+  }
   if (firstCharacter) {
     const realmless = hrefOf(firstCharacter.character)
     if (realmless) {
       const response = await client.get(realmless, null, token)
       record('character-realmless', 'Charakterprofil (realmlos, Link aus dem Account)', response)
-      if (response.status === 200) profileBase = new URL(realmless).pathname
+      if (response.status === 200) {
+        profileBase = new URL(realmless).pathname
+        detectGuild(response.body)
+      }
     }
     const realm = isObject(firstCharacter.realm) ? firstCharacter.realm : null
     const first = text(firstCharacter.name)?.toLocaleLowerCase('de-DE')
@@ -196,11 +207,7 @@ export async function runBlizzardProbe(client: BlizzardClient, options: ProbeOpt
       const response = await client.get(path, namespaces.profile, token)
       record(index === 0 ? 'character-realm' : 'character-realm-fullname', `Charakterprofil (Realm-Slug + ${index === 0 ? 'Vorname' : 'Vorname-Nachname'})`, response)
       if (!profileBase && response.status === 200) profileBase = path
-      if (response.status === 200 && isObject(response.body) && isObject(response.body.guild) && !report.guild.slug) {
-        const guildKey = hrefOf(response.body.guild.key)
-        const slug = guildKey?.match(/\/guild\/(?:[^/]+\/)?([^/?]+)/)?.[1] ?? null
-        if (slug) report.guild = { slug, source: 'character', memberCount: null }
-      }
+      if (response.status === 200) detectGuild(response.body)
     }
   }
   else {
