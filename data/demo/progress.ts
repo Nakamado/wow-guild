@@ -3,8 +3,6 @@ import { retroactiveEvents } from '../../shared/domain/points'
 import type { PointsRules, ProgressEvent } from '../../shared/schemas/points'
 import type { Character } from '../../shared/types'
 
-const PROFESSIONS = ['alchemy', 'blacksmithing', 'enchanting', 'herbalism', 'mining', 'tailoring']
-
 /**
  * FIKTIVE Fortschritte für die Demo-Rangliste – deterministisch aus den Demo-Charakteren erzeugt
  * (gleiche Eingabe → gleiche Punkte), damit Tests und Screenshots stabil bleiben.
@@ -16,10 +14,8 @@ export function createDemoProgress(characters: readonly Character[], rules: Poin
 
   characters.forEach((character, index) => {
     const base = { memberId: character.memberId, characterId: character.id }
-    const professions = [
-      { id: PROFESSIONS[index % PROFESSIONS.length]!, skill: Math.min(300, character.level * 5 - (index % 3) * 20) },
-    ]
-    events.push(...retroactiveEvents({ ...base, level: character.level, professions }, rules))
+    // Berufsmeilensteine aus den (fiktiven) Berufen des Charakters – passt zur Charaktertabelle
+    events.push(...retroactiveEvents({ ...base, level: character.level, professions: character.professions }, rules))
 
     // Dungeons passend zur Stufe, verteilt über die letzten zwei Wochen
     const fitting = eligible.filter(dungeon => dungeon.levelRange.min <= character.level)

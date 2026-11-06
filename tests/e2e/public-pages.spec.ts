@@ -8,7 +8,7 @@ test.describe('Mitglieder & Datenschutz', () => {
     await context.addCookies([{ name: PERSONA_COOKIE, value: 'visitor', url: baseURL! }])
     await page.goto('/mitglieder')
     await expect(page.getByText('Mitglieder sehen mehr')).toBeVisible()
-    await expect(page.getByRole('article')).toHaveCount(0)
+    await expect(page.getByRole('table')).toHaveCount(0)
 
     // Die API verweigert den Zugriff serverseitig
     const response = await page.request.get('/api/members')
@@ -16,7 +16,7 @@ test.describe('Mitglieder & Datenschutz', () => {
 
     // Demo-Rolle wechseln → Liste erscheint ohne Neuladen
     await page.getByLabel('Ansicht als').selectOption('member')
-    await expect(page.getByRole('heading', { name: 'Brummbart' })).toBeVisible()
+    await expect(page.getByRole('table').getByRole('link', { name: 'Brummbart' }).first()).toBeVisible()
   })
 
   test('Rollenwechsel bleibt nach dem Neuladen erhalten', async ({ page }) => {
@@ -28,19 +28,39 @@ test.describe('Mitglieder & Datenschutz', () => {
     await expect(page.getByLabel('Ansicht als')).toHaveValue('visitor')
   })
 
-  test('Filter wirken und landen in der URL', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'Filterlogik einmal genügt')
-    await page.goto('/mitglieder')
-    await page.getByLabel('Klasse').selectOption('druid')
-    await expect(page).toHaveURL(/klasse=druid/)
-    await expect(page.getByRole('status').filter({ hasText: /^\d+ Mitglied/ })).toHaveText('2 Mitglieder')
+  test('Charaktertabelle sortiert per Spaltenüberschrift, Berufe inklusive', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Sortierlogik einmal genügt')
+    await gotoReady(page, '/mitglieder')
+    const table = page.getByRole('table')
+    const firstName = () => table.locator('tbody tr').first().getByRole('rowheader')
+    await expect(page.getByText('Beispieldaten: Berufe und Skillwerte sind fiktiv.')).toBeVisible()
 
-    await page.getByLabel('Rolle').selectOption('tank')
-    await expect(page.getByRole('heading', { name: 'Mondsichel' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Sternenstaub' })).toHaveCount(0)
+    // Standard: Stufe absteigend
+    await expect(table.getByRole('columnheader', { name: 'Stufe' })).toHaveAttribute('aria-sort', 'descending')
 
-    await page.getByRole('button', { name: 'Filter zurücksetzen' }).first().click()
-    await expect(page.getByRole('status').filter({ hasText: /^\d+ Mitglied/ })).toHaveText('11 Mitglieder')
+    const nameHeader = table.getByRole('columnheader', { name: 'Charakter' })
+    await nameHeader.getByRole('button').click()
+    await expect(nameHeader).toHaveAttribute('aria-sort', 'ascending')
+    await expect(page).toHaveURL(/sortierung=name&richtung=aufsteigend/)
+    await expect(firstName()).toHaveText(/^Eisblume Frostweber/)
+    await nameHeader.getByRole('button').click()
+    await expect(nameHeader).toHaveAttribute('aria-sort', 'descending')
+    await expect(firstName()).toHaveText(/^Zischelbart Rußfunke/)
+
+    // Skill absteigend: Charaktere ohne Berufe stehen ganz unten
+    const skillHeader = table.getByRole('columnheader', { name: 'Skill' })
+    await skillHeader.getByRole('button').click()
+    await skillHeader.getByRole('button').click()
+    await expect(skillHeader).toHaveAttribute('aria-sort', 'descending')
+    await expect(table.locator('tbody tr').last()).toContainText('–')
+
+    // Zwei Hauptberufe stehen in einer Zeile; Link zum Charakterprofil bleibt
+    const row = table.getByRole('row').filter({ hasText: 'Eisblume Frostweber' })
+    await expect(row).toContainText('Schneiderei')
+    await expect(row).toContainText('Verzauberkunst')
+    await row.getByRole('link', { name: 'Eisblume Frostweber' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Eisblume Frostweber' })).toBeVisible()
+    await expect(page.getByText('Erste Hilfe')).toBeVisible()
   })
 
   test('Mitgliederprofil führt zum Charakter', async ({ page }) => {

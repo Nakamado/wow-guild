@@ -1,4 +1,5 @@
-import type { Character } from '../../shared/types'
+import { findProfession } from '../../shared/data/professions'
+import type { Character, Profession } from '../../shared/types'
 
 /**
  * EINDEUTIG FIKTIVE Charaktere (Allianz, Demo-Realm). Wie in WoW: Forever mit Vor- und Nachnamen.
@@ -6,6 +7,30 @@ import type { Character } from '../../shared/types'
  * Demo-Mitglied 11 hat bewusst noch keinen Charakter (Onboarding-Fall).
  */
 type CharacterInput = Pick<Character, 'id' | 'memberId' | 'name' | 'classId' | 'raceId' | 'level' | 'roles' | 'isMain'>
+
+/** FIKTIVE Berufe (Quelle „demo“) – bewusst gemischt: zwei, ein oder kein Hauptberuf, mit/ohne Sekundärberufe */
+const prof = (id: string, skill: number, maxSkill = 300): Profession => {
+  const info = findProfession(id)!
+  return { id, name: info.name, kind: info.kind, skill, maxSkill, source: 'demo' }
+}
+
+const demoProfessions: Record<string, Profession[]> = {
+  'demo-char-01': [prof('tailoring', 300), prof('enchanting', 285), prof('first-aid', 300), prof('cooking', 225)],
+  'demo-char-02': [prof('engineering', 160, 225), prof('mining', 175, 225)],
+  'demo-char-03': [prof('blacksmithing', 300), prof('mining', 300), prof('fishing', 150)],
+  'demo-char-04': [prof('herbalism', 105, 150)],
+  'demo-char-05': [prof('alchemy', 210, 225), prof('herbalism', 225, 225), prof('fishing', 200, 225)],
+  'demo-char-06': [prof('leatherworking', 290), prof('skinning', 300), prof('cooking', 300), prof('first-aid', 270)],
+  'demo-char-07': [],
+  'demo-char-08': [prof('alchemy', 180, 225), prof('herbalism', 200, 225)],
+  'demo-char-09': [prof('tailoring', 195, 225), prof('enchanting', 180, 225)],
+  'demo-char-10': [prof('leatherworking', 300), prof('skinning', 300), prof('fishing', 300), prof('cooking', 300), prof('first-aid', 300)],
+  'demo-char-11': [prof('tailoring', 75, 150)],
+  'demo-char-12': [prof('enchanting', 205, 225), prof('tailoring', 210, 225)],
+  'demo-char-13': [prof('engineering', 300), prof('mining', 285), prof('first-aid', 225)],
+  'demo-char-14': [prof('skinning', 90, 150), prof('leatherworking', 85, 150)],
+  'demo-char-15': [],
+}
 
 const inputs: CharacterInput[] = [
   { id: 'demo-char-01', memberId: 'demo-member-01', name: 'Eisblume Frostweber', classId: 'priest', raceId: 'dwarf', level: 60, roles: ['healer'], isMain: true },
@@ -33,6 +58,7 @@ export function createDemoCharacters(now: Date): Character[] {
     realm: DEMO_REALM,
     faction: 'alliance',
     source: 'demo',
+    professions: demoProfessions[input.id] ?? [],
     // Gestaffelte „letzte Aktualisierung“, damit die Anzeige realistisch wirkt
     updatedAt: new Date(now.getTime() - (index + 1) * 3_600_000 * 7).toISOString(),
   }))

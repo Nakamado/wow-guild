@@ -54,13 +54,15 @@ describe('Blizzard-Fortschritt lesen', () => {
     expect(parseProfessions({
       primaries: [
         { profession: { id: 186, name: 'Bergbau' }, tiers: [{ skill_points: 160, max_skill_points: 225 }] },
-        { profession: { id: 182, name: 'Kräuterkunde' }, skill_points: 80 },
+        { profession: { id: 182, name: 'Kräuterkunde' }, skill_points: 80, max_skill_points: 150 },
+        { profession: { id: 9999, name: 'Unbekannter Beruf' }, skill_points: 5 },
       ],
       secondaries: [{ profession: { name: 'Angeln' }, skill_points: 20 }],
     })).toEqual([
-      { id: '186', name: 'Bergbau', skill: 160 },
-      { id: '182', name: 'Kräuterkunde', skill: 80 },
-      { id: 'angeln', name: 'Angeln', skill: 20 },
+      { id: 'mining', name: 'Bergbau', kind: 'primary', skill: 160, maxSkill: 225, source: 'blizzard-api' },
+      { id: 'herbalism', name: 'Kräuterkunde', kind: 'primary', skill: 80, maxSkill: 150, source: 'blizzard-api' },
+      { id: 'unbekannter-beruf', name: 'Unbekannter Beruf', kind: 'primary', skill: 5, maxSkill: null, source: 'blizzard-api' },
+      { id: 'fishing', name: 'Angeln', kind: 'secondary', skill: 20, maxSkill: null, source: 'blizzard-api' },
     ])
     expect(parseProfessions(null)).toEqual([])
   })

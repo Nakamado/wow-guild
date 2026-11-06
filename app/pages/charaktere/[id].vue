@@ -3,6 +3,7 @@ import { findClass } from '#shared/data/classes'
 import { dungeons } from '#shared/data/dungeons'
 import { findRace } from '#shared/data/races'
 import { filterDungeons } from '#shared/domain/dungeons'
+import { primaryProfessions, secondaryProfessions } from '#shared/domain/character-table'
 import { formatRange } from '#shared/domain/level'
 import type { Character } from '#shared/types'
 
@@ -27,6 +28,13 @@ const { data, status, refresh, notFound } = await useProtectedFetch<CharacterRes
 const character = computed(() => data.value?.character ?? null)
 const gameClass = computed(() => (character.value ? findClass(character.value.classId) : undefined))
 const race = computed(() => (character.value ? findRace(character.value.raceId) : undefined))
+const primaries = computed(() => (character.value ? primaryProfessions(character.value) : []))
+const secondaries = computed(() => (character.value ? secondaryProfessions(character.value) : []))
+const professionSourceLabels = { 'blizzard-api': 'Blizzard-API', 'addon': 'Addon', 'manual': 'Eigene Angabe', 'demo': 'Beispieldaten (fiktiv)' } as const
+const professionSource = computed(() => {
+  const sources = [...new Set(character.value?.professions.map(profession => professionSourceLabels[profession.source]) ?? [])]
+  return sources.join(', ')
+})
 const factionLabel = computed(() => (character.value?.faction === 'horde' ? 'Horde' : 'Allianz'))
 const sourceLabel: Record<Character['source'], string> = {
   demo: 'Demo-Daten',
@@ -126,6 +134,51 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
                 :role="role"
               />
             </dd>
+          </div>
+          <div class="character-page__detail">
+            <dt>Hauptberufe</dt>
+            <dd>
+              <ul
+                v-if="primaries.length"
+                class="character-page__professions"
+              >
+                <li
+                  v-for="profession in primaries"
+                  :key="profession.id"
+                >
+                  {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
+                </li>
+              </ul>
+              <template v-else>
+                Keine Angaben
+              </template>
+            </dd>
+          </div>
+          <div class="character-page__detail">
+            <dt>Sekundärberufe</dt>
+            <dd>
+              <ul
+                v-if="secondaries.length"
+                class="character-page__professions"
+              >
+                <li
+                  v-for="profession in secondaries"
+                  :key="profession.id"
+                >
+                  {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
+                </li>
+              </ul>
+              <template v-else>
+                Keine Angaben
+              </template>
+            </dd>
+          </div>
+          <div
+            v-if="professionSource"
+            class="character-page__detail"
+          >
+            <dt>Berufe laut</dt>
+            <dd>{{ professionSource }}</dd>
           </div>
           <div class="character-page__detail">
             <dt>Regelsatz</dt>
@@ -275,6 +328,16 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
+  }
+
+  &__professions {
+    display: grid;
+    gap: 2px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    strong { color: var(--color-text); }
   }
 
   &__title {

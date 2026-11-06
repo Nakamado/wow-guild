@@ -1,11 +1,12 @@
 import type { H3Event } from 'h3'
 import { createBlizzardClient, type BlizzardClient } from '../providers/blizzard/client'
-import { characterSlug } from '../providers/blizzard/progress'
+import { characterSlug, fetchCharacterProfessions } from '../providers/blizzard/progress'
+import type { Character, Profession } from '#shared/types'
 
 let cachedClient: { key: string, client: BlizzardClient } | null = null
 
 /** Ein Client pro Zugangsdaten – so wird das App-Token zwischen Anfragen wiederverwendet */
-function blizzardClient(event: H3Event): { client: BlizzardClient, region: string } | null {
+function blizzardClient(event?: H3Event): { client: BlizzardClient, region: string } | null {
   const { blizzard } = useRuntimeConfig(event)
   const clientId = String(blizzard.clientId ?? '')
   const clientSecret = String(blizzard.clientSecret ?? '')
@@ -42,4 +43,25 @@ export async function assertCharacterExistsInGame(event: H3Event, name: string):
     message: `„${name}“ wurde in WoW: Forever (EU) nicht gefunden. Bitte Vor- und Nachnamen prüfen. `
       + 'Ganz neue Charaktere kennt die Blizzard-API erst nach einigen Stunden – dann einfach später noch einmal versuchen.',
   })
+}
+
+/** Berufe je Charakter höchstens alle 30 Minuten abrufen (die API hinkt ohnehin ~13 Std. hinterher) */
+const cachedProfessions = defineCachedFunction(async (name: string): Promise<Profession[] | null> => {
+  const blizzard = blizzardClient()
+  if (!blizzard) return null
+  const app = await blizzard.client.getAppToken()
+  if (!app.token) throw new Error('Kein Blizzard-App-Token') // Fehler werden nicht zwischengespeichert
+  return fetchCharacterProfessions(blizzard.client, app.token, blizzard.region, name)
+}, { name: 'character-professions', maxAge: 30 * 60, swr: true, getKey: (name: string) => characterSlug(name) })
+
+/**
+ * Live: Berufe aus der Blizzard-API ergänzen (API-first). Demo-Daten und Charaktere, für die die API
+ * nichts liefert, bleiben unverändert – vorhandene Daten werden nie mit leeren Werten überschrieben.
+ */
+export async function withGameProfessions(characters: Character[]): Promise<Character[]> {
+  if (useRuntimeConfig().public.demoMode || !blizzardClient()) return characters
+  return Promise.all(characters.map(async (character) => {
+    const professions = await cachedProfessions(character.name).catch(() => null)
+    return professions?.length ? { ...character, professions } : character
+  }))
 }

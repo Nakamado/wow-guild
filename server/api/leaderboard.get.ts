@@ -3,6 +3,7 @@ import { createDemoProgress } from '../../data/demo/progress'
 import { createBlizzardClient } from '../providers/blizzard/client'
 import { characterSlug, fetchCharacterProgress, parsePreviewCharacters, type BlizzardCharacterProgress } from '../providers/blizzard/progress'
 import { instances } from '#shared/data/dungeons'
+import { findProfession } from '#shared/data/professions'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
 import type { ProgressEvent } from '#shared/schemas/points'
 
@@ -28,15 +29,6 @@ interface MemberInfo {
   avatarUrl: string | null
 }
 
-const professionNames: Record<string, string> = {
-  alchemy: 'Alchemie',
-  blacksmithing: 'Schmiedekunst',
-  enchanting: 'Verzauberkunst',
-  herbalism: 'Kräuterkunde',
-  mining: 'Bergbau',
-  tailoring: 'Schneiderei',
-}
-
 /** Längster Instanz-Slug, mit dem die Objekt-ID beginnt (z. B. „the-deadmines:3:1“) */
 const instanceName = (objectId: string) =>
   instances.filter(instance => objectId === instance.slug || objectId.startsWith(`${instance.slug}:`) || objectId.startsWith(`${instance.slug}-`))
@@ -46,7 +38,7 @@ function describer(extraProfessionNames: Record<string, string>) {
   return (event: ProgressEvent): string => {
     if (event.type === 'profession-milestone') {
       const [id = '', milestone = ''] = event.objectId.split(':')
-      return `${extraProfessionNames[id] ?? professionNames[id] ?? id} – Skill ${milestone}`
+      return `${findProfession(id)?.name ?? extraProfessionNames[id] ?? id} – Skill ${milestone}`
     }
     return instanceName(event.objectId)
   }

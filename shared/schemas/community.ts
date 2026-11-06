@@ -53,6 +53,20 @@ export function splitCharacterName(name: string): { firstName: string, lastName:
   return { firstName, lastName: rest.join(' ') }
 }
 
+/** Berufe: zwei Hauptberufe, dazu bis zu drei Sekundärberufe (Angeln, Kochen, Erste Hilfe) */
+export const ProfessionKindSchema = z.enum(['primary', 'secondary'])
+export const ProfessionSourceSchema = z.enum(['blizzard-api', 'addon', 'manual', 'demo'])
+
+export const ProfessionSchema = z.object({
+  /** Berufs-ID aus dem Katalog (shared/data/professions.ts), z. B. „tailoring“ */
+  id: SlugSchema,
+  name: z.string().min(1),
+  kind: ProfessionKindSchema,
+  skill: z.number().int().min(0).max(1000),
+  maxSkill: z.number().int().min(0).max(1000).nullable(),
+  source: ProfessionSourceSchema,
+})
+
 export const CharacterSchema = z.object({
   id: IdSchema,
   memberId: IdSchema,
@@ -67,6 +81,8 @@ export const CharacterSchema = z.object({
   isMain: z.boolean(),
   source: DataSourceSchema,
   updatedAt: IsoDateTimeSchema,
+  /** Berufe – kommen aus der Blizzard-API (später Addon/manuell); leer = unbekannt */
+  professions: z.array(ProfessionSchema).max(5).default([]),
 })
 
 export const MAX_CHARACTERS_PER_MEMBER = 12

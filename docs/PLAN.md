@@ -218,3 +218,5 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 8 | Testlauf: `NUXT_BLIZZARD_PREVIEW_CHARACTERS` holt einzelne Charaktere live aus der API (Stufe, Berufe; Cache 30 Min.) | echte Daten ausprobieren, bevor Verknüpfung und Opt-in stehen |
 | 8 | Charaktere auf Vertrauensbasis: beim Eintragen nur prüfen, ob es den Charakter in der Blizzard-API gibt (kein Eigentumsnachweis); bei API-Störung nicht blockieren | Schummeln ist unwahrscheinlich; Battle.net-Login bleibt optional |
 | 8 | Ansprechpartner: Kanal #wow-forever als erste Anlaufstelle | Fragen öffentlich statt per Privatnachricht |
+| 8 | /mitglieder zeigt statt Mitgliederkarten eine sortierbare Charaktertabelle (Spaltenköpfe als Buttons, `aria-sort`, Sortierung in der URL), ohne Filter | Wunsch: klassische Datentabelle statt Filteroberfläche |
+| 8 | Berufe (2 Haupt-, bis 3 Sekundärberufe) am Charakter, live aus der Blizzard-API (Cache 30 Min.), noch nicht in der Datenbank | API-first; Speicherung folgt mit Abgleich bzw. Addon (Quelle je Beruf vorgesehen) |

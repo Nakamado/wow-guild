@@ -1,4 +1,6 @@
 import type { BlizzardClient } from './client'
+import { matchBlizzardProfession } from '#shared/data/professions'
+import type { Profession } from '#shared/types'
 
 /**
  * Fortschritt eines Charakters aus der Blizzard-API (WoW: Forever) – vorerst nur das, was
@@ -12,7 +14,7 @@ export interface BlizzardCharacterProgress {
   name: string
   level: number
   classId: string
-  professions: { id: string, name: string, skill: number }[]
+  professions: Profession[]
   /** letzter Login laut API (ISO) – die Daten hinken dem Spiel rund 13 Stunden hinterher */
   lastLoginAt: string | null
 }
@@ -46,19 +48,33 @@ export function parsePreviewCharacters(value: string): { name: string, discordId
 const professionSlug = (name: string) =>
   name.toLocaleLowerCase('de-DE').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-/** Berufe aus `/professions` lesen – mit Stufen (`tiers`) oder direkt mit `skill_points` */
-export function parseProfessions(body: unknown): BlizzardCharacterProgress['professions'] {
+/**
+ * Berufe aus `/professions` lesen – mit Stufen (`tiers`) oder direkt mit `skill_points`.
+ * Zuordnung zum Katalog über die Blizzard-ID, sonst über den deutschen Namen.
+ */
+export function parseProfessions(body: unknown): Profession[] {
   if (!isObject(body)) return []
-  const entries = [body.primaries, body.secondaries].flatMap(list => (Array.isArray(list) ? list : []))
-  const result: BlizzardCharacterProgress['professions'] = []
-  for (const entry of entries) {
-    if (!isObject(entry) || !isObject(entry.profession)) continue
-    const name = text(entry.profession.name)
-    if (!name) continue
-    const tiers = Array.isArray(entry.tiers) ? entry.tiers.filter(isObject) : []
-    const skill = Math.max(num(entry.skill_points) ?? 0, ...tiers.map(tier => num(tier.skill_points) ?? 0))
-    const id = num(entry.profession.id)
-    result.push({ id: id !== null ? String(id) : professionSlug(name), name, skill })
+  const lists: [unknown, Profession['kind']][] = [[body.primaries, 'primary'], [body.secondaries, 'secondary']]
+  const result: Profession[] = []
+  for (const [list, kind] of lists) {
+    for (const entry of Array.isArray(list) ? list : []) {
+      if (!isObject(entry) || !isObject(entry.profession)) continue
+      const name = text(entry.profession.name)
+      const blizzardId = num(entry.profession.id)
+      if (!name && blizzardId === null) continue
+      const tiers = Array.isArray(entry.tiers) ? entry.tiers.filter(isObject) : []
+      const skill = Math.max(num(entry.skill_points) ?? 0, ...tiers.map(tier => num(tier.skill_points) ?? 0))
+      const maxValues = [num(entry.max_skill_points), ...tiers.map(tier => num(tier.max_skill_points))].filter((value): value is number => value !== null)
+      const known = matchBlizzardProfession(blizzardId, name)
+      result.push({
+        id: known?.id ?? (name ? professionSlug(name) : `profession-${blizzardId}`),
+        name: known?.name ?? name ?? `Beruf ${blizzardId}`,
+        kind: known?.kind ?? kind,
+        skill,
+        maxSkill: maxValues.length ? Math.max(...maxValues) : null,
+        source: 'blizzard-api',
+      })
+    }
   }
   return result
 }
@@ -81,6 +97,13 @@ export function parseCharacterProgress(slug: string, fallbackName: string, profi
     professions: parseProfessions(professions),
     lastLoginAt: lastLogin ? new Date(lastLogin).toISOString() : null,
   }
+}
+
+/** Nur die Berufe eines Charakters abrufen; `null` = nicht abrufbar (z. B. unbekannt oder API-Störung) */
+export async function fetchCharacterProfessions(client: BlizzardClient, token: string, region: string, name: string): Promise<Profession[] | null> {
+  const path = `/profile/wow/character/${encodeURIComponent(characterSlug(name))}/professions`
+  const response = await client.get(path, `profile-forever-${region}`, token)
+  return response.status === 200 ? parseProfessions(response.body) : null
 }
 
 /** Einen Charakter per App-Token abrufen (realmloser Profilpfad). Fehler → `null`, nie Tokens im Log. */

@@ -17,6 +17,7 @@ export type Dungeon = z.infer<typeof S.DungeonSchema>
 
 export type CommunityMember = z.infer<typeof S.CommunityMemberSchema>
 export type Character = z.infer<typeof S.CharacterSchema>
+export type Profession = z.infer<typeof S.ProfessionSchema>
 export type CharacterInput = z.infer<typeof S.CharacterInputSchema>
 
 export type RoleCapacity = z.infer<typeof S.RoleCapacitySchema>
