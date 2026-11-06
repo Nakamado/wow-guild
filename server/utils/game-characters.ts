@@ -42,17 +42,24 @@ export async function lookupGameCharacter(event: H3Event | undefined, name: stri
   }
 }
 
+/**
+ * Blizzard kennt Charaktere erst ab Stufe 10, nach dem Ausloggen und mit einigen Stunden Verzögerung.
+ * Deshalb ist „nicht gefunden“ kein hartes Nein: Man kann bewusst trotzdem speichern (`?allowUnknown=1`).
+ */
 export const notInGameError = (name: string) => ({
   code: 'character-not-in-game',
-  message: `„${name}“ wurde in WoW: Forever (EU) nicht gefunden. Bitte Vor- und Nachnamen prüfen. `
-    + 'Ganz neue Charaktere kennt die Blizzard-API erst nach einigen Stunden – dann einfach später noch einmal versuchen.',
+  message: `„${name}“ ist bei Blizzard (noch) nicht zu finden. Bitte prüfe die Schreibweise. `
+    + 'Blizzard zeigt Charaktere erst ab Stufe 10 und nach dem Ausloggen – mit einigen Stunden Verzögerung. '
+    + 'Du kannst ihn trotzdem eintragen; sobald Blizzard ihn kennt, aktualisieren sich Stufe, Klasse und Volk automatisch.',
 })
 
 /**
- * Prüft beim Umbenennen, ob es den Charakter gibt (Vertrauensbasis: nur Existenz, kein Eigentum).
- * Nur ein eindeutiges „gibt es nicht“ blockiert – Demo, fehlende Zugangsdaten oder Störungen nicht.
+ * Prüft beim Eintragen/Umbenennen, ob es den Charakter gibt (Vertrauensbasis: nur Existenz, kein Eigentum).
+ * Nur ein eindeutiges „gibt es nicht“ hält an – und auch das nur, solange nicht bewusst bestätigt wurde.
+ * Demo, fehlende Zugangsdaten oder Störungen blockieren nie.
  */
 export async function assertCharacterExistsInGame(event: H3Event, name: string): Promise<void> {
+  if (getQuery(event).allowUnknown === '1') return
   const result = await lookupGameCharacter(event, name)
   if (result.status === 'not-found') rejectWith(notInGameError(name))
 }

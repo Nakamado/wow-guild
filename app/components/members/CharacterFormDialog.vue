@@ -3,7 +3,7 @@ import { gameClasses, findClass } from '#shared/data/classes'
 import { races } from '#shared/data/races'
 import { roles as roleDefinitions } from '#shared/data/roles'
 import { MAX_LEVEL } from '#shared/schemas/common'
-import { CharacterInputSchema, QuickCharacterInputSchema, splitCharacterName } from '#shared/schemas/community'
+import { CharacterInputSchema, normalizeCharacterName, QuickCharacterInputSchema, splitCharacterName } from '#shared/schemas/community'
 import type { Character, Faction, RoleId } from '#shared/types'
 
 /**
@@ -43,11 +43,17 @@ const errorMessage = ref<string | null>(null)
 const saving = ref(false)
 /** Live beim Anlegen: nur Name + Rollen, den Rest liefert die Blizzard-API */
 const quick = ref(false)
+/** Blizzard kennt den Namen (noch) nicht – der nächste Klick speichert bewusst trotzdem */
+const confirmUnknown = ref(false)
+const confirmedName = ref('')
+const awaitingConfirm = computed(() => !quick.value && confirmUnknown.value
+  && confirmedName.value === normalizeCharacterName(`${form.firstName} ${form.lastName}`))
 
 watch(open, (isOpen) => {
   if (!isOpen) return
   errorMessage.value = null
   quick.value = !isDemo && !props.character
+  confirmUnknown.value = false
   const source = props.character
   const name = splitCharacterName(source?.name ?? '')
   form.firstName = name.firstName
@@ -120,8 +126,13 @@ async function submit() {
       emit('saved', result.value)
       return
     }
-    // Blizzard nicht erreichbar oder unvollständig: volles Formular, soweit bekannt vorausgefüllt
-    if (result.error.code === 'game-data-unavailable' || result.error.code === 'game-data-incomplete') {
+    // Blizzard kennt den Charakter (noch) nicht, ist nicht erreichbar oder unvollständig:
+    // volles Formular, soweit bekannt vorausgefüllt – bei „nicht gefunden“ mit bewusster Bestätigung
+    if (result.error.code === 'character-not-in-game') {
+      confirmUnknown.value = true
+      confirmedName.value = normalizeCharacterName(name)
+    }
+    if (['game-data-unavailable', 'game-data-incomplete', 'character-not-in-game'].includes(result.error.code)) {
       quick.value = false
       const prefill = 'prefill' in result ? result.prefill : undefined
       if (prefill?.faction) form.faction = prefill.faction
@@ -139,10 +150,18 @@ async function submit() {
     errorMessage.value = describeIssue(parsed.error.issues[0]?.path[0])
     return
   }
+  // Bestätigung gilt nur für genau diesen Namen
+  const allowUnknown = confirmUnknown.value && confirmedName.value === parsed.data.name
   saving.value = true
-  const result = props.character ? await update(props.character.id, parsed.data) : await create(parsed.data)
+  const result = props.character
+    ? await update(props.character.id, parsed.data, { allowUnknown })
+    : await create(parsed.data, { allowUnknown })
   saving.value = false
   if (!result.ok) {
+    if (result.error.code === 'character-not-in-game') {
+      confirmUnknown.value = true
+      confirmedName.value = parsed.data.name
+    }
     errorMessage.value = result.error.message
     return
   }
@@ -397,7 +416,7 @@ async function submit() {
         :form="`${ids.error}-form`"
         :loading="saving"
       >
-        {{ submitLabel ?? (isEdit ? 'Änderungen speichern' : 'Charakter speichern') }}
+        {{ awaitingConfirm ? 'Trotzdem speichern' : (submitLabel ?? (isEdit ? 'Änderungen speichern' : 'Charakter speichern')) }}
       </BaseButton>
     </template>
   </BaseDialog>
