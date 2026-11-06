@@ -4,6 +4,25 @@
 > Alle API-Angaben stammen aus Community-Tests (03.–05.11.); Blizzard hat für Forever **nichts offiziell
 > dokumentiert** und im Entwicklerforum nicht geantwortet. Eigene Tests mit Zugangsdaten stehen noch aus (Schritt 0).
 
+## 0. Ergebnis der eigenen API-Probe (06.11.2026, EU, Charakter „Nak Totembart“, Stufe 14)
+
+| Endpunkt | Ergebnis |
+|---|---|
+| App-Token (Client-Credentials) | ✅ |
+| `/profile/user/wow` (Battle.net-Login) | ✅ liefert die eigenen Forever-Charaktere → **Verifizierung über Battle.net funktioniert** |
+| `/profile/user/wow/protected-character/6939-6815512` | ✅ – versteckte **Realm-ID 6939**, Charakter-ID 6815512 (enthält auch Gold/Position → wird nicht gespeichert) |
+| `/profile/wow/character/nak-totembart` (realmlos, App-Token) | ✅ 31 Felder, u. a. `level`, `race`, `character_class`, `faction`, `ruleset`, `last_login_timestamp`, Links zu allen Unterseiten |
+| …`/equipment`, `/professions` (mit Stufen/`tiers`), `/quests/completed`, `/specializations`, `/achievements`, `/statistics`, `/reputations` | ✅ alle mit Daten |
+| …`/encounters/dungeons` | ✅ 200, aber **ohne Inhalt** (bei Stufe 14 noch kein Dungeon?) – Inhalt offen |
+| …`/encounters/raids` | ✅ 200, nur `character` (Raids öffnen am 09.12.) |
+| `/data/wow/playable-class/index?namespace=static-forever-eu` | ✅ jetzt auch **ohne** Versionsnummer |
+| `/data/wow/realm/index?namespace=dynamic-forever-eu` | ❌ 404 – Realm-ID 6939 lässt sich derzeit keinem Namen zuordnen |
+| Gildenliste | noch nicht getestet (Gilde/Slug fehlt) |
+
+**Folgerung:** Die API liefert weit mehr als erwartet. Stufe, Berufe mit Skillwerten und abgeschlossene Quests –
+also fast alles für das Punktesystem – kommen **ohne Addon**. Offen bleibt nur, ob `encounters/dungeons` Abschlüsse
+und Bosskills zählt (nächste Probe mit einem Charakter, der einen Dungeon abgeschlossen hat).
+
 ## 1. Recherche: Was liefert die Blizzard-API für Forever?
 
 **Namespaces** (inoffiziell, gefunden durch Ausprobieren):
@@ -24,8 +43,8 @@
 | `…/equipment`, `…/professions`, `…/quests/completed`, `…/encounters/raids`, `…/specializations`, Erfolge | **unbekannt** | nicht getestet bzw. nicht veröffentlicht. In Classic Era gibt es z. B. gar keinen Berufe-Endpunkt |
 | Armory-Seite für Forever | gibt es nicht | — |
 
-Folgerung: **Verlässlich sind heute nur die Gildenliste und die Charakterliste des eigenen Accounts.**
-Alles andere kann jederzeit kommen – oder ausbleiben. Die Architektur muss beides aushalten.
+Folgerung vor der eigenen Probe: Verlässlich schienen nur Gildenliste und Account-Charakterliste. **Überholt durch
+Abschnitt 0** – die Charakter-Endpunkte antworten inzwischen fast vollständig.
 
 ### Serverstruktur: Regelsatz statt Realm
 
@@ -45,15 +64,15 @@ Legende: ✅ bestätigt · 🧪 experimentell / teilweise · ❔ unbestätigt ·
 
 | Information | Blizzard-API | Addon | Bewertung |
 |---|---|---|---|
-| Name, Nachname, Charakter-ID | ✅ Roster/Account | ✅ | **beide** – API als Quelle |
-| Stufe, Klasse, Volk, Fraktion | ✅ Roster (Stufe verzögert) | ✅ | **beide** – API, Addon nur bei Abweichung |
-| Gildenzugehörigkeit, Mitgliederliste, Rang | ✅ Roster | ✅ (Gildenliste des Admin-Addons) | **beide** – API |
-| Zuordnung Charakter → Person | ✅ über Battle.net-Login (`/profile/user/wow`) | ❔ nur Selbstauskunft | **API** (Nachweis statt Behauptung) |
-| Berufe und Skillwerte | ❔ | ✅ | **Addon**, bis die API sie liefert |
-| Abgeschlossene Quests | ❔ | ✅ (Liste aller erledigten Quest-IDs) | **Addon** |
-| Dungeon- und Raidfortschritt, Bosskills | ❔ | ✅ ab Installation (Kampf-Ende-Ereignisse); rückwirkend nur aktuelle Raid-Sperren | **Addon** |
-| Ausrüstung | ❔ | ✅ | **Addon** (nur bei Bedarf) |
-| Talente | ❔ | ✅ | **Addon** (nur bei Bedarf) |
+| Name, Nachname, Charakter-ID, Realm-ID | ✅ Profil + geschützte Ansicht (Probe 06.11.) | ✅ | **API** |
+| Stufe, Klasse, Volk, Fraktion, Regelsatz | ✅ Profil (Probe 06.11.) | ✅ | **API** |
+| Gildenzugehörigkeit, Mitgliederliste, Rang | 🧪 Roster (andere Gilde bestätigt, unsere ungetestet) | ✅ (Gildenliste des Admin-Addons) | **API**, Addon als Rückfall |
+| Zuordnung Charakter → Person | ✅ Battle.net-Login (Probe 06.11.) | ✅ Bestätigungscode (Weg B) | **API**, Code für Mitglieder ohne Battle.net |
+| Berufe und Skillwerte | ✅ `professions` mit Stufen (Probe 06.11.) | ✅ | **API** |
+| Abgeschlossene Quests | ✅ `quests/completed` (Probe 06.11.) | ✅ | **API** |
+| Dungeon-Abschlüsse, Bosskills | 🧪 `encounters/dungeons` antwortet, Inhalt noch leer | ✅ ab Installation | **offen** – entscheidet die nächste Probe |
+| Raidfortschritt | 🧪 `encounters/raids` antwortet (Raids ab 09.12.) | ✅ ab Installation | **offen** |
+| Ausrüstung, Talente, Erfolge, Ruf | ✅ (Probe 06.11.) | ✅ | **API** (nur bei Bedarf speichern) |
 | Historische Levelaufstiege | — | ✅ ab Installation | **Addon**; Vergangenes wird aus der aktuellen Stufe abgeleitet |
 | Zeitpunkt eines Fortschritts vor Addon-Installation | — | — | nicht verfügbar → Initial-Scan nur mit „vor Datum X“ |
 
@@ -89,6 +108,11 @@ die API widerlegt (z. B. Stufe 60 laut Addon, Stufe 20 laut API ohne spätere Be
 **Serverseitige Prüfung jedes Uploads:** Schema (Zod), bekannte IDs (Quest/Boss aus den Spieldaten), plausible
 Zeitpunkte (nicht in der Zukunft, nicht vor dem Forever-Start 04.11.2026), monotone Stufen, Charakter gehört zur Gilde
 (Roster) und hat zugestimmt.
+
+> **Nach der Probe vom 06.11.:** Liefert `encounters/dungeons` Abschlüsse mit Zählern (wie in Retail:
+> `completed_count` je Instanz), wird das **Addon für das Punktesystem gar nicht gebraucht**: Wiederholte Abschlüsse
+> ergeben sich aus der Differenz der Zähler zwischen zwei Abrufen. Das Addon bliebe dann nur Rückfall für
+> Bosskills einzelner Bosse ohne Abschluss. Die folgenden Abschnitte gelten nur für den Fall, dass die API das nicht liefert.
 
 ## 5. Addon-Kommunikation – schlank
 

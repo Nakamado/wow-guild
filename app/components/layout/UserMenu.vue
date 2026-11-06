@@ -4,7 +4,7 @@
  * Nicht angemeldet (live): Anmelde-Button. In der Demo ersetzt „Ansicht als“ den Login.
  */
 const { isDemo } = useSiteConfig()
-const { signedIn, displayName, avatarUrl, logout } = useViewer()
+const { signedIn, displayName, avatarUrl, logout, can } = useViewer()
 const route = useRoute()
 
 const open = ref(false)
@@ -77,6 +77,17 @@ async function onLogout() {
           :size="18"
         />
         Meine Charaktere
+      </NuxtLink>
+      <NuxtLink
+        v-if="!isDemo && can('admin:tools')"
+        to="/admin/blizzard"
+        class="user-menu__item"
+      >
+        <BaseIcon
+          name="settings"
+          :size="18"
+        />
+        Blizzard-API-Probe
       </NuxtLink>
       <button
         v-if="!isDemo"

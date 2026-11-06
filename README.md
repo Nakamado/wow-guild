@@ -100,6 +100,20 @@ Discord-Events im Kalender.
 
 **Live-Betrieb ohne Zugangsdaten** für eine Quelle zeigt dort leere Inhalte, niemals Beispieldaten.
 
+### Blizzard-API-Probe (WoW: Forever)
+
+Blizzard hat die Forever-API nicht dokumentiert. Die Seite `/admin/blizzard` (nur Gildenleitung, im Benutzermenü)
+testet, welche Endpunkte antworten, und zeigt Status und Feldnamen an – gespeichert wird nichts.
+
+1. Client auf [community.developer.battle.net](https://community.developer.battle.net/access/clients) anlegen,
+   Redirect-URLs `<SITE_URL>/auth/battlenet` (lokal `http://localhost:3000/auth/battlenet`).
+2. `NUXT_BLIZZARD_CLIENT_ID`, `NUXT_BLIZZARD_CLIENT_SECRET` (und optional `NUXT_BLIZZARD_GUILD_SLUG`) setzen.
+3. Auf der Probe-Seite „Mit Battle.net verbinden“, dann „Probe starten“. Mit „Ergebnis kopieren“ lässt sich der
+   Bericht (ohne Tokens) teilen. Das Battle.net-Token liegt nur im verschlüsselten Session-Cookie und wird mit
+   „Battle.net trennen“ entfernt.
+
+Der weitere Plan (API-first + Addon, Punkte, Verifizierung) steht in `docs/ADDON-PLAN.md`.
+
 ### Twitch-Integration
 
 1. [Twitch Developer Console](https://dev.twitch.tv/console/apps) → **Register Your Application**
