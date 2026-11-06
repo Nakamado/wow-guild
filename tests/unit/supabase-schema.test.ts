@@ -27,7 +27,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await db.exec('delete from run_participants; delete from runs; delete from characters; delete from members;')
+  await db.exec('delete from run_participants; delete from runs; delete from characters; delete from members; delete from board_notes;')
 })
 
 async function character(memberId: string, firstName: string, options: { isMain?: boolean, roles?: string[] } = {}) {
@@ -175,5 +175,18 @@ describe('Constraints', () => {
     )
     expect(rows.every(row => row.relrowsecurity)).toBe(true)
     expect(rows).toHaveLength(4)
+  })
+})
+
+describe('board_notes', () => {
+  it('speichert Aushänge und prüft Titel, Text und Ersteller', async () => {
+    const { rows } = await db.query<{ id: string, expires_on: string | null }>(
+      `insert into board_notes (title, body, created_by) values ('100 Fische für den Raid', null, $1) returning id, expires_on`,
+      [ALICE],
+    )
+    expect(rows[0]!.expires_on).toBeNull()
+    await expect(db.query(`insert into board_notes (title, created_by) values ('   ', $1)`, [ALICE])).rejects.toThrow()
+    await expect(db.query(`insert into board_notes (title, created_by) values ('x', 'kein-discord')`)).rejects.toThrow()
+    await expect(db.query(`insert into board_notes (title, body, created_by) values ('x', $1, $2)`, ['a'.repeat(401), ALICE])).rejects.toThrow()
   })
 })

@@ -38,3 +38,6 @@ export type Streamer = z.infer<typeof S.StreamerSchema>
 
 export type GuildInfo = z.infer<typeof S.GuildInfoSchema>
 export type GuildStats = z.infer<typeof S.GuildStatsSchema>
+
+export type BoardNote = z.infer<typeof S.BoardNoteSchema>
+export type BoardNoteInput = z.infer<typeof S.BoardNoteInputSchema>

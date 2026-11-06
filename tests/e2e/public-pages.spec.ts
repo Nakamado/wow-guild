@@ -151,3 +151,46 @@ test.describe('Chronik & Rangliste', () => {
     await expect(first.getByRole('heading', { name: 'So kommen die Punkte zustande' })).toBeHidden()
   })
 })
+
+test.describe('Schwarzes Brett', () => {
+  test('nur Mitglieder sehen die Aushänge, Besucher nicht', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: PERSONA_COOKIE, value: 'visitor', url: baseURL! }])
+    await gotoReady(page, '/')
+    await expect(page.getByRole('heading', { name: 'Schwarzes Brett' })).toHaveCount(0)
+    expect((await page.request.get('/api/board')).status()).toBe(401)
+
+    await page.getByLabel('Ansicht als').selectOption('member')
+    const board = page.getByRole('region', { name: 'Schwarzes Brett' })
+    await expect(board.getByRole('heading', { name: /Feuerflossenschnapper/ })).toBeVisible()
+    await expect(board.getByText('Beispieldaten: Die Aushänge sind fiktiv.')).toBeVisible()
+    await expect(board.getByRole('button', { name: 'Aushang hinzufügen' })).toHaveCount(0)
+  })
+
+  test('Admins hängen aus, bearbeiten und entfernen – leeres Brett verschwindet für Mitglieder', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: PERSONA_COOKIE, value: 'admin', url: baseURL! }])
+    await gotoReady(page, '/')
+    const board = page.getByRole('region', { name: 'Schwarzes Brett' })
+
+    await board.getByRole('button', { name: 'Aushang hinzufügen' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Neuer Aushang' })
+    await dialog.getByLabel('Titel').fill('Heiler für BRD heute Abend')
+    await dialog.getByRole('button', { name: 'Aushängen' }).click()
+    await expect(board.getByRole('heading', { name: 'Heiler für BRD heute Abend' })).toBeVisible()
+
+    await board.getByRole('button', { name: /Bearbeiten\s*: Heiler für BRD heute Abend/ }).click()
+    const edit = page.getByRole('dialog', { name: 'Aushang bearbeiten' })
+    await edit.getByLabel('Titel').fill('Heiler und Tank für BRD')
+    await edit.getByRole('button', { name: 'Änderungen speichern' }).click()
+    await expect(board.getByRole('heading', { name: 'Heiler und Tank für BRD' })).toBeVisible()
+
+    // alle entfernen (zweiter Klick bestätigt)
+    for (const title of ['Heiler und Tank', 'Feuerflossenschnapper', 'Verzauberer für Waffen']) {
+      await board.getByRole('button', { name: new RegExp(`^Entfernen\\s*: .*${title}`) }).click()
+      await board.getByRole('button', { name: /Wirklich entfernen\?/ }).click()
+    }
+    await expect(board.getByText(/Gerade hängt nichts aus/)).toBeVisible()
+
+    await page.getByLabel('Ansicht als').selectOption('member')
+    await expect(page.getByRole('heading', { name: 'Schwarzes Brett' })).toHaveCount(0)
+  })
+})

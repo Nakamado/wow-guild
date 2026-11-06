@@ -220,3 +220,4 @@ Versionen: jeweils neueste stabile, per Lockfile fixiert.
 | 8 | Ansprechpartner: Kanal #wow-forever als erste Anlaufstelle | Fragen öffentlich statt per Privatnachricht |
 | 8 | /mitglieder zeigt statt Mitgliederkarten eine sortierbare Charaktertabelle (Spaltenköpfe als Buttons, `aria-sort`, Sortierung in der URL), ohne Filter | Wunsch: klassische Datentabelle statt Filteroberfläche |
 | 8 | Berufe (2 Haupt-, bis 3 Sekundärberufe) am Charakter, live aus der Blizzard-API (Cache 30 Min.), noch nicht in der Datenbank | API-first; Speicherung folgt mit Abgleich bzw. Addon (Quelle je Beruf vorgesehen) |
+| 8 | Schwarzes Brett nur auf der Startseite, nur für Mitglieder; Aushänge erstellen nur Admins (Titel, Text, optional „sichtbar bis“), ohne Kategorien/Interaktion; leeres Brett wird ausgeblendet | bewusst einfach: Infos, was die Gilde gerade braucht – Wünsche laufen über die Admins |

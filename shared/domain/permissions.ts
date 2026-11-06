@@ -22,6 +22,9 @@ export type Action
     | 'runs:moderate'
     /** Admin-Werkzeuge (z. B. Blizzard-API-Probe) – nur Gildenleitung */
     | 'admin:tools'
+    /** Schwarzes Brett lesen (Mitglieder) bzw. Aushänge verwalten (nur Admins) */
+    | 'board:view'
+    | 'board:manage'
 
 export interface PermissionResource {
   /** Organisator eines Runs */
@@ -43,6 +46,7 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
 
   switch (action) {
     case 'members:view':
+    case 'board:view':
     case 'runs:create':
     case 'runs:join':
       return hasLevel(viewer, 'member')
@@ -53,6 +57,7 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
       return hasLevel(viewer, 'member') && isSelf(viewer, resource.organizerId)
     case 'runs:moderate':
     case 'admin:tools':
+    case 'board:manage':
       return false
   }
 }

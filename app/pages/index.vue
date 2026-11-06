@@ -38,6 +38,8 @@ const memberPreview = computed(() => members.value?.slice(0, 8) ?? [])
   <div class="home">
     <HeroSection />
 
+    <HomeBoard />
+
     <section
       class="home__intro container"
       aria-labelledby="home-intro-title"
