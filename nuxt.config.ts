@@ -115,6 +115,16 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2026-11-04',
 
+  nitro: {
+    // Vercel Cron: tägliche Bereinigung (Protokoll, alte Freigaben). Nitro schreibt das in die Build-Ausgabe
+    // (.vercel/output/config.json) – eine vercel.json im Projekt wird dafür nicht verwendet.
+    vercel: {
+      config: {
+        crons: [{ path: '/api/cron/cleanup', schedule: '17 3 * * *' }],
+      },
+    },
+  },
+
   vite: {
     css: {
       preprocessorOptions: {

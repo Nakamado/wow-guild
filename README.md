@@ -90,7 +90,7 @@ ihn automatisch).
 **Adminbereich (`/admin`):** Übersicht und Mitgliederliste für Admins; Rollenvergabe, Ranglistenfreigaben mit
 Zustimmungsnachweis und Aktivitätsprotokoll nur für den Hauptadmin. Nachweis-Screenshots liegen im **privaten**
 Supabase-Storage-Bucket `consent-evidence` (einmalig anlegen, „Public bucket“ aus). Abgelaufene Protokolleinträge
-löscht ein täglicher Vercel-Cron (`vercel.json` → `/api/cron/cleanup`, gesichert mit `CRON_SECRET`).
+löscht ein täglicher Vercel-Cron (`nitro.vercel.config.crons` in `nuxt.config.ts` → `/api/cron/cleanup`, gesichert mit `CRON_SECRET`).
 
 Ablauf: Login mit Scopes `identify` + `guilds.members.read`, danach liest die Seite die eigenen Rollen auf dem
 Gilden-Server und speichert sie (nur serverseitig lesbar) in der verschlüsselten Session. Rollen werden spätestens
