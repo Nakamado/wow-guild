@@ -61,3 +61,22 @@ test.describe('Navigation', () => {
     await expect(page.getByRole('button', { name: 'Menü öffnen' })).toBeVisible()
   })
 })
+
+test.describe('SEO & Domain', () => {
+  test('Canonical- und Open-Graph-URL zeigen auf die konfigurierte Hauptdomain', async ({ page }) => {
+    await page.goto('/gilde')
+    const canonical = await page.locator('link[rel="canonical"]').getAttribute('href')
+    expect(canonical).toMatch(/\/gilde$/)
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', canonical!)
+  })
+
+  test('Sitemap enthält öffentliche Seiten und Dungeons, robots.txt antwortet', async ({ request }) => {
+    const sitemap = await (await request.get('/sitemap.xml')).text()
+    expect(sitemap).toContain('<urlset')
+    expect(sitemap).toMatch(/<loc>[^<]+\/dungeons\/the-deadmines<\/loc>/)
+    expect(sitemap).not.toContain('/einstellungen')
+    const robots = await request.get('/robots.txt')
+    expect(robots.status()).toBe(200)
+    expect(await robots.text()).toContain('User-agent: *')
+  })
+})
