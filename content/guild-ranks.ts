@@ -5,6 +5,10 @@
  */
 export const guildRankNames: Record<number, string> = {
   0: 'Gildenmeister',
+  1: 'Offizier',
+  2: 'Veteran',
+  3: 'Mitglied',
+  4: 'Initiant',
 }
 
 export function guildRankLabel(rank: number): string {

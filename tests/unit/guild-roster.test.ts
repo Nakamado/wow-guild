@@ -31,7 +31,8 @@ describe('Gildenliste (Blizzard)', () => {
 
   it('benennt Ränge über content/guild-ranks.ts', () => {
     expect(guildRankLabel(0)).toBe('Gildenmeister')
-    expect(guildRankLabel(3)).toBe('Rang 3')
+    expect(guildRankLabel(3)).toBe('Mitglied')
+    expect(guildRankLabel(7)).toBe('Rang 7')
   })
 
   it('sortiert nach Gildenrang; Nicht-Mitglieder und Unbekannte am Ende', () => {
