@@ -34,6 +34,20 @@ export function parseGuildRoster(body: unknown): GuildRosterEntry[] {
   return entries
 }
 
+/** Gründungszeitpunkt aus `/data/wow/guild/{slug}` (Feld `created_timestamp`, Millisekunden) – sonst null */
+export function parseGuildCreatedAt(body: unknown): string | null {
+  if (!isObject(body) || typeof body.created_timestamp !== 'number' || !Number.isFinite(body.created_timestamp)) return null
+  const date = new Date(body.created_timestamp)
+  // Plausibilität: WoW: Forever gibt es erst seit 2026
+  return date.getUTCFullYear() >= 2026 && date.getTime() <= Date.now() + 86_400_000 ? date.toISOString() : null
+}
+
+/** Gilden-Übersicht abrufen; `null` = nicht abrufbar oder ohne Gründungsdatum */
+export async function fetchGuildCreatedAt(client: BlizzardClient, token: string, region: string, guildSlug: string): Promise<string | null> {
+  const response = await client.get(`/data/wow/guild/${encodeURIComponent(guildSlug.toLowerCase())}`, `profile-forever-${region}`, token)
+  return response.status === 200 ? parseGuildCreatedAt(response.body) : null
+}
+
 /** Gildenliste abrufen; `null` = nicht abrufbar (Gilde unbekannt, noch nicht in der API oder Störung) */
 export async function fetchGuildRoster(client: BlizzardClient, token: string, region: string, guildSlug: string): Promise<GuildRosterEntry[] | null> {
   const response = await client.get(`/data/wow/guild/${encodeURIComponent(guildSlug.toLowerCase())}/roster`, `profile-forever-${region}`, token)

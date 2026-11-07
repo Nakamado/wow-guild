@@ -8,7 +8,12 @@ export const GuildContentSchema = z.object({
   tagline: z.string().min(1),
   intro: z.array(z.string().min(1)).min(1),
   values: z.array(z.object({ title: z.string().min(1), text: z.string().min(1) })).min(1),
-  activities: z.array(z.object({ title: z.string().min(1), text: z.string().min(1) })).min(1),
+  activities: z.array(z.object({
+    title: z.string().min(1),
+    text: z.string().min(1),
+    /** Weiterführende Links: interne Pfade („/gruppen“) oder externe https-Adressen */
+    links: z.array(z.object({ label: z.string().min(1), to: z.string().regex(/^(\/|https:\/\/)/) })).optional(),
+  })).min(1),
   focus: z.object({ pve: z.string(), dungeons: z.string(), raids: z.string() }),
   contacts: z.array(z.object({
     role: z.string().min(1),

@@ -53,7 +53,7 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
         Beispieldaten: Personen, Charaktere und Punkte sind fiktiv.
       </p>
       <p
-        v-else-if="data?.isPreview"
+        v-else-if="data"
         class="ranking-page__demo"
       >
         <BaseIcon
@@ -61,8 +61,8 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
           :size="18"
         />
         <span>
-          Testlauf: Diese Einträge kommen direkt aus der Blizzard-API – bisher nur Stufe und Berufe, Dungeons folgen.
-          Die API hinkt dem Spiel rund 13 Stunden hinterher<template v-if="data.updatedAt"> (Stand: letzter Login {{ dateTime.format(new Date(data.updatedAt)) }})</template>.
+          <template v-if="data.isPreview">Testlauf: </template>Die Punkte kommen direkt aus der Blizzard-API – bisher nur Stufe und Berufe, Dungeons und Raids folgen.
+          Die Daten können dem Spiel etwas hinterherhinken<template v-if="data.updatedAt"> (Stand: letzter Login {{ dateTime.format(new Date(data.updatedAt)) }})</template>.
         </span>
       </p>
 
@@ -97,7 +97,7 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
           v-if="!rows.length"
           icon="star"
           title="Die Rangliste startet bald"
-          description="Sobald die Punkte aus dem Spiel abgeglichen werden, erscheinen hier alle, die der Teilnahme zugestimmt haben."
+          description="Hier erscheinen alle Gildenmitglieder, die in den Einstellungen der Teilnahme an der Rangliste zugestimmt haben."
         />
 
         <ol
@@ -227,6 +227,7 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
             v-for="type in ruleOrder"
             :key="type"
             class="ranking-page__rule"
+            :class="{ 'ranking-page__rule--inactive': !data.tracked.includes(type) }"
           >
             <dt>
               {{ ruleLabels[type] }}
@@ -234,16 +235,29 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
                 v-if="data.rules.repeatable.includes(type)"
                 class="ranking-page__tag"
               >wiederholbar</span>
+              <span
+                v-if="!data.tracked.includes(type)"
+                class="visually-hidden"
+              >(wird noch nicht erfasst)</span>
             </dt>
             <dd>{{ points.format(data.rules.points[type] ?? 0) }}</dd>
           </div>
         </dl>
+        <p
+          v-if="ruleOrder.some(type => !data!.tracked.includes(type))"
+          class="ranking-page__inactive-note"
+        >
+          Ausgegraute Punkte werden noch nicht erfasst – die Blizzard-API liefert dafür bisher keine Daten.
+        </p>
         <ul class="ranking-page__notes">
           <li>Wiederholbare Aktivität zählt höchstens {{ points.format(data.rules.weeklyRepeatableCap) }} Punkte pro Woche und Person (Wochenwechsel am Mittwoch).</li>
           <li>Berufsmeilensteine bei Skill {{ data.rules.professionMilestones.join(', ') }}.</li>
           <li>Bereits erreichte Stufen, Berufsmeilensteine und Dungeon-Quests werden rückwirkend gezählt.</li>
           <li>Punkte berechnet nur die Webseite; dieselbe Leistung zählt nie doppelt.</li>
-          <li>In der Rangliste erscheinen nur Mitglieder, die zugestimmt haben.</li>
+          <li>
+            In der Rangliste erscheinen nur Mitglieder, die zugestimmt haben – das geht in den
+            <NuxtLink to="/einstellungen">Einstellungen</NuxtLink>. Gezählt werden nur Charaktere in der Gilde.
+          </li>
         </ul>
       </section>
     </div>
@@ -475,6 +489,12 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
     }
   }
 
+  &__inactive-note {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
   &__rule {
     display: flex;
     gap: var(--space-3);
@@ -486,6 +506,14 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
     dd {
       font-weight: var(--font-weight-medium);
       color: var(--color-accent);
+    }
+  }
+
+  &__rule--inactive {
+    color: var(--color-text-subtle);
+
+    dd {
+      color: var(--color-text-subtle);
     }
   }
 

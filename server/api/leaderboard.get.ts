@@ -5,14 +5,18 @@ import { characterSlug, fetchCharacterProgress, parsePreviewCharacters, type Bli
 import { instances } from '#shared/data/dungeons'
 import { findProfession } from '#shared/data/professions'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
-import type { ProgressEvent } from '#shared/schemas/points'
+import type { ProgressEvent, ProgressType } from '#shared/schemas/points'
+
+/** Was die Blizzard-API für WoW: Forever derzeit liefert – Dungeons und Raids noch nicht */
+const LIVE_TRACKED: ProgressType[] = ['level', 'profession-milestone']
 
 /**
  * Ranglisten (Main + Gesamt). Punkte berechnet ausschließlich der Server – jede Zeile bringt ihre
  * Aufschlüsselung mit („So kommen die Punkte zustande“).
  * - Demo: fiktive Fortschritte
- * - Live: vorerst nur ein Testlauf mit den in NUXT_BLIZZARD_PREVIEW_CHARACTERS genannten Charakteren
- *   (Stufe + Berufe direkt aus der Blizzard-API). Später: alle Mitglieder mit Opt-in.
+ * - Live: alle Gildenmitglieder, die in den Einstellungen zugestimmt haben, mit ihren eingetragenen
+ *   Charakteren, soweit diese in der Gilde sind (Stufe + Berufe direkt aus der Blizzard-API).
+ * - Ohne Datenbank: Testlauf mit den in NUXT_BLIZZARD_PREVIEW_CHARACTERS genannten Charakteren.
  */
 
 interface CharacterInfo {
@@ -45,7 +49,7 @@ function describer(extraProfessionNames: Record<string, string>) {
 }
 
 function buildResponse(
-  options: { isDemo: boolean, isPreview: boolean, updatedAt: string | null },
+  options: { isDemo: boolean, isPreview: boolean, updatedAt: string | null, tracked: ProgressType[] },
   events: ProgressEvent[],
   members: MemberInfo[],
   characters: CharacterInfo[],
@@ -82,7 +86,7 @@ function buildResponse(
   return { ...options, rules: pointsRules, total: boards.total.map(enrich), main: boards.main.map(enrich) }
 }
 
-/** Testcharaktere höchstens alle 30 Minuten neu abrufen (die API hinkt ohnehin ~13 Std. hinterher) */
+/** Charaktere höchstens alle 30 Minuten neu abrufen (die API hinkt dem Spiel ohnehin hinterher) */
 const loadPreviewCharacters = defineCachedFunction(async (names: string[], clientId: string, clientSecret: string, region: string) => {
   const client = createBlizzardClient({ clientId, clientSecret, region })
   const app = await client.getAppToken()
@@ -101,7 +105,7 @@ export default defineEventHandler(async (event) => {
     const [members, characters] = await Promise.all([providers.members.listGuildMembers(), providers.characters.list()])
     const mains = new Map(characters.filter(character => character.isMain).map(character => [character.memberId, character.id]))
     return buildResponse(
-      { isDemo: true, isPreview: false, updatedAt: null },
+      { isDemo: true, isPreview: false, updatedAt: null, tracked: [...pointsRules.repeatable, 'level', 'dungeon-first', 'dungeon-quest', 'raid-first', 'profession-milestone'] },
       createDemoProgress(characters, pointsRules, new Date()),
       members.map(member => ({ id: member.id, displayName: member.displayName, avatarUrl: member.avatarUrl ?? null })),
       characters.map(character => ({ id: character.id, memberId: character.memberId, name: character.name, classId: character.classId, level: character.level })),
@@ -109,46 +113,53 @@ export default defineEventHandler(async (event) => {
     )
   }
 
-  // „Vorname Nachname“ oder „Vorname Nachname=DiscordID“ (verknüpft den Charakter mit dem Discord-Konto)
-  const entries = parsePreviewCharacters(String(config.blizzard.previewCharacters ?? ''))
-  const names = entries.map(entry => entry.name)
   const clientId = String(config.blizzard.clientId ?? '')
   const clientSecret = String(config.blizzard.clientSecret ?? '')
+  const store = useMemberSettingsStore()
+  const entries = store
+    ? await optedInEntries(store)
+    // Ohne Datenbank: „Vorname Nachname“ oder „Vorname Nachname=DiscordID“ aus der Umgebungsvariable
+    : parsePreviewCharacters(String(config.blizzard.previewCharacters ?? '')).map(entry => ({ name: entry.name, memberId: entry.discordId ?? null, characterId: null, isMain: false }))
+  const isPreview = !store
+  const names = entries.map(entry => entry.name)
   if (!names.length || !clientId || !clientSecret) {
-    return buildResponse({ isDemo: false, isPreview: false, updatedAt: null }, [], [], [], new Map())
+    return buildResponse({ isDemo: false, isPreview: false, updatedAt: null, tracked: LIVE_TRACKED }, [], [], [], new Map())
   }
 
   const region = String(config.blizzard.region || 'eu').toLowerCase()
-  const preview = await loadPreviewCharacters(names, clientId, clientSecret, region).catch((error: unknown) => {
-    console.warn('[leaderboard] Testlauf nicht abrufbar:', error instanceof Error ? error.message : 'unbekannt')
+  const loaded = await loadPreviewCharacters(names, clientId, clientSecret, region).catch((error: unknown) => {
+    console.warn('[leaderboard] Charaktere nicht abrufbar:', error instanceof Error ? error.message : 'unbekannt')
     return [] as BlizzardCharacterProgress[]
   })
+  const entryOf = (character: BlizzardCharacterProgress) => entries.find(entry => characterSlug(entry.name) === character.slug)
   // Mit Discord-ID: Person = Discord-Konto (Name + Profilbild aus Discord); sonst der Charakter selbst
+  const ownerOf = (character: BlizzardCharacterProgress) => entryOf(character)?.memberId ?? `preview:${character.slug}`
+  // Seiten-ID verwenden, wenn der Charakter eingetragen ist (verlinkt dann aufs Charakterprofil)
+  const idOf = (character: BlizzardCharacterProgress) => entryOf(character)?.characterId ?? character.characterId
   const providers = useProviders()
-  const ownerOf = (character: BlizzardCharacterProgress) =>
-    entries.find(entry => characterSlug(entry.name) === character.slug)?.discordId ?? `preview:${character.slug}`
-  const ownerIds = [...new Set(preview.map(ownerOf))]
+  const ownerIds = [...new Set(loaded.map(ownerOf))]
   const members = await Promise.all(ownerIds.map(async (id) => {
-    const fallback = preview.find(character => ownerOf(character) === id)!.name
+    const fallback = loaded.find(character => ownerOf(character) === id)!.name
     if (id.startsWith('preview:')) return { id, displayName: fallback, avatarUrl: null }
     const member = await providers.members.getMember(id).catch(() => null)
     return { id, displayName: member?.displayName ?? fallback, avatarUrl: member?.avatarUrl ?? null }
   }))
-  const characters = preview.map(character => ({ id: character.characterId, memberId: ownerOf(character), name: character.name, classId: character.classId, level: character.level }))
-  const events = preview.flatMap(character => retroactiveEvents({
+  const characters = loaded.map(character => ({ id: idOf(character), memberId: ownerOf(character), name: character.name, classId: character.classId, level: character.level }))
+  const events = loaded.flatMap(character => retroactiveEvents({
     memberId: ownerOf(character),
-    characterId: character.characterId,
+    characterId: idOf(character),
     level: character.level,
     professions: character.professions,
   }, pointsRules))
-  // Main je Person: der erste eingetragene Charakter
+  // Main je Person: der als Hauptcharakter markierte, sonst der erste
   const mainIds = new Map<string, string>()
+  for (const character of loaded) if (entryOf(character)?.isMain) mainIds.set(ownerOf(character), idOf(character))
   for (const character of characters) if (!mainIds.has(character.memberId)) mainIds.set(character.memberId, character.id)
-  const professionNamesById = Object.fromEntries(preview.flatMap(character => character.professions.map(profession => [profession.id, profession.name])))
-  const updatedAt = preview.map(character => character.lastLoginAt).filter(Boolean).sort().at(-1) ?? null
+  const professionNamesById = Object.fromEntries(loaded.flatMap(character => character.professions.map(profession => [profession.id, profession.name])))
+  const updatedAt = loaded.map(character => character.lastLoginAt).filter(Boolean).sort().at(-1) ?? null
 
   return buildResponse(
-    { isDemo: false, isPreview: preview.length > 0, updatedAt },
+    { isDemo: false, isPreview: isPreview && loaded.length > 0, updatedAt, tracked: LIVE_TRACKED },
     events,
     members,
     characters,
@@ -156,3 +167,24 @@ export default defineEventHandler(async (event) => {
     professionNamesById,
   )
 })
+
+interface LeaderboardEntry {
+  name: string
+  memberId: string | null
+  characterId: string | null
+  isMain: boolean
+}
+
+/**
+ * Charaktere aller Mitglieder mit Zustimmung. Gezählt werden nur Charaktere in der Gilde –
+ * ist die Gildenliste gerade nicht abrufbar, zählen vorübergehend alle eingetragenen.
+ */
+async function optedInEntries(store: NonNullable<ReturnType<typeof useMemberSettingsStore>>): Promise<LeaderboardEntry[]> {
+  const memberIds = new Set(await store.listLeaderboardMembers())
+  if (!memberIds.size) return []
+  const [characters, roster] = await Promise.all([useProviders().characters.list(), guildRosterBySlug()])
+  return characters
+    .filter(character => memberIds.has(character.memberId))
+    .filter(character => !roster || roster.has(characterSlug(character.name)))
+    .map(character => ({ name: character.name, memberId: character.memberId, characterId: character.id, isMain: character.isMain }))
+}

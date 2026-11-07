@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { createBlizzardClient, type BlizzardClient } from '../providers/blizzard/client'
-import { fetchGuildRoster, type GuildRosterEntry } from '../providers/blizzard/guild'
-import { characterSlug, fetchCharacterProfessions, parseCharacterProfile, type GameCharacterProfile } from '../providers/blizzard/progress'
+import { fetchGuildCreatedAt, fetchGuildRoster, type GuildRosterEntry } from '../providers/blizzard/guild'
+import { characterSlug, fetchCharacterMedia, fetchCharacterProfessions, parseCharacterProfile, type GameCharacterProfile } from '../providers/blizzard/progress'
 import type { Character, Profession } from '#shared/types'
 
 let cachedClient: { key: string, client: BlizzardClient } | null = null
@@ -77,7 +77,7 @@ const cachedGameData = defineCachedFunction(async (name: string): Promise<{ prof
 }, { name: 'character-game-data', maxAge: 30 * 60, swr: true, getKey: (name: string) => characterSlug(name) })
 
 /** Gildenliste höchstens alle 30 Minuten abrufen – ein Aufruf für alle Charaktere */
-const cachedGuildRoster = defineCachedFunction(async (guildSlug: string): Promise<GuildRosterEntry[] | null> => {
+export const cachedGuildRoster = defineCachedFunction(async (guildSlug: string): Promise<GuildRosterEntry[] | null> => {
   const blizzard = blizzardClient()
   if (!blizzard) return null
   const app = await blizzard.client.getAppToken()
@@ -85,8 +85,41 @@ const cachedGuildRoster = defineCachedFunction(async (guildSlug: string): Promis
   return fetchGuildRoster(blizzard.client, app.token, blizzard.region, guildSlug)
 }, { name: 'guild-roster', maxAge: 30 * 60, swr: true, getKey: (guildSlug: string) => guildSlug.toLowerCase() })
 
+/** Gründungszeitpunkt der Gilde laut Blizzard-API (ändert sich nie – 6 Std. Cache) */
+const cachedGuildCreatedAt = defineCachedFunction(async (guildSlug: string): Promise<string | null> => {
+  const blizzard = blizzardClient()
+  if (!blizzard) return null
+  const app = await blizzard.client.getAppToken()
+  if (!app.token) throw new Error('Kein Blizzard-App-Token')
+  return fetchGuildCreatedAt(blizzard.client, app.token, blizzard.region, guildSlug)
+}, { name: 'guild-created', maxAge: 6 * 60 * 60, swr: true, getKey: (guildSlug: string) => guildSlug.toLowerCase() })
+
+/** Gildenliste und Gründungsdatum der konfigurierten Gilde; null-Werte = nicht verfügbar */
+export async function guildOverview(): Promise<{ roster: GuildRosterEntry[] | null, createdAt: string | null }> {
+  const guildSlug = String(useRuntimeConfig().blizzard.guildSlug ?? '').trim()
+  if (!guildSlug) return { roster: null, createdAt: null }
+  const [roster, createdAt] = await Promise.all([
+    cachedGuildRoster(guildSlug).catch(() => null),
+    cachedGuildCreatedAt(guildSlug).catch(() => null),
+  ])
+  return { roster, createdAt }
+}
+
+const cachedCharacterMedia = defineCachedFunction(async (name: string) => {
+  const blizzard = blizzardClient()
+  if (!blizzard) return null
+  const app = await blizzard.client.getAppToken()
+  if (!app.token) throw new Error('Kein Blizzard-App-Token')
+  return fetchCharacterMedia(blizzard.client, app.token, blizzard.region, name)
+}, { name: 'character-media', maxAge: 60 * 60, swr: true, getKey: (name: string) => characterSlug(name) })
+
+/** Charakterbilder von Blizzard (1 Std. Cache); null = keine Bilder oder API nicht erreichbar */
+export async function characterMedia(name: string) {
+  return cachedCharacterMedia(name).catch(() => null)
+}
+
 /** Gildenliste als Map nach Charakter-Slug; `null` = keine verlässlichen Daten (dann nichts anzeigen) */
-async function guildRosterBySlug(): Promise<Map<string, GuildRosterEntry> | null> {
+export async function guildRosterBySlug(): Promise<Map<string, GuildRosterEntry> | null> {
   const guildSlug = String(useRuntimeConfig().blizzard.guildSlug ?? '').trim()
   if (!guildSlug) return null
   const roster = await cachedGuildRoster(guildSlug).catch(() => null)

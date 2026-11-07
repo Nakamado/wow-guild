@@ -35,7 +35,7 @@ const { data: streamers, status, refresh } = await useFetch('/api/twitch/streame
         v-else-if="status === 'success'"
         icon="broadcast"
         title="Noch keine weiteren Streamer eingetragen"
-        description="Du streamst selbst? Melde dich im Discord, dann nehmen wir deinen Kanal auf."
+        description="Du streamst selbst? Mit der Discord-Rolle „Streamer“ kannst du deinen Twitch-Kanal in den Einstellungen eintragen."
       />
       <p class="streamer-page__note">
         Kanäle werden nur nach Absprache aufgenommen und nie automatisch anhand ähnlicher Namen mit Discord-Profilen verknüpft.

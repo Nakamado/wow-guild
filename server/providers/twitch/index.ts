@@ -13,6 +13,8 @@ const STREAMERS_TTL = 60_000
 const GAMES_TTL = 24 * 60 * 60_000
 /** höchstens so viele Clip-Seiten (je 100) durchsuchen, um genug passende Clips zu finden */
 const MAX_CLIP_PAGES = 5
+/** bei weiteren Gilden-Streamern weniger Seiten durchsuchen */
+const MAX_EXTRA_CLIP_PAGES = 2
 const DAY = 86_400_000
 const periodDays = { '7d': 7, '30d': 30, 'all': null } as const
 
@@ -20,6 +22,8 @@ export interface TwitchProviderConfig {
   broadcasterId: string
   channel: string
   streamers: StreamerEntry[]
+  /** Mitglieder mit Discord-Rolle „Streamer“ und selbst eingetragenem Twitch-Kanal (aus der Datenbank) */
+  memberStreamers?: () => Promise<{ memberId: string, twitchLogin: string }[]>
   /** Nur Clips aus diesen Twitch-Kategorien (exakte Namen); leer = alle Clips */
   clipGames?: string[]
 }
@@ -67,7 +71,7 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
     return new Set(ids)
   }
 
-  return {
+  const provider: TwitchProvider = {
     getStreamStatus() {
       return cache.get('status', STATUS_TTL, async () => {
         const [stream] = await client.getStreams({ userIds: [config.broadcasterId] })
@@ -81,16 +85,33 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
         const startedAt = days === null ? undefined : new Date(now().getTime() - days * DAY).toISOString()
         const endedAt = days === null ? undefined : now().toISOString()
         const gameIds = await resolveClipGames()
+
         // Ohne Kategorie-Filter reicht eine Seite (100 = Maximum); mit Filter weitere Seiten, bis 100 passen
-        const matching: HelixClip[] = []
-        let after: string | undefined
-        for (let page = 0; page < (gameIds ? MAX_CLIP_PAGES : 1); page++) {
-          const result = await client.getClipsPage(config.broadcasterId, { first: 100, startedAt, endedAt, after })
-          matching.push(...result.clips.filter(clip => !gameIds || gameIds.has(clip.game_id)))
-          if (!result.cursor || matching.length >= 100) break
-          after = result.cursor
+        async function clipsOf(broadcasterId: string, maxPages: number): Promise<HelixClip[]> {
+          const matching: HelixClip[] = []
+          let after: string | undefined
+          for (let page = 0; page < (gameIds ? maxPages : 1); page++) {
+            const result = await client.getClipsPage(broadcasterId, { first: 100, startedAt, endedAt, after })
+            matching.push(...result.clips.filter(clip => !gameIds || gameIds.has(clip.game_id)))
+            if (!result.cursor || matching.length >= 100) break
+            after = result.cursor
+          }
+          return matching
         }
-        return matching.slice(0, 100).map(helixClipToClip)
+
+        // Weitere Gilden-Streamer nur mit Kategorie-Filter (sonst kämen fremde Spiele dazu);
+        // fällt einer aus, bleiben die übrigen Clips trotzdem sichtbar
+        const extraIds = gameIds
+          ? (await provider.listStreamers().catch(() => [] as Streamer[])).map(streamer => streamer.twitchId).filter(id => id !== config.broadcasterId)
+          : []
+        const [own, ...extra] = await Promise.all([
+          clipsOf(config.broadcasterId, MAX_CLIP_PAGES),
+          ...extraIds.map(id => clipsOf(id, MAX_EXTRA_CLIP_PAGES).catch(() => [] as HelixClip[])),
+        ])
+        return [...own!, ...extra.flat()]
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+          .slice(0, 100)
+          .map(helixClipToClip)
       })
       return [...clips]
         .sort((a, b) => query.sort === 'popular' ? b.viewCount - a.viewCount : Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -99,12 +120,23 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
 
     listStreamers() {
       return cache.get('streamers', STREAMERS_TTL, async (): Promise<Streamer[]> => {
-        const logins = config.streamers.map(entry => entry.login.toLowerCase())
+        const fromMembers = config.memberStreamers
+          ? await config.memberStreamers().catch((error: unknown) => {
+              console.warn('[twitch] Streamer aus der Datenbank nicht lesbar:', error instanceof Error ? error.message : 'unbekannt')
+              return []
+            })
+          : []
+        // Fest eingetragene Streamer haben Vorrang; Miinyu selbst hat einen eigenen Bereich
+        const entries = [...config.streamers]
+        for (const member of fromMembers) {
+          if (!entries.some(entry => entry.login.toLowerCase() === member.twitchLogin)) entries.push({ login: member.twitchLogin, discordId: member.memberId })
+        }
+        const logins = entries.map(entry => entry.login.toLowerCase()).filter(login => login !== config.channel.toLowerCase())
         if (!logins.length) return []
         const [users, streams] = await Promise.all([client.getUsers(logins), client.getStreams({ logins })])
         const live = new Set(streams.filter(stream => stream.type === 'live').map(stream => stream.user_id))
         return users.map((user) => {
-          const entry = config.streamers.find(item => item.login.toLowerCase() === user.login.toLowerCase())
+          const entry = entries.find(item => item.login.toLowerCase() === user.login.toLowerCase())
           return {
             id: `twitch-${user.id}`,
             twitchId: user.id,
@@ -118,4 +150,5 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
       })
     },
   }
+  return provider
 }

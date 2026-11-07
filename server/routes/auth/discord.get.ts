@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
       // In der Mitgliederliste erscheinen (ohne Bot ist das die einzige Quelle)
       const level = accessLevelFor(event, profile.id, roles)
-      await rememberMember({ ...profile, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: true })
+      await rememberMember({ ...profile, isGuildMember: level !== 'user', isAdmin: level === 'admin', isStreamer: hasStreamerRole(event, roles), login: true })
 
       const returnTo = safeReturnPath(getCookie(event, RETURN_COOKIE))
       deleteCookie(event, RETURN_COOKIE, { path: '/' })

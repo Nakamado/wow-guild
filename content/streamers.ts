@@ -1,5 +1,6 @@
 /**
- * Weitere Gilden-Streamer (Live-Betrieb). Twitch-Daten wie Anzeigename, Avatar und
+ * Weitere Gilden-Streamer (Live-Betrieb). Normalerweise nicht nötig: Mitglieder mit den Discord-Rollen
+ * „WoW Forever“ und „Streamer“ tragen ihren Kanal selbst in den Einstellungen ein. Hier nur Ausnahmen. Twitch-Daten wie Anzeigename, Avatar und
  * Livestatus werden automatisch über die Twitch-API geladen.
  *
  * - `login`: Twitch-Benutzername (klein geschrieben, wie in der Kanal-URL)

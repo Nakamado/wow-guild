@@ -136,6 +136,37 @@ export function parseCharacterProgress(slug: string, fallbackName: string, profi
   }
 }
 
+export interface CharacterMedia {
+  /** kleines Porträt (quadratisch) */
+  avatarUrl: string | null
+  /** Brustbild mit Hintergrund */
+  insetUrl: string | null
+  /** ganzer Charakter, freigestellt */
+  mainUrl: string | null
+}
+
+const RENDER_HOST = 'https://render.worldofwarcraft.com/'
+
+/** Bilder aus `/character-media` lesen – nur Adressen vom Blizzard-Render-Server */
+export function parseCharacterMedia(body: unknown): CharacterMedia | null {
+  if (typeof body !== 'object' || body === null || !Array.isArray((body as { assets?: unknown }).assets)) return null
+  const assets = new Map<string, string>()
+  for (const asset of (body as { assets: unknown[] }).assets) {
+    if (typeof asset !== 'object' || asset === null) continue
+    const { key, value } = asset as { key?: unknown, value?: unknown }
+    if (typeof key === 'string' && typeof value === 'string' && value.startsWith(RENDER_HOST)) assets.set(key, value)
+  }
+  const media = { avatarUrl: assets.get('avatar') ?? null, insetUrl: assets.get('inset') ?? null, mainUrl: assets.get('main-raw') ?? assets.get('main') ?? null }
+  return media.avatarUrl || media.insetUrl || media.mainUrl ? media : null
+}
+
+/** Charakterbilder abrufen; `null` = keine Bilder (z. B. noch nie gerendert oder unbekannt) */
+export async function fetchCharacterMedia(client: BlizzardClient, token: string, region: string, name: string): Promise<CharacterMedia | null> {
+  const path = `/profile/wow/character/${encodeURIComponent(characterSlug(name))}/character-media`
+  const response = await client.get(path, `profile-forever-${region}`, token)
+  return response.status === 200 ? parseCharacterMedia(response.body) : null
+}
+
 /** Nur die Berufe eines Charakters abrufen; `null` = nicht abrufbar (z. B. unbekannt oder API-Störung) */
 export async function fetchCharacterProfessions(client: BlizzardClient, token: string, region: string, name: string): Promise<Profession[] | null> {
   const path = `/profile/wow/character/${encodeURIComponent(characterSlug(name))}/professions`

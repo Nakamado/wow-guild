@@ -49,6 +49,8 @@ export default defineNuxtConfig({
       guildId: '723275162971275335',
       memberRoleId: '',
       adminRoleId: '',
+      /** Discord-Rolle „Streamer“: Mitglieder mit dieser Rolle und eigenem Twitch-Kanal erscheinen unter Streamer und Clips */
+      streamerRoleId: '',
     },
     // Blizzard Battle.net (WoW: Forever) – vorerst nur für die API-Probe der Gildenleitung
     blizzard: {
@@ -130,6 +132,6 @@ export default defineNuxtConfig({
   // Externe Bilder über den eigenen Server/Hoster ausliefern (Datenschutz: kein direkter Kontakt zu Discord/Twitch,
   // besonders Twitch-Vorschaubilder vor der 2-Klick-Zustimmung)
   image: {
-    domains: ['cdn.discordapp.com', 'static-cdn.jtvnw.net', 'clips-media-assets2.twitch.tv'],
+    domains: ['cdn.discordapp.com', 'static-cdn.jtvnw.net', 'clips-media-assets2.twitch.tv', 'render.worldofwarcraft.com'],
   },
 })

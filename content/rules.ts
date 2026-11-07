@@ -1,12 +1,12 @@
 import type { RulesContent } from '../shared/schemas/content'
 
 /**
- * BEISPIELREGELN – werden ersetzt, sobald Miinyus offizielle Gildenregeln feststehen.
- * Solange `isExample: true` gesetzt ist, zeigt die Seite einen deutlichen Hinweis.
+ * Gildenregeln. Mit `isExample: false` zeigt die Seite einen Hinweis „Beispielregeln“.
+ * Bei inhaltlichen Änderungen `updatedAt` anpassen.
  */
 export const rulesContent: RulesContent = {
-  isExample: true,
-  updatedAt: '2026-11-04',
+  isExample: false,
+  updatedAt: '2026-11-07',
   intro: 'Damit sich alle wohlfühlen, gelten in Gilde, Discord und auf dieser Seite ein paar einfache Regeln.',
   sections: [
     {
@@ -39,7 +39,7 @@ export const rulesContent: RulesContent = {
       id: 'stream',
       title: 'Stream und Community',
       rules: [
-        'Stream-Sniping und das Verraten von Positionen im Stream sind tabu.',
+        'Stream-Sniping und das Verraten von Positionen im Chat sind nur tabu, wenn Miinyu oder ein anderer Gilden-Streamer das im Stream ansagt. Sonst darfst du im Spiel gern vorbeischauen.',
         'Was im Discord besprochen wird, bleibt im Discord – keine Screenshots ohne Zustimmung.',
       ],
     },

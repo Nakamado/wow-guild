@@ -31,6 +31,8 @@ export interface MemberSnapshot {
   avatarUrl: string | null
   isGuildMember: boolean
   isAdmin: boolean
+  /** Discord-Rolle „Streamer“ – undefined, wenn die Rollen unbekannt sind (dann unverändert lassen) */
+  isStreamer?: boolean
   /** true beim Login, false bei der Rollen-Nachprüfung */
   login: boolean
 }
@@ -57,6 +59,7 @@ export function createSupabaseMemberRepository(db: SupabaseClient): DiscordMembe
         avatar_url: snapshot.avatarUrl,
         is_guild_member: snapshot.isGuildMember,
         is_admin: snapshot.isAdmin,
+        ...(snapshot.isStreamer !== undefined ? { is_streamer: snapshot.isStreamer } : {}),
         roles_checked_at: now,
         ...(snapshot.login ? { last_login_at: now } : {}),
       })

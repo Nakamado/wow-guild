@@ -195,6 +195,38 @@ describe('Twitch', () => {
     expect(clips.map(entry => entry.id)).toEqual(['b', 'a'])
   })
 
+  it('nimmt Mitglieder mit Streamer-Rolle auf und zeigt auch ihre WoW-Clips', async () => {
+    const calls: string[] = []
+    const route = (url: string) => {
+      calls.push(url)
+      if (url.startsWith('https://id.twitch.tv')) return { access_token: 'app-token', expires_in: 3600, token_type: 'bearer' }
+      if (url.includes('/helix/games')) return { data: [{ id: '18122', name: 'World of Warcraft' }] }
+      if (url.includes('/helix/users')) return { data: [{ id: '77', login: 'gildenkanal', display_name: 'Gildenkanal', profile_image_url: null }] }
+      if (url.includes('/helix/streams')) return { data: [] }
+      if (url.includes('broadcaster_id=1&')) return { data: [{ ...clip('eigen', 5, '2026-11-02T10:00:00Z'), game_id: '18122' }], pagination: {} }
+      if (url.includes('broadcaster_id=77&')) {
+        return { data: [{ ...clip('gast', 5, '2026-11-03T10:00:00Z'), game_id: '18122' }, { ...clip('anderes-spiel', 5, '2026-11-03T11:00:00Z'), game_id: '1' }], pagination: {} }
+      }
+      throw new Error(`Unerwarteter Aufruf: ${url}`)
+    }
+    const fetch = vi.fn(async (url: string) => json(route(url)))
+    const provider = createTwitchProvider(createTwitchClient('cid', 's', { fetch, sleep: noSleep }), {
+      broadcasterId: '1',
+      channel: 'miinyu',
+      streamers: [],
+      clipGames: ['World of Warcraft'],
+      // Miinyu selbst taucht nicht doppelt auf
+      memberStreamers: async () => [{ memberId: '591736149647687697', twitchLogin: 'gildenkanal' }, { memberId: '2', twitchLogin: 'miinyu' }],
+    })
+
+    const streamers = await provider.listStreamers()
+    expect(streamers).toMatchObject([{ login: 'gildenkanal', memberId: '591736149647687697' }])
+    expect(calls.find(url => url.includes('/helix/users'))).toBe('https://api.twitch.tv/helix/users?login=gildenkanal')
+
+    const clips = await provider.listClips({ period: '30d', sort: 'recent', limit: 10 })
+    expect(clips.map(entry => entry.id)).toEqual(['gast', 'eigen'])
+  })
+
   it('zeigt alle Clips, wenn keine Kategorie gefunden wird', async () => {
     const { fetch } = mockFetch(token(), json({ data: [] }), json({ data: [clip('a', 1, '2026-11-03T10:00:00Z')], pagination: { cursor: 'next' } }))
     const provider = createTwitchProvider(createTwitchClient('cid', 's', { fetch, sleep: noSleep }), {

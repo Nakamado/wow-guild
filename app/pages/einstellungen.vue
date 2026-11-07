@@ -205,6 +205,8 @@ async function onDelete() {
             </li>
           </ul>
         </section>
+
+        <MemberSettingsPanel v-if="canManage" />
       </template>
     </div>
 

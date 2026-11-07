@@ -1,7 +1,10 @@
 import { classifySupabaseKey, normalizeSupabaseUrl } from '../lib/supabase-config'
 import { createLiveFactories } from '../providers/live'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createSupabase } from '../repositories/supabase'
 import { createSupabaseBoardStore, type BoardStore } from '../repositories/supabase/board'
+import { createSupabaseMemberSettingsStore, type MemberSettingsStore } from '../repositories/supabase/member-settings'
+import { createSupabaseMilestoneStore, type MilestoneStore } from '../repositories/supabase/milestones'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
 import type { ProviderKey, Providers, Writers } from '../providers/types'
 
@@ -69,18 +72,44 @@ export function useWriters(): Writers {
   })
 }
 
-let boardStore: { key: string, store: BoardStore } | null = null
+let database: { key: string, db: SupabaseClient } | null = null
+const stores = new Map<string, unknown>()
+
+/** Supabase-Client für den Server – null im Demo-Modus oder ohne Datenbank */
+function useDatabase(): SupabaseClient | null {
+  const config = readProviderConfig()
+  if (config.demoMode || !config.supabase.url || !config.supabase.serviceRoleKey) return null
+  const key = `${config.supabase.url}:${config.supabase.serviceRoleKey.slice(-6)}`
+  if (database?.key !== key) {
+    database = { key, db: createSupabase(config.supabase.url, config.supabase.serviceRoleKey) }
+    stores.clear()
+  }
+  return database.db
+}
+
+function useStore<T>(name: string, create: (db: SupabaseClient) => T): T | null {
+  const db = useDatabase()
+  if (!db) return null
+  if (!stores.has(name)) stores.set(name, create(db))
+  return stores.get(name) as T
+}
 
 /**
  * Schwarzes Brett in Supabase – null im Demo-Modus oder ohne Datenbank
  * (dann zeigt die Seite Beispiel-Aushänge bzw. nichts).
  */
 export function useBoardStore(): BoardStore | null {
-  const config = readProviderConfig()
-  if (config.demoMode || !config.supabase.url || !config.supabase.serviceRoleKey) return null
-  const key = `${config.supabase.url}:${config.supabase.serviceRoleKey.slice(-6)}`
-  if (boardStore?.key !== key) boardStore = { key, store: createSupabaseBoardStore(createSupabase(config.supabase.url, config.supabase.serviceRoleKey)) }
-  return boardStore.store
+  return useStore('board', createSupabaseBoardStore)
+}
+
+/** Einstellungen der Mitglieder (Ranglisten-Zustimmung, Twitch-Kanal) – null ohne Datenbank */
+export function useMemberSettingsStore(): MemberSettingsStore | null {
+  return useStore('member-settings', createSupabaseMemberSettingsStore)
+}
+
+/** Automatisch erkannte Chronik-Meilensteine – null ohne Datenbank */
+export function useMilestoneStore(): MilestoneStore | null {
+  return useStore('milestones', createSupabaseMilestoneStore)
 }
 
 /**

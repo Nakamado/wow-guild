@@ -107,7 +107,7 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
       await replaceUserSession(event, { ...session, user, secure: { ...session.secure, roles, rolesCheckedAt } })
       currentUser = user
       const level = accessLevelFor(event, user.id, roles)
-      await rememberMember({ ...user, isGuildMember: level !== 'user', isAdmin: level === 'admin', login: false })
+      await rememberMember({ ...user, isGuildMember: level !== 'user', isAdmin: level === 'admin', isStreamer: hasStreamerRole(event, roles), login: false })
     }
     else if (age > ROLE_MAX_AGE_MS) {
       roles = null // veraltet und nicht prüfbar → nur noch „angemeldet“
@@ -127,6 +127,20 @@ export function accessLevelFor(event: H3Event, userId: string, roles: string[] |
   if (parseIdList(config.adminUserIds).includes(userId)) return 'admin'
   const roleConfig = { memberRoleId: String(config.discord.memberRoleId ?? ''), adminRoleId: String(config.discord.adminRoleId ?? '') }
   return accessLevelFromRoles(roles, roleConfig) as Exclude<Viewer['level'], 'visitor'>
+}
+
+/** Trägt der Nutzer die Discord-Rolle „Streamer“? undefined = Rollen unbekannt oder Rolle nicht eingerichtet */
+export function hasStreamerRole(event: H3Event, roles: string[] | null): boolean | undefined {
+  const roleId = String(useRuntimeConfig(event).discord.streamerRoleId ?? '').trim()
+  if (!roleId || !roles) return undefined
+  return roles.includes(roleId)
+}
+
+/** Hat der aktuelle Betrachter die Streamer-Rolle? (Rollen aus der versiegelten Session) */
+export async function viewerIsStreamer(event: H3Event): Promise<boolean> {
+  if (useRuntimeConfig(event).public.demoMode) return false
+  const session = await getUserSession(event).catch(() => null)
+  return hasStreamerRole(event, session?.secure?.roles ?? null) ?? false
 }
 
 /**
