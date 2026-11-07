@@ -83,6 +83,15 @@ export const CharacterSchema = z.object({
   updatedAt: IsoDateTimeSchema,
   /** Berufe – kommen aus der Blizzard-API (später Addon/manuell); leer = unbekannt */
   professions: z.array(ProfessionSchema).max(5).default([]),
+  /**
+   * Gildenzugehörigkeit laut Blizzard-Gildenliste: `undefined`/null = unbekannt (keine Daten),
+   * `inGuild: false` = Liste geladen, Charakter steht nicht drin.
+   */
+  guild: z.object({
+    inGuild: z.boolean(),
+    /** 0 = Gildenmeister; Namen der Ränge stehen in content/guild-ranks.ts */
+    rank: z.number().int().min(0).max(20).nullable(),
+  }).nullable().optional(),
 })
 
 export const MAX_CHARACTERS_PER_MEMBER = 12
