@@ -93,10 +93,10 @@ alle 10 Minuten nachgeprüft – per Bot, oder ohne Bot mit dem Discord-Token de
 `guilds.members.read`, nur im verschlüsselten Session-Cookie, nie in der Datenbank). Wer die Rolle verliert,
 verliert damit die Mitgliedsrechte.
 
-**Mitgliederliste:** Mit Bot zeigt sie alle Träger der Rolle „WoW Forever“. **Ohne Bot** zeigt sie alle, die sich
-schon einmal auf der Seite angemeldet haben und die Rolle tragen (Tabelle `members` in Supabase: Discord-ID,
-Anzeigename, Avatar, Rollenstand – keine E-Mail). Der Bot ist also optional; ohne ihn fehlen nur die
-Discord-Events im Kalender.
+**Mitgliederliste:** Sie zeigt alle, die sich schon einmal auf der Seite angemeldet haben und die Rolle
+„WoW Forever“ tragen (Tabelle `members` in Supabase: Discord-ID, Anzeigename, Avatar, Rollenstand – keine E-Mail),
+auch wenn ein Bot eingerichtet ist. Der Bot liest die Discord-Events für den Kalender und prüft Rollen nach. Nur ganz
+ohne Datenbank liefert er die Mitgliederliste (dann alle Träger der Rolle).
 
 **Live-Betrieb ohne Zugangsdaten** für eine Quelle zeigt dort leere Inhalte, niemals Beispieldaten.
 

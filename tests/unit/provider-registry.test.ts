@@ -53,7 +53,9 @@ describe('resolveProviderModes', () => {
     expect(modes.members.mode).toBe('live')
     expect(modes.discordEvents).toMatchObject({ mode: 'off', missing: ['NUXT_DISCORD_BOT_TOKEN'] })
     expect(hasDiscordBot(config)).toBe(false)
-    expect(hasDiscordBot(liveConfig)).toBe(true)
+    // Mit Datenbank bleibt die Liste bei den angemeldeten Mitgliedern, auch wenn ein Bot da ist
+    expect(hasDiscordBot(liveConfig)).toBe(false)
+    expect(hasDiscordBot({ ...liveConfig, supabase: { url: '', serviceRoleKey: '' } })).toBe(true)
   })
 
   it('zeigt live ohne Zugangsdaten leere Daten statt Beispieldaten', async () => {
