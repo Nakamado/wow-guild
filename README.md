@@ -285,8 +285,18 @@ Für Playwright einmalig die Browser installieren: `pnpm exec playwright install
 nur, wenn deren Adresse ebenfalls als Redirect eingetragen ist – für Vorschauen am einfachsten
 `NUXT_PUBLIC_DEMO_MODE=true` nur für *Preview* setzen.
 
-**Eigene Domain:** In Vercel unter *Settings → Domains* hinzufügen, dann `NUXT_PUBLIC_SITE_URL` und den
-Discord-Redirect auf die neue Domain umstellen.
+**Eigene Domain (`www.mukimuki-forever.de`):**
+
+- Vercel → *Settings → Domains*: `www.mukimuki-forever.de` als Hauptdomain, `mukimuki-forever.de` mit
+  „Redirect to“ auf die www-Adresse (308).
+- DNS bei united-domains: `A` für `@` und `CNAME` für `www` – exakt die Werte aus Vercels Domain-Karte.
+  MX-, SPF-, DKIM- und DMARC-Einträge des Postfachs bleiben unverändert.
+- `NUXT_PUBLIC_SITE_URL=https://www.mukimuki-forever.de` (Production) – daraus entstehen Canonical- und
+  Open-Graph-URLs, `sitemap.xml`, `robots.txt` und die OAuth-Redirects.
+- Redirects ergänzen: Discord `…/auth/discord`, Battle.net `…/auth/battlenet` (alte Adressen erst später entfernen).
+- Die alte `*.vercel.app`-Adresse leitet in Production automatisch auf die Hauptdomain um
+  (`server/middleware/canonical-host.ts`); Vorschauen bleiben erreichbar, aber `robots.txt` sperrt sie für Suchmaschinen.
+- Kontaktadresse: `NUXT_PUBLIC_CONTACT_EMAIL` (Standard `kontakt@mukimuki-forever.de`).
 
 ## Betrieb & Fehlersuche
 

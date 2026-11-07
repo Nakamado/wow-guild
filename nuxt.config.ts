@@ -70,6 +70,8 @@ export default defineNuxtConfig({
     },
     public: {
       siteUrl: 'http://localhost:3000',
+      /** Kontaktadresse für Impressum und Datenschutz (Postfach bei united-domains) */
+      contactEmail: 'kontakt@mukimuki-forever.de',
       demoMode: true,
       guild: {
         name: 'MukiMuki',

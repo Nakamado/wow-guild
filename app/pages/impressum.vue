@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const { contactEmail } = useRuntimeConfig().public
+</script>
+
 <template>
   <LegalPage title="Impressum">
     <h2>Angaben gemäß § 5 DDG</h2>
@@ -9,7 +13,7 @@
     </p>
 
     <h2>Kontakt</h2>
-    <p>E-Mail: <a href="mailto:dustin.clever@gmail.com">dustin.clever@gmail.com</a></p>
+    <p>E-Mail: <a :href="`mailto:${contactEmail}`">{{ contactEmail }}</a></p>
 
     <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
     <p>Dustin Clever, Anschrift wie oben</p>
