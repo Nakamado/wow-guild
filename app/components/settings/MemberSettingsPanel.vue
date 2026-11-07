@@ -12,6 +12,9 @@ const twitchInput = ref('')
 watch(() => settings.value?.twitchLogin, value => (twitchInput.value = value ?? ''), { immediate: true })
 
 const disabled = computed(() => !settings.value?.available)
+const grantedCount = computed(() => settings.value?.grantedCharacterIds?.length ?? 0)
+/** Teilnahme: selbst zugestimmt oder Adminfreigabe mit deiner Zustimmung */
+const participating = computed(() => Boolean(settings.value?.leaderboardOptIn) || grantedCount.value > 0)
 
 async function onToggleLeaderboard(event: Event) {
   const checked = (event.target as HTMLInputElement).checked
@@ -72,7 +75,7 @@ async function onSaveTwitch() {
           id="leaderboard-opt-in"
           type="checkbox"
           class="member-settings__checkbox"
-          :checked="settings?.leaderboardOptIn ?? false"
+          :checked="participating"
           :disabled="disabled || busy === 'leaderboard'"
           aria-describedby="leaderboard-opt-in-hint"
           @change="onToggleLeaderboard"
@@ -88,6 +91,13 @@ async function onSaveTwitch() {
           >
             Öffentlich sichtbar mit deinem Discord-Namen, Profilbild, Charakteren und Punkten. Du kannst das jederzeit
             wieder abschalten.
+          </p>
+          <p
+            v-if="grantedCount && !settings?.leaderboardOptIn"
+            class="member-settings__hint"
+          >
+            Der Hauptadmin hat mit deiner Zustimmung {{ grantedCount === 1 ? 'einen Charakter' : `${grantedCount} Charaktere` }} freigegeben.
+            Abschalten widerruft auch diese Freigabe{{ grantedCount === 1 ? '' : 'n' }}.
           </p>
         </div>
       </div>

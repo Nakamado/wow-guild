@@ -79,15 +79,15 @@ async function onLogout() {
         Meine Charaktere
       </NuxtLink>
       <NuxtLink
-        v-if="!isDemo && can('admin:tools')"
-        to="/admin/blizzard"
+        v-if="can('admin:area')"
+        to="/admin"
         class="user-menu__item"
       >
         <BaseIcon
-          name="settings"
+          name="shield"
           :size="18"
         />
-        Blizzard-API-Probe
+        Adminbereich
       </NuxtLink>
       <button
         v-if="!isDemo"

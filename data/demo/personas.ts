@@ -9,6 +9,7 @@ export const demoPersonas = {
   member: { label: 'Mitglied', level: 'member', memberId: 'demo-member-04' },
   organizer: { label: 'Organisator', level: 'member', memberId: 'demo-member-02' },
   admin: { label: 'Admin', level: 'admin', memberId: 'demo-member-01' },
+  superadmin: { label: 'Hauptadmin', level: 'superadmin', memberId: 'demo-member-01' },
   // Gildenmitglied ohne eingetragene Charaktere – zeigt das Charakter-Onboarding
   newcomer: { label: 'Neues Mitglied', level: 'member', memberId: 'demo-member-11' },
 } as const satisfies Record<string, { label: string, level: AccessLevel, memberId: string | null }>

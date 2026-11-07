@@ -30,7 +30,6 @@ export interface MemberSnapshot {
   displayName: string
   avatarUrl: string | null
   isGuildMember: boolean
-  isAdmin: boolean
   /** Discord-Rolle „Streamer“ – undefined, wenn die Rollen unbekannt sind (dann unverändert lassen) */
   isStreamer?: boolean
   /** true beim Login, false bei der Rollen-Nachprüfung */
@@ -51,18 +50,23 @@ export function createSupabaseMemberRepository(db: SupabaseClient): DiscordMembe
       if (result.error) throw fromPostgresError(result.error)
       return result.data ? rowToMember(result.data as MemberRow) : null
     },
+    /**
+     * Login: Profil anlegen oder aktualisieren. Rollen-Nachprüfung: nur aktualisieren – ein
+     * gelöschtes Konto entsteht so nicht durch eine noch offene Sitzung neu.
+     * Die Webseitenrolle (is_admin) wird hier nie geschrieben, nur im Adminbereich.
+     */
     async save(snapshot) {
       const now = new Date().toISOString()
-      const result = await table().upsert({
-        id: snapshot.id,
+      const columns = {
         display_name: snapshot.displayName.slice(0, 64),
         avatar_url: snapshot.avatarUrl,
         is_guild_member: snapshot.isGuildMember,
-        is_admin: snapshot.isAdmin,
         ...(snapshot.isStreamer !== undefined ? { is_streamer: snapshot.isStreamer } : {}),
         roles_checked_at: now,
-        ...(snapshot.login ? { last_login_at: now } : {}),
-      })
+      }
+      const result = snapshot.login
+        ? await table().upsert({ id: snapshot.id, ...columns, last_login_at: now })
+        : await table().update(columns).eq('id', snapshot.id)
       if (result.error) throw fromPostgresError(result.error)
     },
   }

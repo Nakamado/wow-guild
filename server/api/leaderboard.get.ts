@@ -5,6 +5,7 @@ import { characterSlug, fetchCharacterProgress, parsePreviewCharacters, type Bli
 import { instances } from '#shared/data/dungeons'
 import { findProfession } from '#shared/data/professions'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
+import { leaderboardCharacterIds } from '#shared/domain/admin'
 import type { ProgressEvent, ProgressType } from '#shared/schemas/points'
 
 /** Was die Blizzard-API für WoW: Forever derzeit liefert – Dungeons und Raids noch nicht */
@@ -176,15 +177,23 @@ interface LeaderboardEntry {
 }
 
 /**
- * Charaktere aller Mitglieder mit Zustimmung. Gezählt werden nur Charaktere in der Gilde –
- * ist die Gildenliste gerade nicht abrufbar, zählen vorübergehend alle eingetragenen.
+ * Charaktere mit Zustimmung: Selbstfreigabe des Mitglieds (alle seine Charaktere) oder Adminfreigabe
+ * mit dokumentierter Zustimmung (nur genau dieser Charakter). Gezählt werden nur Charaktere in der
+ * Gilde – ist die Gildenliste gerade nicht abrufbar, zählen vorübergehend alle.
  */
 async function optedInEntries(store: NonNullable<ReturnType<typeof useMemberSettingsStore>>): Promise<LeaderboardEntry[]> {
-  const memberIds = new Set(await store.listLeaderboardMembers())
-  if (!memberIds.size) return []
+  const [memberIds, grants] = await Promise.all([
+    store.listLeaderboardMembers(),
+    useGrantStore()?.listActive().catch(() => []) ?? [],
+  ])
+  if (!memberIds.length && !grants.length) return []
   const [characters, roster] = await Promise.all([useProviders().characters.list(), guildRosterBySlug()])
+  const included = leaderboardCharacterIds({
+    characters: characters.map(character => ({ id: character.id, memberId: character.memberId, inGuild: !roster || roster.has(characterSlug(character.name)) })),
+    optedInMemberIds: new Set(memberIds),
+    grants,
+  })
   return characters
-    .filter(character => memberIds.has(character.memberId))
-    .filter(character => !roster || roster.has(characterSlug(character.name)))
+    .filter(character => included.has(character.id))
     .map(character => ({ name: character.name, memberId: character.memberId, characterId: character.id, isMain: character.isMain }))
 }

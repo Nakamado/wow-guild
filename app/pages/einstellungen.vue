@@ -9,7 +9,7 @@ const { signedIn, displayName, avatarUrl, viewer } = useViewer()
 const { mine, loaded, canManage, remove, setMain } = useCharacters()
 const { runs } = useRuns()
 
-const levelLabels = { visitor: 'Besucher', user: 'Angemeldet (ohne Gildenrolle)', member: 'Gildenmitglied', admin: 'Admin' } as const
+const levelLabels = { visitor: 'Besucher', user: 'Angemeldet (ohne Gildenrolle)', member: 'Gildenmitglied', admin: 'Admin', superadmin: 'Hauptadmin' } as const
 
 const formOpen = ref(false)
 const editing = ref<Character | null>(null)
@@ -87,7 +87,7 @@ async function onDelete() {
             : 'Mit deinem Discord-Konto kannst du deine Charaktere eintragen und Gruppen beitreten.'"
         />
         <div class="settings-page__center">
-          <LoginButton />
+          <LoginButton notice />
         </div>
       </BaseCard>
 
@@ -207,6 +207,8 @@ async function onDelete() {
         </section>
 
         <MemberSettingsPanel v-if="canManage" />
+
+        <AccountDeletion />
       </template>
     </div>
 

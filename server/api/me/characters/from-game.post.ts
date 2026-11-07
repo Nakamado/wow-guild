@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
   setResponseStatus(event, 201)
   const realm = config.public.guild.realm
   const created = await persist(() => writers.characters.create(viewer.memberId, { ...check.value, realm, isMain: existing.length === 0 }))
+  await logActivity({ action: 'character.added', actorId: viewer.memberId, subjectType: 'character', subjectId: created.id, summary: `${created.name} hinzugefügt (${created.isMain ? 'Hauptcharakter' : 'Twink'})` })
   const [enriched] = await withGameData([created])
   return enriched ?? created
 })

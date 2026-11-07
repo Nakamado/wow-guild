@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { guildContent } from '~~/content/guild'
 
+const accountDeleted = computed(() => useRoute().query.konto === 'geloescht')
+
 const { guild, twitch } = useSiteConfig()
 
 useSeoMeta({
@@ -37,6 +39,14 @@ const memberPreview = computed(() => members.value?.slice(0, 8) ?? [])
 <template>
   <div class="home">
     <HeroSection />
+
+    <p
+      v-if="accountDeleted"
+      class="home__deleted container"
+      role="status"
+    >
+      Dein Konto wurde gelöscht. Mit einem neuen Discord-Login kannst du dich jederzeit wieder registrieren.
+    </p>
 
     <HomeBoard />
 
@@ -284,6 +294,15 @@ const memberPreview = computed(() => members.value?.slice(0, 8) ?? [])
 
 <style scoped lang="scss">
 .home {
+  &__deleted {
+    padding: var(--space-3) var(--space-4);
+    margin-top: var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--color-success);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
   display: flex;
   flex-direction: column;
   gap: var(--section-gap);

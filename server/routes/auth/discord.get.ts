@@ -51,9 +51,14 @@ export default defineEventHandler(async (event) => {
         loggedInAt: new Date().toISOString(),
       })
 
-      // In der Mitgliederliste erscheinen (ohne Bot ist das die einzige Quelle)
-      const level = accessLevelFor(event, profile.id, roles)
-      await rememberMember({ ...profile, isGuildMember: level !== 'user', isAdmin: level === 'admin', isStreamer: hasStreamerRole(event, roles), login: true })
+      // Profil anlegen bzw. aktualisieren – das erste Mal wird als Registrierung protokolliert
+      const isNew = (await siteAccount(profile.id)) === null
+      const level = await accessLevelFor(event, profile.id, roles)
+      await rememberMember({ ...profile, isGuildMember: level !== 'user', isStreamer: hasStreamerRole(event, roles), login: true })
+      forgetSiteAccount(profile.id)
+      if (isNew) {
+        await logActivity({ action: 'account.registered', actorId: profile.id, subjectType: 'member', subjectId: profile.id, summary: 'Konto über den Discord-Login angelegt' })
+      }
 
       const returnTo = safeReturnPath(getCookie(event, RETURN_COOKIE))
       deleteCookie(event, RETURN_COOKIE, { path: '/' })

@@ -7,6 +7,8 @@ export interface ViewerState {
   displayName: string | null
   avatarUrl: string | null
   loginAvailable: boolean
+  /** einmaliger Hinweis zur geänderten Datenschutzerklärung steht noch aus */
+  privacyNoticePending?: boolean
   demo: {
     persona: DemoPersonaId | null
     personas: { id: string, label: string }[]
@@ -75,6 +77,7 @@ export function useViewer() {
     displayName: computed(() => state.value?.displayName ?? null),
     avatarUrl: computed(() => state.value?.avatarUrl ?? null),
     loginAvailable: computed(() => state.value?.loginAvailable ?? false),
+    privacyNoticePending: computed(() => state.value?.privacyNoticePending ?? false),
     login,
     logout,
     demo: computed(() => state.value?.demo ?? null),

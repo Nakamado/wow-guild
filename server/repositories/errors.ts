@@ -14,6 +14,7 @@ const messages: Record<string, { status: number, message: string }> = {
   'not-joined': { status: 409, message: 'Du bist für diesen Run nicht angemeldet.' },
   'not-found': { status: 404, message: 'Nicht gefunden.' },
   'name-taken': { status: 409, message: 'Diesen Charakternamen gibt es auf dem Realm bereits.' },
+  'already-granted': { status: 409, message: 'Für diesen Charakter gibt es bereits eine aktive Freigabe.' },
   'has-signups': { status: 409, message: 'Dieser Charakter ist noch für Runs angemeldet. Melde ihn zuerst ab.' },
 }
 

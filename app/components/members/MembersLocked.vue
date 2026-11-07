@@ -38,6 +38,7 @@ const signedIn = computed(() => viewer.value.level !== 'visitor')
       <LoginButton
         v-else-if="!signedIn"
         size="sm"
+        notice
         class="members-locked__login"
       />
     </div>

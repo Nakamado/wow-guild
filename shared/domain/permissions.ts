@@ -3,8 +3,12 @@
  * Server (verbindliche Prüfung jeder geschützten Aktion).
  */
 
-/** Besucher · angemeldeter Discord-Nutzer · Gildenmitglied · Admin/Event-Moderator */
-export type AccessLevel = 'visitor' | 'user' | 'member' | 'admin'
+/**
+ * Besucher · angemeldeter Discord-Nutzer · Gildenmitglied · Admin · Hauptadmin.
+ * Admin ist eine Webseitenrolle (vom Hauptadmin vergeben); der Hauptadmin ist fest per
+ * serverseitiger Konfiguration hinterlegt und lässt sich über die Oberfläche nicht ändern.
+ */
+export type AccessLevel = 'visitor' | 'user' | 'member' | 'admin' | 'superadmin'
 
 export interface Viewer {
   level: AccessLevel
@@ -25,6 +29,12 @@ export type Action
     /** Schwarzes Brett lesen (Mitglieder) bzw. Aushänge verwalten (nur Admins) */
     | 'board:view'
     | 'board:manage'
+    /** Adminbereich: Übersicht und Mitgliederliste (Admins und Hauptadmin) */
+    | 'admin:area'
+    /** Nur Hauptadmin: Admins ernennen/zurückstufen, Protokoll, Ranglistenfreigaben mit Nachweisen */
+    | 'roles:manage'
+    | 'activity:view'
+    | 'leaderboard:grant'
 
 export interface PermissionResource {
   /** Organisator eines Runs */
@@ -33,7 +43,10 @@ export interface PermissionResource {
   ownerId?: string
 }
 
-const rank: Record<AccessLevel, number> = { visitor: 0, user: 1, member: 2, admin: 3 }
+const rank: Record<AccessLevel, number> = { visitor: 0, user: 1, member: 2, admin: 3, superadmin: 4 }
+
+/** Aktionen, die ausschließlich der Hauptadmin ausführen darf – auch Admins nicht */
+const superadminOnly: ReadonlySet<Action> = new Set(['roles:manage', 'activity:view', 'leaderboard:grant'])
 
 export const visitor: Viewer = { level: 'visitor', memberId: null }
 
@@ -42,6 +55,8 @@ export function hasLevel(viewer: Viewer, required: AccessLevel): boolean {
 }
 
 export function can(viewer: Viewer, action: Action, resource: PermissionResource = {}): boolean {
+  if (viewer.level === 'superadmin') return true
+  if (superadminOnly.has(action)) return false
   if (viewer.level === 'admin') return true
 
   switch (action) {
@@ -58,6 +73,9 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
     case 'runs:moderate':
     case 'admin:tools':
     case 'board:manage':
+    case 'admin:area':
+      return false
+    default:
       return false
   }
 }
@@ -87,5 +105,26 @@ export function accessLevelFromRoles(
   if (roleIds === null) return 'user' // angemeldet, aber nicht auf dem Server
   if (hasAnyRole(roleIds, config.adminRoleId)) return 'admin'
   if (hasAnyRole(roleIds, config.memberRoleId)) return 'member'
+  return 'user'
+}
+
+/**
+ * Zugriffsstufe im Live-Betrieb: Discord bestimmt nur noch, wer zur Gilde gehört
+ * (Rolle „WoW Forever“) – Admin ist eine Webseitenrolle, Hauptadmin steht in der Konfiguration.
+ * - Hauptadmin und Webseiten-Admins brauchen keine Gildenrolle, müssen aber auf dem Discord-Server sein
+ *   (roleIds !== null). Ausnahme: der Hauptadmin – er darf sich nie aussperren.
+ */
+export function accessLevelFor(input: {
+  userId: string
+  roleIds: readonly string[] | null
+  memberRoleId: string
+  superadminId: string | null
+  /** Webseitenrolle aus der Datenbank (members.is_admin) */
+  isSiteAdmin: boolean
+}): Exclude<AccessLevel, 'visitor'> {
+  if (input.superadminId && input.userId === input.superadminId) return 'superadmin'
+  if (input.roleIds === null) return 'user'
+  if (input.isSiteAdmin) return 'admin'
+  if (hasAnyRole(input.roleIds, input.memberRoleId)) return 'member'
   return 'user'
 }
