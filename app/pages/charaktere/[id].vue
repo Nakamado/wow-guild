@@ -321,11 +321,13 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
   &__hero {
     display: grid;
     gap: var(--space-6);
-    align-items: end;
+    align-items: center;
 
     &--portrait {
       @include mq('md') {
-        grid-template-columns: 1fr minmax(16rem, 26rem);
+        grid-template-columns: max-content minmax(14rem, 22rem);
+        gap: var(--space-10);
+        justify-content: start;
       }
     }
   }

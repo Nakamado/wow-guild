@@ -26,7 +26,7 @@ export const guildContent: GuildContent = {
       ],
     },
     { title: 'Raids', text: 'Sobald genug Mitglieder Stufe 60 erreicht haben, planen wir feste Raid-Abende.' },
-    { title: 'Community-Abende', text: 'Für die Zukunft können wir uns Gildentreffen, Angelwettbewerbe oder gemeinsames Stream-Schauen auf Discord gut vorstellen.' },
+    { title: 'Community-Abende', text: 'Für die Zukunft können wir uns Gildentreffen, Angelwettbewerbe oder Ähnliches vorstellen. Ihr könnt gerne Sachen vorschlagen.' },
   ],
   focus: {
     pve: 'Unser Schwerpunkt liegt auf PvE: Leveln, Dungeons und später Raids.',
