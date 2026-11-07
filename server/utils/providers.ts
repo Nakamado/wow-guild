@@ -2,7 +2,10 @@ import { classifySupabaseKey, normalizeSupabaseUrl } from '../lib/supabase-confi
 import { createLiveFactories } from '../providers/live'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createSupabase } from '../repositories/supabase'
+import { createSupabaseAccountStore, type AccountStore } from '../repositories/supabase/accounts'
+import { createSupabaseActivityStore, type ActivityStore } from '../repositories/supabase/activity'
 import { createSupabaseBoardStore, type BoardStore } from '../repositories/supabase/board'
+import { createSupabaseGrantStore, type GrantStore } from '../repositories/supabase/grants'
 import { createSupabaseMemberSettingsStore, type MemberSettingsStore } from '../repositories/supabase/member-settings'
 import { createSupabaseMilestoneStore, type MilestoneStore } from '../repositories/supabase/milestones'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
@@ -105,6 +108,21 @@ export function useBoardStore(): BoardStore | null {
 /** Einstellungen der Mitglieder (Ranglisten-Zustimmung, Twitch-Kanal) – null ohne Datenbank */
 export function useMemberSettingsStore(): MemberSettingsStore | null {
   return useStore('member-settings', createSupabaseMemberSettingsStore)
+}
+
+/** Konten (Webseitenrolle, Datenschutzhinweis, Löschen, Adminliste) – null ohne Datenbank */
+export function useAccountStore(): AccountStore | null {
+  return useStore('accounts', createSupabaseAccountStore)
+}
+
+/** Aktivitätsprotokoll – null ohne Datenbank */
+export function useActivityStore(): ActivityStore | null {
+  return useStore('activity', createSupabaseActivityStore)
+}
+
+/** Ranglistenfreigaben durch den Hauptadmin – null ohne Datenbank */
+export function useGrantStore(): GrantStore | null {
+  return useStore('grants', createSupabaseGrantStore)
 }
 
 /** Automatisch erkannte Chronik-Meilensteine – null ohne Datenbank */

@@ -5,6 +5,7 @@
       class="default-layout__skip-link"
     >Zum Inhalt springen</a>
     <DemoBanner />
+    <PrivacyNoticeBanner />
     <AppHeader />
     <main
       id="main"

@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
   await assertCharacterExistsInGame(event, check.value.name)
 
   const realm = useRuntimeConfig(event).public.guild.realm
+  const created = await persist(() => writers.characters.create(viewer.memberId, { ...check.value, realm, isMain: existing.length === 0 }))
+  await logActivity({ action: 'character.added', actorId: viewer.memberId, subjectType: 'character', subjectId: created.id, summary: `${created.name} hinzugefügt (${created.isMain ? 'Hauptcharakter' : 'Twink'})` })
   setResponseStatus(event, 201)
-  return persist(() => writers.characters.create(viewer.memberId, { ...check.value, realm, isMain: existing.length === 0 }))
+  return created
 })

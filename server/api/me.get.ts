@@ -1,4 +1,5 @@
 import { demoPersonas } from '../../data/demo/personas'
+import { PRIVACY_NOTICE_VERSION } from '#shared/domain/admin'
 
 /** Aktueller Betrachter (Zugriffsstufe, Mitglied), Login-Status und Demo-Steuerung. */
 export default defineEventHandler(async (event) => {
@@ -7,6 +8,8 @@ export default defineEventHandler(async (event) => {
   const demoMode = Boolean(config.public.demoMode)
 
   const member = !viewer.user && viewer.memberId ? await useProviders().members.getMember(viewer.memberId) : null
+  // Bestehende Mitglieder sehen den Hinweis zur geänderten Datenschutzerklärung einmal
+  const account = viewer.user ? await siteAccount(viewer.user.id) : undefined
 
   return {
     level: viewer.level,
@@ -15,6 +18,7 @@ export default defineEventHandler(async (event) => {
     avatarUrl: viewer.user?.avatarUrl ?? member?.avatarUrl ?? null,
     /** Discord-Login ist eingerichtet (nur live) */
     loginAvailable: !demoMode && Boolean(config.discord.clientId && config.discord.clientSecret),
+    privacyNoticePending: Boolean(account && account.privacyNoticeVersion < PRIVACY_NOTICE_VERSION),
     demo: demoMode
       ? {
           persona: viewer.persona,

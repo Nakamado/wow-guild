@@ -84,8 +84,13 @@ ihn automatisch).
 5. Rollen-IDs (Discord: *Einstellungen → Erweitert → Entwicklermodus*, dann Rechtsklick auf die Rolle →
    *ID kopieren*): Rolle „WoW Forever“ → `NUXT_DISCORD_MEMBER_ROLE_ID`, Admin-/Event-Moderator-Rolle →
    `NUXT_DISCORD_ADMIN_ROLE_ID`, Rolle „Streamer“ → `NUXT_DISCORD_STREAMER_ROLE_ID`.
-6. Optional: Discord-User-IDs von Personen, die auf der Seite immer Admin sein sollen (z. B. Betreiber),
-   kommagetrennt in `NUXT_ADMIN_USER_IDS`. Sie brauchen dafür keine Discord-Rolle.
+6. Hauptadmin (Betreiber): eigene Discord-User-ID in `NUXT_SUPERADMIN_USER_ID`. Weitere Admins ernennt der
+   Hauptadmin im Adminbereich (`/admin`); die Discord-Adminrolle macht nicht mehr automatisch zum Admin.
+
+**Adminbereich (`/admin`):** Übersicht und Mitgliederliste für Admins; Rollenvergabe, Ranglistenfreigaben mit
+Zustimmungsnachweis und Aktivitätsprotokoll nur für den Hauptadmin. Nachweis-Screenshots liegen im **privaten**
+Supabase-Storage-Bucket `consent-evidence` (einmalig anlegen, „Public bucket“ aus). Abgelaufene Protokolleinträge
+löscht ein täglicher Vercel-Cron (`vercel.json` → `/api/cron/cleanup`, gesichert mit `CRON_SECRET`).
 
 Ablauf: Login mit Scopes `identify` + `guilds.members.read`, danach liest die Seite die eigenen Rollen auf dem
 Gilden-Server und speichert sie (nur serverseitig lesbar) in der verschlüsselten Session. Rollen werden spätestens

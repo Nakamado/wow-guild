@@ -13,5 +13,9 @@ export default defineEventHandler(async (event) => {
   if (!check.ok) rejectWith(check.error)
   if (check.value.name !== character.name) await assertCharacterExistsInGame(event, check.value.name)
 
-  return persist(() => writers.characters.update(character.id, check.value))
+  const updated = await persist(() => writers.characters.update(character.id, check.value))
+  if (updated.name !== character.name) {
+    await logActivity({ action: 'character.renamed', actorId: viewer.memberId, subjectType: 'character', subjectId: character.id, summary: `${character.name} umbenannt in ${updated.name}` })
+  }
+  return updated
 })

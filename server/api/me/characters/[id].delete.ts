@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
   if (signedUp) rejectWith({ code: 'has-signups', message: `${character.name} ist noch für kommende Runs angemeldet. Melde ihn zuerst ab.` }, 409)
 
   await persist(() => writers.characters.remove(character.id))
+  await logActivity({ action: 'character.removed', actorId: viewer.memberId, subjectType: 'character', subjectId: character.id, summary: `${character.name} entfernt` })
 
   if (character.isMain) {
     const [next] = sortCharacters(await useProviders().characters.listByMember(viewer.memberId))

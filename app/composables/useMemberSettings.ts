@@ -6,6 +6,8 @@ export interface MemberSettingsView {
   available: boolean
   isStreamer: boolean
   leaderboardOptIn: boolean
+  /** vom Hauptadmin mit deiner Zustimmung freigegebene Charaktere */
+  grantedCharacterIds: string[]
   twitchLogin: string | null
 }
 

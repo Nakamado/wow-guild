@@ -8,7 +8,7 @@ import {
   isDemoPersonaId,
   type DemoPersonaId,
 } from '../../data/demo/personas'
-import { accessLevelFromRoles, can, parseIdList, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
+import { accessLevelFor as accessLevelForSite, accessLevelFromRoles, can, visitor, type Action, type PermissionResource, type Viewer } from '#shared/domain/permissions'
 import { createDiscordBotClient, fetchOwnGuildMember } from '../providers/discord'
 import { discordAvatarUrl, discordDisplayName } from '../providers/discord/normalize'
 import type { DiscordGuildMember } from '../providers/discord/schemas'
@@ -106,27 +106,39 @@ async function resolveViewer(event: H3Event): Promise<ResolvedViewer> {
         : currentUser
       await replaceUserSession(event, { ...session, user, secure: { ...session.secure, roles, rolesCheckedAt } })
       currentUser = user
-      const level = accessLevelFor(event, user.id, roles)
-      await rememberMember({ ...user, isGuildMember: level !== 'user', isAdmin: level === 'admin', isStreamer: hasStreamerRole(event, roles), login: false })
+      const level = await accessLevelFor(event, user.id, roles)
+      await rememberMember({ ...user, isGuildMember: level !== 'user', isStreamer: hasStreamerRole(event, roles), login: false })
     }
     else if (age > ROLE_MAX_AGE_MS) {
       roles = null // veraltet und nicht prüfbar → nur noch „angemeldet“
     }
   }
 
-  const level = accessLevelFor(event, currentUser.id, roles)
+  // Konto gelöscht (z. B. auf einem anderen Gerät)? Dann gilt auch diese Sitzung nicht mehr.
+  if (await siteAccount(currentUser.id) === null) {
+    await clearUserSession(event).catch(() => {})
+    return { ...visitor, persona: null, user: null }
+  }
+
+  const level = await accessLevelFor(event, currentUser.id, roles)
   return { level, memberId: currentUser.id, persona: null, user: currentUser }
 }
 
 /**
- * Zugriffsstufe eines angemeldeten Discord-Nutzers. Betreiber der Seite
- * (NUXT_ADMIN_USER_IDS) sind immer Admin – auch ohne Discord-Rolle.
+ * Zugriffsstufe eines angemeldeten Discord-Nutzers:
+ * - Hauptadmin: fest aus der Konfiguration (NUXT_SUPERADMIN_USER_ID)
+ * - Admin: Webseitenrolle aus der Datenbank (nur der Hauptadmin vergibt sie)
+ * - Mitglied: Discord-Rolle „WoW Forever“
+ * Ohne Datenbank (z. B. lokal) gilt übergangsweise die Discord-Adminrolle.
  */
-export function accessLevelFor(event: H3Event, userId: string, roles: string[] | null): Exclude<Viewer['level'], 'visitor'> {
+export async function accessLevelFor(event: H3Event, userId: string, roles: string[] | null): Promise<Exclude<Viewer['level'], 'visitor'>> {
   const config = useRuntimeConfig(event)
-  if (parseIdList(config.adminUserIds).includes(userId)) return 'admin'
-  const roleConfig = { memberRoleId: String(config.discord.memberRoleId ?? ''), adminRoleId: String(config.discord.adminRoleId ?? '') }
-  return accessLevelFromRoles(roles, roleConfig) as Exclude<Viewer['level'], 'visitor'>
+  const memberRoleId = String(config.discord.memberRoleId ?? '')
+  const account = await siteAccount(userId)
+  if (account === undefined && superadminId(event) !== userId) {
+    return accessLevelFromRoles(roles, { memberRoleId, adminRoleId: String(config.discord.adminRoleId ?? '') }) as Exclude<Viewer['level'], 'visitor'>
+  }
+  return accessLevelForSite({ userId, roleIds: roles, memberRoleId, superadminId: superadminId(event), isSiteAdmin: account?.isAdmin ?? false })
 }
 
 /** Trägt der Nutzer die Discord-Rolle „Streamer“? undefined = Rollen unbekannt oder Rolle nicht eingerichtet */

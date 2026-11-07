@@ -16,7 +16,10 @@ export interface StreamerMember {
 
 export interface MemberSettingsStore {
   get(memberId: string): Promise<MemberSettings | null>
+  /** `leaderboardOptIn: false` vermerkt zugleich den Zeitpunkt des Widerrufs */
   update(memberId: string, patch: Partial<MemberSettings>): Promise<MemberSettings>
+  /** Zeitpunkt des letzten Widerrufs; null = nie widerrufen, undefined = Mitglied unbekannt */
+  revokedAt(memberId: string): Promise<string | null | undefined>
   /** Gildenmitglieder, die der Rangliste zugestimmt haben */
   listLeaderboardMembers(): Promise<string[]>
   /** Gildenmitglieder mit Streamer-Rolle und eingetragenem Twitch-Kanal */
@@ -37,12 +40,20 @@ export function createSupabaseMemberSettingsStore(db: SupabaseClient): MemberSet
     async update(memberId, patch) {
       const columns = {
         ...(patch.leaderboardOptIn !== undefined ? { leaderboard_opt_in: patch.leaderboardOptIn } : {}),
+        ...(patch.leaderboardOptIn === false ? { leaderboard_revoked_at: new Date().toISOString() } : {}),
         ...(patch.twitchLogin !== undefined ? { twitch_login: patch.twitchLogin } : {}),
       }
       const result = await table().update(columns).eq('id', memberId).select(SELECT).maybeSingle()
       if (result.error) throw fromPostgresError(result.error)
       if (!result.data) throw new RepositoryError('not-found')
       return toSettings(result.data as SettingsRow)
+    },
+    async revokedAt(memberId) {
+      const result = await table().select('leaderboard_revoked_at').eq('id', memberId).maybeSingle()
+      if (result.error) throw fromPostgresError(result.error)
+      if (!result.data) return undefined
+      const value = (result.data as { leaderboard_revoked_at: string | null }).leaderboard_revoked_at
+      return value ? new Date(value).toISOString() : null
     },
     async listLeaderboardMembers() {
       const result = await table().select('id').eq('is_guild_member', true).eq('leaderboard_opt_in', true)

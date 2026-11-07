@@ -42,6 +42,16 @@ export default defineNuxtConfig({
     session: { maxAge: 60 * 60 * 24 * 7 },
     // Discord-User-IDs (kommagetrennt) mit Admin-Rechten auf der Seite, unabhängig von Discord-Rollen
     adminUserIds: '',
+    /** Discord-User-ID des Hauptadmins (fest, nicht über die Oberfläche änderbar) */
+    superadminUserId: '',
+    /** Aktivitätsprotokoll und Aufbewahrung (Tage) */
+    retention: {
+      activityDays: 90,
+      /** zurückgezogene Ranglistenfreigaben (ohne Screenshot) als Nachweis der früheren Zustimmung */
+      revokedGrantDays: 365,
+    },
+    /** Vercel Cron: wird als „Authorization: Bearer …“ mitgeschickt */
+    cronSecret: '',
     discord: {
       clientId: '',
       clientSecret: '',
