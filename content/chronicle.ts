@@ -26,7 +26,8 @@ export const manualMilestones: GuildMilestone[] = [
 ]
 
 /**
- * Beispieldaten (fiktiv, sichtbar als „Beispiel“ markiert) anzeigen?
- * Auf `false` setzen, sobald echte Meilensteine eingetragen sind.
+ * Gründungstag der Gilde, falls die Blizzard-API kein Gründungsdatum liefert.
+ * Automatisch kommen außerdem dazu: Mitgliederzahlen (10, 25, 50, 100) und die ersten Charaktere
+ * auf Stufe 40, 50 und 60 – erkannt über die Gildenliste der Blizzard-API.
  */
-export const showExampleMilestones = true
+export const guildFoundedOn = '2026-11-06'

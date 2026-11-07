@@ -2,7 +2,7 @@ import type { GuildMilestone } from '../../shared/schemas/chronicle'
 
 /**
  * FIKTIVE Beispiel-Meilensteine für die Gilden-Chronik – keine echten Ereignisse, keine Spielernamen.
- * Werden angezeigt, solange `showExampleMilestones` in content/chronicle.ts aktiv ist.
+ * Nur im Demo-Modus sichtbar.
  */
 export const exampleMilestones: GuildMilestone[] = [
   {

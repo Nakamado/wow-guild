@@ -25,6 +25,7 @@ const emit = defineEmits<{ saved: [character: Character] }>()
 
 const { guild, isDemo } = useSiteConfig()
 const { create, createFromGame, update } = useCharacters()
+const { settings, save: saveSettings } = useMemberSettings()
 
 const ids = { firstName: useId(), lastName: useId(), faction: useId(), race: useId(), class: useId(), level: useId(), roles: useId(), error: useId() }
 const isEdit = computed(() => Boolean(props.character))
@@ -40,6 +41,9 @@ const form = reactive({
   roles: [] as RoleId[],
 })
 const errorMessage = ref<string | null>(null)
+/** Beim Anlegen direkt der Rangliste zustimmen – nur, solange noch keine Zustimmung besteht (Opt-in, nicht vorausgewählt) */
+const showLeaderboardOptIn = computed(() => !isEdit.value && Boolean(settings.value?.available) && !settings.value?.leaderboardOptIn)
+const joinLeaderboard = ref(false)
 const saving = ref(false)
 /** Live beim Anlegen: nur Name + Rollen, den Rest liefert die Blizzard-API */
 const quick = ref(false)
@@ -54,6 +58,7 @@ watch(open, (isOpen) => {
   errorMessage.value = null
   quick.value = !isDemo && !props.character
   confirmUnknown.value = false
+  joinLeaderboard.value = false
   const source = props.character
   const name = splitCharacterName(source?.name ?? '')
   form.firstName = name.firstName
@@ -102,6 +107,13 @@ function describeIssue(field: PropertyKey | undefined): string {
   return 'Bitte prüfe deine Eingaben.'
 }
 
+/** Nach dem Speichern: ggf. Ranglisten-Zustimmung übernehmen, dann schließen */
+async function finish(character: Character) {
+  if (showLeaderboardOptIn.value && joinLeaderboard.value) await saveSettings({ leaderboardOptIn: true })
+  open.value = false
+  emit('saved', character)
+}
+
 function toggleRole(role: RoleId) {
   form.roles = form.roles.includes(role) ? form.roles.filter(entry => entry !== role) : [...form.roles, role]
 }
@@ -122,8 +134,7 @@ async function submit() {
     const result = await createFromGame(parsed.data)
     saving.value = false
     if (result.ok) {
-      open.value = false
-      emit('saved', result.value)
+      await finish(result.value)
       return
     }
     // Blizzard kennt den Charakter (noch) nicht, ist nicht erreichbar oder unvollständig:
@@ -165,8 +176,7 @@ async function submit() {
     errorMessage.value = result.error.message
     return
   }
-  open.value = false
-  emit('saved', result.value)
+  await finish(result.value)
 }
 </script>
 
@@ -384,6 +394,23 @@ async function submit() {
         </p>
       </fieldset>
 
+      <label
+        v-if="showLeaderboardOptIn"
+        class="character-form__choice character-form__opt-in"
+      >
+        <input
+          v-model="joinLeaderboard"
+          type="checkbox"
+          class="character-form__checkbox"
+        >
+        <span>
+          In der Rangliste erscheinen
+          <span class="character-form__hint character-form__opt-in-hint">
+            Öffentlich mit Discord-Name, Profilbild, Charakteren und Punkten – jederzeit in den Einstellungen abschaltbar.
+          </span>
+        </span>
+      </label>
+
       <p
         v-if="errorMessage"
         class="character-form__error"
@@ -545,6 +572,16 @@ async function submit() {
   &__hint {
     font-size: var(--text-xs);
     color: var(--color-text-muted);
+  }
+
+  &__opt-in {
+    align-items: flex-start;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+  }
+
+  &__opt-in-hint {
+    display: block;
   }
 
   &__error {

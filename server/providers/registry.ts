@@ -58,14 +58,14 @@ function requirements(config: ProviderConfig): Record<Exclude<ProviderKey, 'dung
   }
   return {
     members: [
-      // Vollständige Liste über den Discord-Bot …
+      // Alle, die sich schon einmal auf der Seite angemeldet haben (Supabase) …
+      supabase,
+      // … nur ohne Datenbank: vollständige Rollenliste über den Discord-Bot
       {
         NUXT_DISCORD_BOT_TOKEN: config.discord.botToken,
         NUXT_DISCORD_GUILD_ID: config.discord.guildId,
         NUXT_DISCORD_MEMBER_ROLE_ID: config.discord.memberRoleId,
       },
-      // … oder ohne Bot: alle, die sich schon einmal angemeldet haben (Supabase)
-      supabase,
     ],
     discordEvents: [{
       NUXT_DISCORD_BOT_TOKEN: config.discord.botToken,
@@ -84,9 +84,13 @@ function requirements(config: ProviderConfig): Record<Exclude<ProviderKey, 'dung
 const missingIn = (requirement: Requirement) =>
   Object.entries(requirement).filter(([, value]) => !String(value ?? '').trim()).map(([name]) => name)
 
-/** Ist die Discord-Bot-Variante für Mitglieder vollständig? (sonst Supabase) */
+/**
+ * Mitgliederliste über den Discord-Bot? Nur ohne Datenbank – mit Supabase erscheinen bewusst nur
+ * Mitglieder, die sich auf der Seite angemeldet haben (der Bot liest dann nur Events und prüft Rollen).
+ */
 export function hasDiscordBot(config: ProviderConfig): boolean {
-  return missingIn(requirements(config).members[0]!).length === 0
+  const [supabase, bot] = requirements(config).members
+  return missingIn(supabase!).length > 0 && missingIn(bot!).length === 0
 }
 
 /**

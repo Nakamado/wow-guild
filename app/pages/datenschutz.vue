@@ -61,8 +61,9 @@ const { contactEmail } = useRuntimeConfig().public
     <h2>7. Gespeicherte Daten (Datenbank)</h2>
     <p>
       Gespeichert werden in einer Datenbank bei Supabase Inc. (Rechenzentrum in Irland, EU): dein Profil (Discord-ID, Anzeigename,
-      Avatar, Stand der Gildenrolle, Zeitpunkt der letzten Anmeldung), die Charaktere, die du selbst
-      einträgst, sowie deine Gruppenanmeldungen. Andere angemeldete Gildenmitglieder sehen diese
+      Avatar, Stand der Gildenrolle und der Streamer-Rolle, Zeitpunkt der letzten Anmeldung, deine
+      Einstellung zur Rangliste und – falls du ihn einträgst – deinen Twitch-Kanalnamen), die Charaktere,
+      die du selbst einträgst, sowie deine Gruppenanmeldungen. Andere angemeldete Gildenmitglieder sehen diese
       Angaben; Besucher ohne Anmeldung nicht. Charaktere kannst du jederzeit in den Einstellungen
       löschen; die Löschung deines Profils erfolgt auf Anfrage an die oben genannte Adresse.
     </p>
@@ -79,13 +80,16 @@ const { contactEmail } = useRuntimeConfig().public
     <p>
       In der öffentlich sichtbaren Rangliste erscheinen nur Personen, die dem zugestimmt haben – mit
       Discord-Anzeigename, Avatar, Charakter und Punkten (Art. 6 Abs. 1 lit. a DSGVO). Die Zustimmung
-      kannst du jederzeit widerrufen; dann wirst du aus der Rangliste entfernt.
+      kannst du jederzeit in den Einstellungen widerrufen; dann wirst du aus der Rangliste entfernt.
     </p>
 
     <h2>10. Twitch-Inhalte</h2>
     <p>
       Twitch-Clips und Streams werden erst nach deiner ausdrücklichen Zustimmung per Klick geladen
-      (2-Klick-Lösung). Erst dann werden Daten an Twitch Interactive, Inc. übertragen.
+      (2-Klick-Lösung). Erst dann werden Daten an Twitch Interactive, Inc. übertragen. Hast du die
+      Discord-Rolle „Streamer“ und trägst deinen Twitch-Kanal ein, zeigen wir deinen Kanal (Name,
+      Profilbild, Livestatus) unter „Streamer“ und deine World-of-Warcraft-Clips unter „Clips“. Den Kanal
+      kannst du jederzeit in den Einstellungen entfernen.
     </p>
 
     <h2>11. Deine Rechte</h2>

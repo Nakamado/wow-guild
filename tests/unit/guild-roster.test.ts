@@ -45,3 +45,27 @@ describe('Gildenliste (Blizzard)', () => {
     expect(sortCharacterRows(rows, { key: 'rank', direction: 'desc' }).map(entry => entry.character.name)).toEqual(['B B', 'D D', 'A A', 'C C'])
   })
 })
+
+describe('Gilden-Gründung und Charakterbilder (Blizzard)', () => {
+  it('liest das Gründungsdatum und verwirft unplausible Werte', async () => {
+    const { parseGuildCreatedAt } = await import('../../server/providers/blizzard/guild')
+    expect(parseGuildCreatedAt({ name: 'MukiMuki', created_timestamp: Date.parse('2026-11-06T19:30:00Z') })).toBe('2026-11-06T19:30:00.000Z')
+    expect(parseGuildCreatedAt({ name: 'MukiMuki' })).toBeNull()
+    expect(parseGuildCreatedAt({ created_timestamp: 0 })).toBeNull()
+    expect(parseGuildCreatedAt(null)).toBeNull()
+  })
+
+  it('übernimmt nur Bilder vom Blizzard-Render-Server', async () => {
+    const { parseCharacterMedia } = await import('../../server/providers/blizzard/progress')
+    const base = 'https://render.worldofwarcraft.com/forever-eu/character/x'
+    expect(parseCharacterMedia({
+      assets: [
+        { key: 'avatar', value: `${base}-avatar.jpg` },
+        { key: 'inset', value: `${base}-inset.jpg` },
+        { key: 'main-raw', value: `${base}-main-raw.png` },
+      ],
+    })).toEqual({ avatarUrl: `${base}-avatar.jpg`, insetUrl: `${base}-inset.jpg`, mainUrl: `${base}-main-raw.png` })
+    expect(parseCharacterMedia({ assets: [{ key: 'avatar', value: 'https://example.com/a.jpg' }] })).toBeNull()
+    expect(parseCharacterMedia({ _links: {} })).toBeNull()
+  })
+})

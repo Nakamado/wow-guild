@@ -3,6 +3,7 @@ import { clipGames, guildStreamers, type StreamerEntry } from '../../content/str
 import { createSupabase, createSupabaseCharacterRepository, createSupabaseGroupRepository } from '../repositories/supabase'
 import { createDiscordBotClient, createDiscordEventProvider, createDiscordMemberProvider } from './discord'
 import { createSupabaseMemberRepository, type MemberSnapshot } from '../repositories/supabase/members'
+import { createSupabaseMemberSettingsStore } from '../repositories/supabase/member-settings'
 import { hasDiscordBot, type LiveFactories, type ProviderConfig } from './registry'
 import { createTwitchClient, createTwitchProvider } from './twitch'
 import type { DiscordEventProvider, DiscordMemberProvider, TwitchProvider, Writers } from './types'
@@ -31,7 +32,16 @@ export function createLiveFactories(options: { streamers?: StreamerEntry[] } = {
     discordEvents: config => resilientEvents(createDiscordEventProvider(getBot(config), config.discord)),
     twitch: config => resilientTwitch(createTwitchProvider(
       createTwitchClient(config.twitch.clientId, config.twitch.clientSecret),
-      { broadcasterId: config.twitch.broadcasterId, channel: config.twitch.channel, streamers: options.streamers ?? guildStreamers, clipGames },
+      {
+        broadcasterId: config.twitch.broadcasterId,
+        channel: config.twitch.channel,
+        streamers: options.streamers ?? guildStreamers,
+        clipGames,
+        // Mitglieder mit Streamer-Rolle und eigenem Kanal – nur mit Datenbank
+        memberStreamers: !config.demoMode && config.supabase.url && config.supabase.serviceRoleKey
+          ? () => createSupabaseMemberSettingsStore(getDb(config)).listStreamers()
+          : undefined,
+      },
     ), config.twitch.channel),
     characters: (config) => {
       const repository = createSupabaseCharacterRepository(getDb(config))

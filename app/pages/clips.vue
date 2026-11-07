@@ -38,7 +38,7 @@ const { twitch } = useSiteConfig()
   <div class="clips-page">
     <PageHeader
       title="Clips"
-      lead="Die WoW-Highlights aus Miinyus Streams – automatisch von Twitch geladen."
+      lead="Die WoW-Highlights aus Miinyus Streams und von weiteren Streamern der Gilde – automatisch von Twitch geladen."
     >
       <TwitchLiveIndicator variant="compact" />
     </PageHeader>

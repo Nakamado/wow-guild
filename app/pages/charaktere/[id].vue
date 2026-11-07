@@ -10,6 +10,7 @@ import type { Character } from '#shared/types'
 
 interface CharacterResponse {
   character: Character
+  media?: { avatarUrl: string | null, insetUrl: string | null, mainUrl: string | null } | null
   member: { id: string, displayName: string, avatarUrl: string | null }
   otherCharacters: Character[]
 }
@@ -36,6 +37,24 @@ const professionSourceLabels = { 'blizzard-api': 'Blizzard-API', 'addon': 'Addon
 const professionSource = computed(() => {
   const sources = [...new Set(character.value?.professions.map(profession => professionSourceLabels[profession.source]) ?? [])]
   return sources.join(', ')
+})
+// Charakterbild von Blizzard: freigestellter Ganzkörper-Render, sonst das Brustbild
+const portrait = computed(() => {
+  const media = data.value?.media
+  if (!media) return null
+  if (media.mainUrl) return { src: media.mainUrl, kind: 'main' as const }
+  if (media.insetUrl) return { src: media.insetUrl, kind: 'inset' as const }
+  return null
+})
+const portraitFailed = ref(false)
+watch(portrait, () => (portraitFailed.value = false))
+/** Kleiner Hinweis unter den Angaben, woher die Daten stammen */
+const sourceNote = computed(() => {
+  if (!character.value) return ''
+  const parts = [`Daten: ${sourceLabel[character.value.source]}`]
+  if (professionSource.value) parts.push(`Berufe: ${professionSource.value}`)
+  if (portrait.value && !portraitFailed.value) parts.push('Charakterbild: Blizzard Entertainment')
+  return parts.join(' · ')
 })
 const factionLabel = computed(() => (character.value?.faction === 'horde' ? 'Horde' : 'Allianz'))
 const sourceLabel: Record<Character['source'], string> = {
@@ -98,123 +117,139 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
     />
 
     <template v-else>
-      <header
-        class="character-page__header"
-        :style="{ '--class-color': `var(--color-class-${character.classId}, var(--color-class-unknown))` }"
+      <div
+        class="character-page__hero"
+        :class="{ 'character-page__hero--portrait': portrait && !portraitFailed }"
       >
-        <p class="character-page__kind">
-          {{ character.isMain ? 'Hauptcharakter' : 'Twink' }} von {{ data.member.displayName }}
-        </p>
-        <h1 class="character-page__name">
-          {{ character.name }}
-        </h1>
-        <p class="character-page__summary">
-          Stufe {{ character.level }} {{ race?.name ?? 'Unbekanntes Volk' }} {{ gameClass?.name ?? '' }}
-        </p>
-      </header>
+        <header
+          class="character-page__header"
+          :style="{ '--class-color': `var(--color-class-${character.classId}, var(--color-class-unknown))` }"
+        >
+          <p class="character-page__kind">
+            {{ character.isMain ? 'Hauptcharakter' : 'Twink' }} von {{ data.member.displayName }}
+          </p>
+          <h1 class="character-page__name">
+            {{ character.name }}
+          </h1>
+          <p class="character-page__summary">
+            Stufe {{ character.level }} {{ race?.name ?? 'Unbekanntes Volk' }} {{ gameClass?.name ?? '' }}
+          </p>
+        </header>
+        <figure
+          v-if="portrait && !portraitFailed"
+          class="character-page__portrait"
+          :class="`character-page__portrait--${portrait.kind}`"
+        >
+          <NuxtImg
+            :src="portrait.src"
+            :alt="`Charakterbild von ${character.name}`"
+            class="character-page__portrait-image"
+            :width="portrait.kind === 'main' ? 640 : 460"
+            sizes="sm:100vw md:640px"
+            @error="portraitFailed = true"
+          />
+        </figure>
+      </div>
 
       <div class="character-page__layout">
-        <dl class="character-page__details">
-          <div class="character-page__detail">
-            <dt>Klasse</dt>
-            <dd><ClassBadge :class-id="character.classId" /></dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Volk</dt>
-            <dd>{{ race?.name ?? 'Unbekannt' }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Stufe</dt>
-            <dd>{{ character.level }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Rollen</dt>
-            <dd class="character-page__roles">
-              <RoleBadge
-                v-for="role in character.roles"
-                :key="role"
-                :role="role"
-              />
-            </dd>
-          </div>
-          <div
-            v-if="character.guild"
-            class="character-page__detail"
-          >
-            <dt>Gilde</dt>
-            <dd>
-              <template v-if="character.guild.inGuild">
-                {{ guildName }}<template v-if="character.guild.rank !== null">
-                  · {{ guildRankLabel(character.guild.rank) }}
+        <div>
+          <dl class="character-page__details">
+            <div class="character-page__detail">
+              <dt>Klasse</dt>
+              <dd><ClassBadge :class-id="character.classId" /></dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Volk</dt>
+              <dd>{{ race?.name ?? 'Unbekannt' }}</dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Stufe</dt>
+              <dd>{{ character.level }}</dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Rollen</dt>
+              <dd class="character-page__roles">
+                <RoleBadge
+                  v-for="role in character.roles"
+                  :key="role"
+                  :role="role"
+                />
+              </dd>
+            </div>
+            <div
+              v-if="character.guild"
+              class="character-page__detail"
+            >
+              <dt>Gilde</dt>
+              <dd>
+                <template v-if="character.guild.inGuild">
+                  {{ guildName }}<template v-if="character.guild.rank !== null">
+                    · {{ guildRankLabel(character.guild.rank) }}
+                  </template>
                 </template>
-              </template>
-              <template v-else>
-                Nicht in der Gilde
-              </template>
-            </dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Hauptberufe</dt>
-            <dd>
-              <ul
-                v-if="primaries.length"
-                class="character-page__professions"
-              >
-                <li
-                  v-for="profession in primaries"
-                  :key="profession.id"
+                <template v-else>
+                  Nicht in der Gilde
+                </template>
+              </dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Hauptberufe</dt>
+              <dd>
+                <ul
+                  v-if="primaries.length"
+                  class="character-page__professions"
                 >
-                  {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
-                </li>
-              </ul>
-              <template v-else>
-                Keine Angaben
-              </template>
-            </dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Sekundärberufe</dt>
-            <dd>
-              <ul
-                v-if="secondaries.length"
-                class="character-page__professions"
-              >
-                <li
-                  v-for="profession in secondaries"
-                  :key="profession.id"
+                  <li
+                    v-for="profession in primaries"
+                    :key="profession.id"
+                  >
+                    {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
+                  </li>
+                </ul>
+                <template v-else>
+                  Keine Angaben
+                </template>
+              </dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Sekundärberufe</dt>
+              <dd>
+                <ul
+                  v-if="secondaries.length"
+                  class="character-page__professions"
                 >
-                  {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
-                </li>
-              </ul>
-              <template v-else>
-                Keine Angaben
-              </template>
-            </dd>
-          </div>
-          <div
-            v-if="professionSource"
-            class="character-page__detail"
+                  <li
+                    v-for="profession in secondaries"
+                    :key="profession.id"
+                  >
+                    {{ profession.name }} <strong>{{ profession.skill }}</strong><span v-if="profession.maxSkill"> / {{ profession.maxSkill }}</span>
+                  </li>
+                </ul>
+                <template v-else>
+                  Keine Angaben
+                </template>
+              </dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Regelsatz</dt>
+              <dd>{{ character.realm }}</dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Fraktion</dt>
+              <dd>{{ factionLabel }}</dd>
+            </div>
+            <div class="character-page__detail">
+              <dt>Zuletzt aktualisiert</dt>
+              <dd><time :datetime="character.updatedAt">{{ formatDateTime(character.updatedAt) }}</time></dd>
+            </div>
+          </dl>
+          <p
+            v-if="sourceNote"
+            class="character-page__source-note"
           >
-            <dt>Berufe laut</dt>
-            <dd>{{ professionSource }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Regelsatz</dt>
-            <dd>{{ character.realm }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Fraktion</dt>
-            <dd>{{ factionLabel }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Datenquelle</dt>
-            <dd>{{ sourceLabel[character.source] }}</dd>
-          </div>
-          <div class="character-page__detail">
-            <dt>Zuletzt aktualisiert</dt>
-            <dd><time :datetime="character.updatedAt">{{ formatDateTime(character.updatedAt) }}</time></dd>
-          </div>
-        </dl>
+            {{ sourceNote }}
+          </p>
+        </div>
 
         <section aria-labelledby="character-dungeons">
           <h2
@@ -281,6 +316,50 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
 
   &__back {
     align-self: flex-start;
+  }
+
+  &__hero {
+    display: grid;
+    gap: var(--space-6);
+    align-items: center;
+
+    &--portrait {
+      @include mq('md') {
+        grid-template-columns: max-content minmax(14rem, 22rem);
+        gap: var(--space-10);
+        justify-content: start;
+      }
+    }
+  }
+
+  &__portrait {
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+
+    &--main {
+      max-height: 26rem;
+      background: radial-gradient(ellipse at 50% 70%, var(--color-surface-raised), transparent 70%);
+    }
+
+    &--inset {
+      border: 1px solid var(--color-border);
+    }
+  }
+
+  &__portrait-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: 26rem;
+    object-fit: contain;
+    object-position: center bottom;
+  }
+
+  &__source-note {
+    margin-top: var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
   }
 
   &__header {

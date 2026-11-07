@@ -2,25 +2,31 @@ import type { GuildContent } from '../shared/schemas/content'
 
 /**
  * Texte für Startseite und Gildenseite.
- * ENTWURF: Platzhaltertexte, bis die Gildenleitung eigene Formulierungen liefert.
  * Zum Bearbeiten einfach die Strings ändern – die Struktur wird per Test geprüft.
  */
 export const guildContent: GuildContent = {
-  isDraft: true,
-  tagline: 'Eine Allianz-Gilde für alle, die Azeroth lieber gemeinsam als schnell erleben.',
+  isDraft: false,
+  tagline: 'Eine Allianz-Gilde, in der man zusammenhält und sich gegenseitig hilft – egal, in welchem Tempo du levelst.',
   intro: [
-    'Wir sind die Gilde aus Miinyus Community für WoW: Forever. Bei uns zählt nicht, wer zuerst Stufe 60 erreicht, sondern dass niemand allein vor der Instanz steht.',
+    'Wir sind die Gilde aus Miinyus Community für WoW: Forever. Ob du so schnell wie möglich auf Stufe 60 willst oder dir lieber Zeit lässt: Bei uns hilft man sich gegenseitig, und niemand steht allein vor der Instanz.',
     'Ob du zum ersten Mal Classic spielst oder jeden Winkel der Todesminen kennst: Du findest hier Leute für Dungeons, Raids und alles dazwischen.',
   ],
   values: [
-    { title: 'Miteinander vor Tempo', text: 'Wir erklären Bosse, warten auf Nachzügler und feiern jeden ersten Kill, auch den zehnten.' },
+    { title: 'Zusammenhalt', text: 'Wir helfen uns gegenseitig – mit Tipps zu Bossen, Material für Berufe oder einer helfenden Hand bei schweren Quests. Teil der Community bist du in jedem Tempo.' },
     { title: 'Respekt im Chat', text: 'Kein Drama, keine Beleidigungen. Kritik ja, aber freundlich und unter vier Augen.' },
     { title: 'Jede Rolle zählt', text: 'Tanks und Heiler sind gefragt, aber ein Run braucht genauso gute Schadensverursacher.' },
   ],
   activities: [
-    { title: 'Dungeon-Runs', text: 'Fast jeden Abend über den Dungeon-Finder dieser Seite geplant – von Stufe 13 bis 60.' },
+    {
+      title: 'Dungeon-Runs',
+      text: 'Eine Gruppe findest du jederzeit – im Gildenchat im Spiel, in unserem Discord oder über den Dungeon-Finder dieser Seite.',
+      links: [
+        { label: 'Zum Dungeon-Finder', to: '/gruppen' },
+        { label: 'Zum Discord-Kanal #wow-forever', to: 'https://discord.com/channels/723275162971275335/1562460291672051822' },
+      ],
+    },
     { title: 'Raids', text: 'Sobald genug Mitglieder Stufe 60 erreicht haben, planen wir feste Raid-Abende.' },
-    { title: 'Community-Abende', text: 'Gildentreffen, Angelwettbewerbe und gemeinsames Stream-Schauen auf Discord.' },
+    { title: 'Community-Abende', text: 'Für die Zukunft können wir uns Gildentreffen, Angelwettbewerbe oder Ähnliches vorstellen. Ihr könnt gerne Sachen vorschlagen.' },
   ],
   focus: {
     pve: 'Unser Schwerpunkt liegt auf PvE: Leveln, Dungeons und später Raids.',

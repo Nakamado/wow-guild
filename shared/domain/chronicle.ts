@@ -30,7 +30,7 @@ export function mergeMilestones(...sources: readonly (readonly GuildMilestone[])
 /** Momentaufnahme der Gilde (aus API oder Addon) für die automatische Erkennung */
 export interface GuildSnapshot {
   memberCount: number
-  characters: readonly { id: string, level: number, professionSkills: readonly number[] }[]
+  characters: readonly { id: string, name?: string, level: number, professionSkills: readonly number[] }[]
 }
 
 export const MEMBER_THRESHOLDS = [10, 25, 50, 100] as const
@@ -64,7 +64,7 @@ export function detectMilestones(
   for (const level of LEVEL_FIRSTS) {
     const first = snapshot.characters.find(character => character.level >= level)
     if (first) {
-      add({ id: `first-level-${level}`, type: 'level.first', dedupeKey: `level.first:${level}`, title: `Erster Charakter auf Stufe ${level}`, category: 'achievement', icon: 'star', characterIds: [first.id], highlight: level === 60, metadata: { level } })
+      add({ id: `first-level-${level}`, type: 'level.first', dedupeKey: `level.first:${level}`, title: `Erster Charakter auf Stufe ${level}`, ...(first.name ? { description: `Geschafft hat es ${first.name}.` } : {}), category: 'achievement', icon: 'star', characterIds: [first.id], highlight: level === 60, metadata: { level } })
     }
   }
   const crafter = snapshot.characters.find(character => character.professionSkills.some(skill => skill >= PROFESSION_MAX))

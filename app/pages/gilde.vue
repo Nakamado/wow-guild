@@ -127,6 +127,34 @@ const focus = [
                 {{ activity.title }}
               </h3>
               <p>{{ activity.text }}</p>
+              <ul
+                v-if="activity.links?.length"
+                class="guild-page__links"
+                role="list"
+              >
+                <li
+                  v-for="link in activity.links"
+                  :key="link.to"
+                >
+                  <NuxtLink
+                    v-if="link.to.startsWith('/')"
+                    :to="link.to"
+                    class="guild-page__link"
+                  >
+                    {{ link.label }}
+                  </NuxtLink>
+                  <a
+                    v-else
+                    :href="link.to"
+                    class="guild-page__link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {{ link.label }}
+                    <span class="visually-hidden">(öffnet in neuem Tab)</span>
+                  </a>
+                </li>
+              </ul>
             </li>
           </ul>
         </div>
@@ -365,6 +393,24 @@ const focus = [
 
   &__list-item {
     color: var(--color-text-muted);
+  }
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  &__link {
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      color: var(--color-text);
+    }
   }
 
   &__list-title {

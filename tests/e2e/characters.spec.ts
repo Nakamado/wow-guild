@@ -86,3 +86,16 @@ test.describe('Charakter-Onboarding & Einstellungen (Demo)', () => {
     await expect(page).toHaveURL(/\/einstellungen$/)
   })
 })
+
+test.describe('Sichtbarkeit (Demo)', () => {
+  test('Mitglieder sehen die Ranglisten-Zustimmung, in der Demo ohne Speichern', async ({ page, context, baseURL }) => {
+    await asPersona(context, baseURL, 'member')
+    await page.goto('/einstellungen')
+    await expect(page.getByRole('heading', { name: 'Sichtbarkeit' })).toBeVisible()
+    const optIn = page.getByRole('checkbox', { name: 'In der Rangliste erscheinen' })
+    await expect(optIn).toBeDisabled()
+    await expect(optIn).not.toBeChecked()
+    // Twitch-Feld nur mit Discord-Rolle „Streamer“
+    await expect(page.getByLabel('Dein Twitch-Kanal')).toHaveCount(0)
+  })
+})

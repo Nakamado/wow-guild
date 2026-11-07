@@ -110,10 +110,17 @@ test.describe('Clips & Regeln', () => {
     await expect.poll(() => clips.count()).toBeLessThan(all)
   })
 
-  test('Regeln sind als Beispiel gekennzeichnet', async ({ page }) => {
+  test('Regeln stehen ohne Beispielhinweis', async ({ page }) => {
     await page.goto('/regeln')
-    await expect(page.getByRole('note')).toContainText('Beispielregeln')
+    await expect(page.getByText('Beispielregeln')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 2, name: 'Miteinander' })).toBeVisible()
+  })
+
+  test('Gildenseite verlinkt bei den Dungeon-Runs auf Dungeon-Finder und Discord', async ({ page }) => {
+    await page.goto('/gilde')
+    await expect(page.getByText(/Entwurf:/)).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Zum Dungeon-Finder' })).toHaveAttribute('href', '/gruppen')
+    await expect(page.getByRole('link', { name: /Zum Discord-Kanal #wow-forever/ })).toHaveAttribute('href', /discord\.com\/channels\//)
   })
 })
 

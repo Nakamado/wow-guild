@@ -57,7 +57,7 @@ cp .env.example .env
 | Allgemein | `NUXT_PUBLIC_SITE_URL`, `NUXT_PUBLIC_DEMO_MODE` | öffentlich |
 | Gilde | `NUXT_PUBLIC_GUILD_NAME`, `…_REALM`, `…_FACTION`, `…_DISCORD_INVITE` | öffentlich |
 | Session | `NUXT_APP_SECRET` | nur Server |
-| Discord | `NUXT_DISCORD_CLIENT_ID/SECRET`, `…_GUILD_ID`, `…_MEMBER_ROLE_ID`, `…_ADMIN_ROLE_ID`, `…_BOT_TOKEN` | nur Server |
+| Discord | `NUXT_DISCORD_CLIENT_ID/SECRET`, `…_GUILD_ID`, `…_MEMBER_ROLE_ID`, `…_ADMIN_ROLE_ID`, `…_STREAMER_ROLE_ID`, `…_BOT_TOKEN` | nur Server |
 | Twitch | `NUXT_TWITCH_CLIENT_ID/SECRET`, `NUXT_PUBLIC_TWITCH_CHANNEL`, `…_BROADCASTER_ID` | gemischt |
 | Supabase | `NUXT_SUPABASE_URL`, `NUXT_SUPABASE_SERVICE_ROLE_KEY` | nur Server |
 
@@ -83,7 +83,7 @@ ihn automatisch).
    (Lesen von Mitgliedern und Events reicht). Für Scheduled Events braucht der Bot nur Sichtbarkeit auf den Server.
 5. Rollen-IDs (Discord: *Einstellungen → Erweitert → Entwicklermodus*, dann Rechtsklick auf die Rolle →
    *ID kopieren*): Rolle „WoW Forever“ → `NUXT_DISCORD_MEMBER_ROLE_ID`, Admin-/Event-Moderator-Rolle →
-   `NUXT_DISCORD_ADMIN_ROLE_ID`.
+   `NUXT_DISCORD_ADMIN_ROLE_ID`, Rolle „Streamer“ → `NUXT_DISCORD_STREAMER_ROLE_ID`.
 6. Optional: Discord-User-IDs von Personen, die auf der Seite immer Admin sein sollen (z. B. Betreiber),
    kommagetrennt in `NUXT_ADMIN_USER_IDS`. Sie brauchen dafür keine Discord-Rolle.
 
@@ -93,10 +93,10 @@ alle 10 Minuten nachgeprüft – per Bot, oder ohne Bot mit dem Discord-Token de
 `guilds.members.read`, nur im verschlüsselten Session-Cookie, nie in der Datenbank). Wer die Rolle verliert,
 verliert damit die Mitgliedsrechte.
 
-**Mitgliederliste:** Mit Bot zeigt sie alle Träger der Rolle „WoW Forever“. **Ohne Bot** zeigt sie alle, die sich
-schon einmal auf der Seite angemeldet haben und die Rolle tragen (Tabelle `members` in Supabase: Discord-ID,
-Anzeigename, Avatar, Rollenstand – keine E-Mail). Der Bot ist also optional; ohne ihn fehlen nur die
-Discord-Events im Kalender.
+**Mitgliederliste:** Sie zeigt alle, die sich schon einmal auf der Seite angemeldet haben und die Rolle
+„WoW Forever“ tragen (Tabelle `members` in Supabase: Discord-ID, Anzeigename, Avatar, Rollenstand – keine E-Mail),
+auch wenn ein Bot eingerichtet ist. Der Bot liest die Discord-Events für den Kalender und prüft Rollen nach. Nur ganz
+ohne Datenbank liefert er die Mitgliederliste (dann alle Träger der Rolle).
 
 **Live-Betrieb ohne Zugangsdaten** für eine Quelle zeigt dort leere Inhalte, niemals Beispieldaten.
 
@@ -112,9 +112,14 @@ testet, welche Endpunkte antworten, und zeigt Status und Feldnamen an – gespei
    Bericht (ohne Tokens) teilen. Das Battle.net-Token liegt nur im verschlüsselten Session-Cookie und wird mit
    „Battle.net trennen“ entfernt.
 
-**Testlauf Rangliste:** Mit `NUXT_BLIZZARD_PREVIEW_CHARACTERS="Vorname Nachname=DiscordID"` (kommagetrennt, Discord-ID
-optional, nur mit Einverständnis der Spieler) zeigt `/rangliste` im Live-Modus diese Charaktere mit Punkten für Stufe und Berufe direkt
-aus der API (alle 30 Minuten neu abgerufen; die API hinkt dem Spiel rund 13 Stunden hinterher).
+**Rangliste:** Im Live-Modus erscheinen alle Gildenmitglieder, die unter *Einstellungen → Sichtbarkeit* zugestimmt
+haben, mit ihren eingetragenen Charakteren, soweit diese in der Gilde sind (Stufe und Berufe direkt aus der API, alle
+30 Minuten neu abgerufen). Nur ohne Datenbank greift noch der Testlauf mit
+`NUXT_BLIZZARD_PREVIEW_CHARACTERS="Vorname Nachname=DiscordID"`.
+
+**Chronik:** Gründung (Datum aus der API, sonst `guildFoundedOn` in `content/chronicle.ts`) sowie automatisch
+erkannte Meilensteine aus der Gildenliste (10/25/50/100 Mitglieder, erste Charaktere auf Stufe 40/50/60). Einmal erkannt,
+bleiben sie in der Tabelle `guild_milestones` stehen.
 
 Der weitere Plan (API-first + Addon, Punkte, Verifizierung) steht in `docs/ADDON-PLAN.md`.
 

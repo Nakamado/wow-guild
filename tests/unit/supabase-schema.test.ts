@@ -27,7 +27,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await db.exec('delete from run_participants; delete from runs; delete from characters; delete from members; delete from board_notes;')
+  await db.exec('delete from run_participants; delete from runs; delete from characters; delete from members; delete from board_notes; delete from guild_milestones;')
 })
 
 async function character(memberId: string, firstName: string, options: { isMain?: boolean, roles?: string[] } = {}) {
@@ -175,6 +175,27 @@ describe('Constraints', () => {
     )
     expect(rows.every(row => row.relrowsecurity)).toBe(true)
     expect(rows).toHaveLength(4)
+  })
+})
+
+describe('Mitglieder-Einstellungen und Chronik', () => {
+  it('speichert Opt-in, Streamer-Rolle und Twitch-Kanal mit sicheren Standardwerten', async () => {
+    await db.query(`insert into members (id, display_name) values ($1, 'Alice')`, [ALICE])
+    const { rows } = await db.query<{ leaderboard_opt_in: boolean, is_streamer: boolean, twitch_login: string | null }>('select leaderboard_opt_in, is_streamer, twitch_login from members')
+    expect(rows).toEqual([{ leaderboard_opt_in: false, is_streamer: false, twitch_login: null }])
+    await db.query(`update members set twitch_login = 'mein_kanal_1' where id = $1`, [ALICE])
+    await expect(db.query(`update members set twitch_login = 'Gross' where id = $1`, [ALICE])).rejects.toThrow()
+    await expect(db.query(`update members set twitch_login = 'https://twitch.tv/x' where id = $1`, [ALICE])).rejects.toThrow()
+  })
+
+  it('legt jeden Meilenstein nur einmal an', async () => {
+    const insert = `insert into guild_milestones (dedupe_key, milestone) values ($1, $2) on conflict (dedupe_key) do nothing`
+    await db.query(insert, ['members.threshold:10', { id: 'members-10' }])
+    await db.query(insert, ['members.threshold:10', { id: 'anders' }])
+    const { rows } = await db.query<{ milestone: { id: string } }>('select milestone from guild_milestones')
+    expect(rows).toEqual([{ milestone: { id: 'members-10' } }])
+    const rls = await db.query<{ relrowsecurity: boolean }>(`select relrowsecurity from pg_class where relname = 'guild_milestones'`)
+    expect(rls.rows[0]!.relrowsecurity).toBe(true)
   })
 })
 
