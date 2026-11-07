@@ -32,6 +32,8 @@ const demoProfessions: Record<string, Profession[]> = {
   'demo-char-15': [],
 }
 
+const demoRanks: Record<string, number> = { 'demo-char-01': 0, 'demo-char-03': 1, 'demo-char-05': 1, 'demo-char-11': 4 }
+
 const inputs: CharacterInput[] = [
   { id: 'demo-char-01', memberId: 'demo-member-01', name: 'Eisblume Frostweber', classId: 'priest', raceId: 'dwarf', level: 60, roles: ['healer'], isMain: true },
   { id: 'demo-char-02', memberId: 'demo-member-01', name: 'Raureif Kurbelzahn', classId: 'mage', raceId: 'gnome', level: 34, roles: ['dps'], isMain: false },
@@ -59,6 +61,8 @@ export function createDemoCharacters(now: Date): Character[] {
     faction: 'alliance',
     source: 'demo',
     professions: demoProfessions[input.id] ?? [],
+    // FIKTIVE Gildenränge: Gildenmeister, Offiziere, Mitglieder – ein Charakter (noch) nicht in der Gilde
+    guild: input.id === 'demo-char-15' ? { inGuild: false, rank: null } : { inGuild: true, rank: demoRanks[input.id] ?? 3 },
     // Gestaffelte „letzte Aktualisierung“, damit die Anzeige realistisch wirkt
     updatedAt: new Date(now.getTime() - (index + 1) * 3_600_000 * 7).toISOString(),
   }))

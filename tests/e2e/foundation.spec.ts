@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test.describe('Grundgerüst', () => {
   test('Startseite lädt mit Titel, Demo-Hinweis und Discord-CTA', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveTitle(/Miinyu WoW Forever/)
+    await expect(page).toHaveTitle(/MukiMuki/)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('complementary', { name: 'Demo-Hinweis' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Discord beitreten/ }).first())

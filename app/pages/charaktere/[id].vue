@@ -3,6 +3,7 @@ import { findClass } from '#shared/data/classes'
 import { dungeons } from '#shared/data/dungeons'
 import { findRace } from '#shared/data/races'
 import { filterDungeons } from '#shared/domain/dungeons'
+import { guildRankLabel } from '~~/content/guild-ranks'
 import { primaryProfessions, secondaryProfessions } from '#shared/domain/character-table'
 import { formatRange } from '#shared/domain/level'
 import type { Character } from '#shared/types'
@@ -28,6 +29,7 @@ const { data, status, refresh, notFound } = await useProtectedFetch<CharacterRes
 const character = computed(() => data.value?.character ?? null)
 const gameClass = computed(() => (character.value ? findClass(character.value.classId) : undefined))
 const race = computed(() => (character.value ? findRace(character.value.raceId) : undefined))
+const guildName = useRuntimeConfig().public.guild.name
 const primaries = computed(() => (character.value ? primaryProfessions(character.value) : []))
 const secondaries = computed(() => (character.value ? secondaryProfessions(character.value) : []))
 const professionSourceLabels = { 'blizzard-api': 'Blizzard-API', 'addon': 'Addon', 'manual': 'Eigene Angabe', 'demo': 'Beispieldaten (fiktiv)' } as const
@@ -133,6 +135,22 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
                 :key="role"
                 :role="role"
               />
+            </dd>
+          </div>
+          <div
+            v-if="character.guild"
+            class="character-page__detail"
+          >
+            <dt>Gilde</dt>
+            <dd>
+              <template v-if="character.guild.inGuild">
+                {{ guildName }}<template v-if="character.guild.rank !== null">
+                  · {{ guildRankLabel(character.guild.rank) }}
+                </template>
+              </template>
+              <template v-else>
+                Nicht in der Gilde
+              </template>
             </dd>
           </div>
           <div class="character-page__detail">

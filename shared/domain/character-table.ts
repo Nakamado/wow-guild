@@ -3,7 +3,7 @@ import { findRace } from '../data/races'
 import type { Character, Profession } from '../types'
 
 /** Sortierbare Spalten der Charaktertabelle (/mitglieder) */
-export const characterSortKeys = ['name', 'player', 'level', 'class', 'race', 'profession', 'skill'] as const
+export const characterSortKeys = ['name', 'player', 'level', 'class', 'race', 'rank', 'profession', 'skill'] as const
 export type CharacterSortKey = (typeof characterSortKeys)[number]
 export type SortDirection = 'asc' | 'desc'
 
@@ -45,6 +45,8 @@ function sortValue(row: CharacterTableRow, key: CharacterSortKey): string | numb
     case 'level': return character.level
     case 'class': return findClass(character.classId)?.name ?? character.classId
     case 'race': return findRace(character.raceId)?.name ?? character.raceId
+    // Gildenrang: 0 = höchster Rang; nicht in der Gilde oder unbekannt → ans Ende
+    case 'rank': return character.guild?.inGuild ? character.guild.rank : null
     case 'profession': {
       const names = primaryProfessions(character).map(profession => profession.name).sort(compareText)
       return names[0] ?? null

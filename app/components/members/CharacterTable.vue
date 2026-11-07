@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { guildRankLabel } from '~~/content/guild-ranks'
 import { findRace } from '#shared/data/races'
 import {
   nextSort,
@@ -26,6 +27,7 @@ const columns: { key: CharacterSortKey, label: string, numeric?: boolean }[] = [
   { key: 'level', label: 'Stufe', numeric: true },
   { key: 'class', label: 'Klasse' },
   { key: 'race', label: 'Volk' },
+  { key: 'rank', label: 'Gilde' },
   { key: 'profession', label: 'Hauptberufe' },
   { key: 'skill', label: 'Skill', numeric: true },
 ]
@@ -128,6 +130,20 @@ const announcement = computed(() => {
               {{ findRace(row.character.raceId)?.name ?? row.character.raceId }}
             </td>
             <td class="character-table__cell">
+              <span
+                v-if="row.character.guild?.inGuild"
+                class="character-table__rank"
+              >{{ row.character.guild.rank === null ? 'Mitglied' : guildRankLabel(row.character.guild.rank) }}</span>
+              <span
+                v-else-if="row.character.guild"
+                class="character-table__missing"
+              >nicht in der Gilde</span>
+              <span
+                v-else
+                class="character-table__missing"
+              >–<span class="visually-hidden">unbekannt</span></span>
+            </td>
+            <td class="character-table__cell">
               <ul
                 v-if="primaryProfessions(row.character).length"
                 class="character-table__professions"
@@ -189,7 +205,7 @@ const announcement = computed(() => {
 
   &__table {
     width: 100%;
-    min-width: 52rem;
+    min-width: 58rem;
     font-size: var(--text-sm);
     border-collapse: collapse;
   }
@@ -304,6 +320,10 @@ const announcement = computed(() => {
     padding: 0;
     margin: 0;
     list-style: none;
+    white-space: nowrap;
+  }
+
+  &__rank {
     white-space: nowrap;
   }
 

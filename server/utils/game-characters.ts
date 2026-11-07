@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { createBlizzardClient, type BlizzardClient } from '../providers/blizzard/client'
+import { fetchGuildRoster, type GuildRosterEntry } from '../providers/blizzard/guild'
 import { characterSlug, fetchCharacterProfessions, parseCharacterProfile, type GameCharacterProfile } from '../providers/blizzard/progress'
 import type { Character, Profession } from '#shared/types'
 
@@ -75,6 +76,23 @@ const cachedGameData = defineCachedFunction(async (name: string): Promise<{ prof
   return { profile: lookup.profile, professions }
 }, { name: 'character-game-data', maxAge: 30 * 60, swr: true, getKey: (name: string) => characterSlug(name) })
 
+/** Gildenliste höchstens alle 30 Minuten abrufen – ein Aufruf für alle Charaktere */
+const cachedGuildRoster = defineCachedFunction(async (guildSlug: string): Promise<GuildRosterEntry[] | null> => {
+  const blizzard = blizzardClient()
+  if (!blizzard) return null
+  const app = await blizzard.client.getAppToken()
+  if (!app.token) throw new Error('Kein Blizzard-App-Token') // Fehler werden nicht zwischengespeichert
+  return fetchGuildRoster(blizzard.client, app.token, blizzard.region, guildSlug)
+}, { name: 'guild-roster', maxAge: 30 * 60, swr: true, getKey: (guildSlug: string) => guildSlug.toLowerCase() })
+
+/** Gildenliste als Map nach Charakter-Slug; `null` = keine verlässlichen Daten (dann nichts anzeigen) */
+async function guildRosterBySlug(): Promise<Map<string, GuildRosterEntry> | null> {
+  const guildSlug = String(useRuntimeConfig().blizzard.guildSlug ?? '').trim()
+  if (!guildSlug) return null
+  const roster = await cachedGuildRoster(guildSlug).catch(() => null)
+  return roster ? new Map(roster.map(entry => [entry.slug, entry])) : null
+}
+
 /**
  * Live: Stufe, Klasse, Volk, Fraktion und Berufe aus der Blizzard-API übernehmen (API-first) –
  * so bleibt die Stufe aktuell, ohne dass jemand sie pflegen muss. Demo-Daten und Charaktere,
@@ -82,8 +100,12 @@ const cachedGameData = defineCachedFunction(async (name: string): Promise<{ prof
  */
 export async function withGameData(characters: Character[]): Promise<Character[]> {
   if (!blizzardClient()) return characters
-  return Promise.all(characters.map(async (character) => {
-    const data = await cachedGameData(character.name).catch(() => null)
+  const roster = await guildRosterBySlug()
+  return Promise.all(characters.map(async (base) => {
+    // Gilde: nur wenn die Liste geladen werden konnte – ein Fehler macht niemanden zum Nicht-Mitglied
+    const entry = roster?.get(characterSlug(base.name))
+    const character: Character = roster ? { ...base, guild: { inGuild: Boolean(entry), rank: entry?.rank ?? null } } : base
+    const data = await cachedGameData(base.name).catch(() => null)
     if (!data?.profile) return character
     const { profile, professions } = data
     return {

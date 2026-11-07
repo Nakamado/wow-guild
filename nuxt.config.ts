@@ -14,7 +14,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'de' },
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      titleTemplate: '%s · Miinyu WoW Forever',
+      titleTemplate: '%s · MukiMuki – Miinyus WoW-Forever-Gilde',
       meta: [
         { name: 'theme-color', content: '#070b1a' },
         { name: 'color-scheme', content: 'dark' },
@@ -72,7 +72,7 @@ export default defineNuxtConfig({
       siteUrl: 'http://localhost:3000',
       demoMode: true,
       guild: {
-        name: 'Gildenname folgt',
+        name: 'MukiMuki',
         // WoW: Forever hat keine Realms, sondern Regelsätze (PvE, PvP, RP …)
         realm: 'PvE',
         faction: 'alliance',
