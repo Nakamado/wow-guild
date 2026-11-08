@@ -1,4 +1,4 @@
-import type { DungeonQuestGroup } from '../data/dungeon-quests'
+import type { DungeonQuestGroup, QuestSlot } from '../data/dungeon-quests'
 import type { ProgressEvent } from '../schemas/points'
 
 /** Quest-Arten laut Blizzard-API (`type.id`) */
@@ -19,8 +19,10 @@ export interface QuestInfo {
 export interface ResolvedDungeonGroup {
   id: string
   name: string
-  questIds: { alliance: number[], horde: number[] }
+  questIds: { alliance: QuestSlot[], horde: QuestSlot[] }
 }
+
+const slotIds = (slot: QuestSlot) => (Array.isArray(slot) ? slot : [slot])
 
 export interface DungeonProgress {
   groupId: string
@@ -32,6 +34,8 @@ export interface DungeonProgress {
 
 export interface QuestProgress {
   dungeonQuests: number[]
+  /** Dungeon-Quests (Typ „Dungeon“), die keinem eingetragenen Dungeon zugeordnet sind */
+  unassignedDungeonQuests: number[]
   groupQuests: number[]
   dungeons: DungeonProgress[]
 }
@@ -42,7 +46,7 @@ export interface QuestProgress {
  */
 export function resolveDungeonGroup(group: DungeonQuestGroup, areaQuestIds: readonly number[], catalog: ReadonlyMap<number, QuestInfo>): ResolvedDungeonGroup {
   if (group.quests) return { id: group.id, name: group.name, questIds: group.quests }
-  const usable = areaQuestIds.filter(id => !catalog.get(id)?.restricted)
+  const usable = [...new Set([...areaQuestIds, ...(group.extraQuestIds ?? [])])].filter(id => !catalog.get(id)?.restricted)
   return {
     id: group.id,
     name: group.name,
@@ -67,7 +71,7 @@ export function questProgress(input: {
   groups: readonly ResolvedDungeonGroup[]
 }): QuestProgress {
   const done = new Set(input.completed)
-  const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde]))
+  const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flatMap(slotIds)))
   const counts = (id: number) => !input.catalog.get(id)?.restricted && input.catalog.get(id)?.typeId !== QUEST_TYPE.class
 
   const dungeonQuests = onePerTitle([...done].filter(id => counts(id) && (inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon)), input.catalog)
@@ -77,12 +81,15 @@ export function questProgress(input: {
   const dungeons = input.faction
     ? input.groups.map((group) => {
         const required = group.questIds[input.faction!]
-        const finished = required.filter(id => done.has(id)).length
+        const finished = required.filter(slot => slotIds(slot).some(id => done.has(id))).length
         return { groupId: group.id, name: group.name, done: finished, total: required.length, complete: required.length > 0 && finished === required.length }
       }).filter(entry => entry.total > 0)
     : []
 
-  return { dungeonQuests: dungeonQuests.sort((a, b) => a - b), groupQuests: groupQuests.sort((a, b) => a - b), dungeons }
+  return {
+    dungeonQuests: dungeonQuests.sort((a, b) => a - b),
+    unassignedDungeonQuests: dungeonQuests.filter(id => !inGroups.has(id)),
+    groupQuests: groupQuests.sort((a, b) => a - b), dungeons }
 }
 
 /**
