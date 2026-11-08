@@ -67,8 +67,8 @@ export const dungeonQuestGroups: DungeonQuestGroup[] = [
     id: 'excavation-site-wetlands',
     name: 'Ausgrabungsstätte: Sumpfland',
     dungeonSlugs: ['excavation-site-wetlands'],
-    // Laut Dungeon-Journal 7 Allianz-Quests – die siebte war im Video nicht lesbar, bitte nachtragen
-    quests: { alliance: ['Hochlandhäute', 'Songblades Suche', 'Schrecken im Hochland', 'Verloren im Dickicht', 'Herzgeflecht', 'Urzeitliches Prisma'], horde: [] },
+    // 7 Allianz-Quests laut Dungeon-Journal
+    quests: { alliance: ['Hochlandhäute', 'Songblades Suche', 'Schrecken im Hochland', 'Verloren im Dickicht', 'Herzgeflecht', 'Urzeitliches Prisma', 'Gefallen im Moor'], horde: [] },
   },
   {
     id: 'city-of-dalaran',
