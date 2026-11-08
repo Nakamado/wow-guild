@@ -120,6 +120,7 @@ function onSaved(run: { id: string }) {
         <li
           v-for="dungeon in results"
           :key="dungeon.slug"
+          class="dungeons-page__item"
         >
           <DungeonCard
             :dungeon="dungeon"
@@ -169,6 +170,15 @@ function onSaved(run: { id: string }) {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: var(--space-5);
+  }
+
+  // Jede Karte belegt sechs Zeilen des Rasters (Titel, englischer Name, Zahlen, Gebiet, Hinweise, Fuß) –
+  // so liegen Titel, Zahlen und Fußzeilen nebeneinanderstehender Karten auf gleicher Höhe
+  &__item {
+    display: grid;
+    grid-row: span 6;
+    grid-template-rows: subgrid;
+    row-gap: 0;
   }
 
   &__sources {
