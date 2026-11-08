@@ -98,4 +98,12 @@ test.describe('Sichtbarkeit (Demo)', () => {
     // Twitch-Feld nur mit Discord-Rolle „Streamer“
     await expect(page.getByLabel('Dein Twitch-Kanal')).toHaveCount(0)
   })
+
+  test('normale Mitglieder dürfen ihre eigenen Einstellungen laden (nicht nur Admins)', async ({ page, context, baseURL }) => {
+    await asPersona(context, baseURL, 'member')
+    await page.goto('/einstellungen')
+    const response = await page.request.get('/api/me/settings')
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toMatchObject({ available: false, leaderboardOptIn: false })
+  })
 })

@@ -4,7 +4,7 @@
  * Discord-Rolle „Streamer“ – der eigene Twitch-Kanal für Streamer-Liste und Clips.
  */
 const { isDemo } = useSiteConfig()
-const { settings, loaded, save } = useMemberSettings()
+const { settings, loaded, loadError, refresh, save } = useMemberSettings()
 
 const busy = ref<'leaderboard' | 'twitch' | null>(null)
 const notice = ref<{ tone: 'success' | 'error', text: string } | null>(null)
@@ -69,7 +69,29 @@ async function onSaveTwitch() {
       v-if="!loaded"
       :lines="2"
     />
+    <div
+      v-else-if="loadError"
+      class="member-settings__notice member-settings__notice--error"
+      role="alert"
+    >
+      <p>{{ loadError }}</p>
+      <BaseButton
+        size="sm"
+        variant="secondary"
+        @click="refresh()"
+      >
+        Erneut versuchen
+      </BaseButton>
+    </div>
     <template v-else>
+      <p
+        v-if="disabled && !isDemo"
+        class="member-settings__notice member-settings__notice--error"
+        role="status"
+      >
+        Dein Konto ist auf der Webseite noch nicht vollständig angelegt, deshalb lässt sich hier gerade nichts
+        speichern. Melde dich bitte einmal ab und wieder mit Discord an.
+      </p>
       <div class="member-settings__option">
         <input
           id="leaderboard-opt-in"
