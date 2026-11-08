@@ -140,14 +140,6 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
           <p class="character-page__summary">
             Stufe {{ character.level }} {{ race?.name ?? 'Unbekanntes Volk' }} {{ gameClass?.name ?? '' }}
           </p>
-          <BaseButton
-            :to="`/charaktere/vergleich?a=${encodeURIComponent(character.id)}`"
-            variant="secondary"
-            size="sm"
-            class="character-page__compare"
-          >
-            Vergleichen
-          </BaseButton>
         </header>
         <figure
           v-if="portrait && !portraitFailed"
@@ -513,11 +505,6 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
   &__summary {
     font-size: var(--text-md);
     color: var(--class-color);
-  }
-
-  &__compare {
-    align-self: flex-start;
-    margin-top: var(--space-3);
   }
 
   &__layout {

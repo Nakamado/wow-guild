@@ -157,6 +157,34 @@ test.describe('Chronik & Rangliste', () => {
     await toggle.click()
     await expect(first.getByRole('heading', { name: 'So kommen die Punkte zustande' })).toBeHidden()
   })
+
+  test('zwei Einträge der Rangliste vergleichen', async ({ page }) => {
+    await gotoReady(page, '/rangliste')
+    const boxes = page.getByRole('checkbox', { name: /zum Vergleich auswählen/ })
+    await expect(boxes).toHaveCount(0)
+    await page.getByRole('button', { name: 'Vergleichen' }).click()
+    const show = page.getByRole('button', { name: 'Vergleich anzeigen' })
+    await boxes.nth(0).check()
+    await expect(page.getByText('hake mindestens einen weiteren Eintrag ab')).toBeVisible()
+    await expect(show).toBeDisabled()
+    await boxes.nth(1).check()
+    await boxes.nth(2).check()
+    await expect(page.getByText('3 ausgewählt:')).toBeVisible()
+    await show.click()
+    const dialog = page.getByRole('dialog', { name: 'Vergleich' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('columnheader')).toHaveCount(4)
+    await expect(dialog.getByRole('row', { name: /^Platz/ })).toContainText('1 (Bestwert)')
+    await expect(dialog.getByRole('row', { name: /Punkte gesamt/ })).toContainText(/Abstand zum Bestwert: −[\d.]+/)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    // höchstens vier
+    await boxes.nth(3).check()
+    await expect(boxes.nth(4)).toBeDisabled()
+
+    await page.getByRole('button', { name: 'Vergleich beenden' }).click()
+    await expect(boxes).toHaveCount(0)
+  })
 })
 
 test.describe('Schwarzes Brett', () => {
