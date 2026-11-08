@@ -23,27 +23,27 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
     class="dungeon-card"
     :class="{ 'dungeon-card--new': dungeon.isNewInForever }"
   >
+    <!-- Titel und englischer Name sind zwei Zeilen des gemeinsamen Rasters -->
     <header class="dungeon-card__header">
-      <div class="dungeon-card__titles">
-        <h2 class="dungeon-card__name">
-          <NuxtLink
-            :to="`/dungeons/${dungeon.slug}`"
-            class="dungeon-card__link"
-          >{{ dungeon.name }}</NuxtLink>
-        </h2>
-        <p class="dungeon-card__name-en">
-          <span
-            v-if="showEnglish"
-            lang="en"
-          >{{ dungeon.nameEn }}</span>
-          <span class="dungeon-card__abbr"><span class="visually-hidden">Kürzel: </span>{{ dungeon.abbreviation }}</span>
-        </p>
-      </div>
-      <span
-        v-if="dungeon.isNewInForever"
-        class="dungeon-card__badge"
-      >Neu in Forever</span>
+      <h2 class="dungeon-card__name">
+        <NuxtLink
+          :to="`/dungeons/${dungeon.slug}`"
+          class="dungeon-card__link"
+        >{{ dungeon.name }}</NuxtLink>
+      </h2>
+      <p class="dungeon-card__name-en">
+        <span
+          v-if="showEnglish"
+          lang="en"
+        >{{ dungeon.nameEn }}</span>
+        <span class="dungeon-card__abbr"><span class="visually-hidden">Kürzel: </span>{{ dungeon.abbreviation }}</span>
+      </p>
     </header>
+    <!-- Abzeichen sitzt oben rechts auf der Kartenkante und braucht keine eigene Zeile -->
+    <span
+      v-if="dungeon.isNewInForever"
+      class="dungeon-card__badge"
+    >Neu in Forever</span>
 
     <dl class="dungeon-card__facts">
       <div class="dungeon-card__fact">
@@ -63,20 +63,24 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
         :class="{ 'dungeon-card__fact--complete': quests?.complete }"
       >
         <dt>Quests</dt>
-        <dd v-if="quests">
-          {{ quests.done }}/{{ quests.total }}<BaseIcon
-            v-if="quests.complete"
-            name="check"
-            :size="18"
-            class="dungeon-card__check"
-          /><span
-            v-if="quests.complete"
-            class="visually-hidden"
-          > – alle erledigt</span>
+        <dd>
+          <template v-if="quests">
+            {{ quests.done }}/{{ quests.total }}<span
+              v-if="quests.complete"
+              class="visually-hidden"
+            > – alle erledigt</span>
+          </template>
+          <template v-else>
+            {{ questTotal || '–' }}
+          </template>
         </dd>
-        <dd v-else>
-          {{ questTotal || '–' }}
-        </dd>
+        <!-- Haken unter der Zahl; der Platz ist in jeder Spalte reserviert, damit alle Zahlen gleich hoch stehen -->
+        <BaseIcon
+          v-if="quests?.complete"
+          name="check"
+          :size="16"
+          class="dungeon-card__check"
+        />
       </div>
     </dl>
 
@@ -84,26 +88,27 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
       {{ dungeon.zone }}
     </p>
 
-    <p
-      v-if="fit"
-      class="dungeon-card__fit"
-      :class="`dungeon-card__fit--${fit.status}`"
-    >
-      {{ fit.message }}
-    </p>
-    <p
-      v-else-if="dungeon.note"
-      class="dungeon-card__note"
-    >
-      {{ dungeon.note }}
-    </p>
-
-    <p
-      v-if="quests && !quests.complete && quests.missing.length <= 2"
-      class="dungeon-card__quests"
-    >
-      Fehlt noch: {{ quests.missing.join(', ') }}
-    </p>
+    <div class="dungeon-card__info">
+      <p
+        v-if="fit"
+        class="dungeon-card__fit"
+        :class="`dungeon-card__fit--${fit.status}`"
+      >
+        {{ fit.message }}
+      </p>
+      <p
+        v-else-if="dungeon.note"
+        class="dungeon-card__note"
+      >
+        {{ dungeon.note }}
+      </p>
+      <p
+        v-if="quests && !quests.complete && quests.missing.length <= 2"
+        class="dungeon-card__quests"
+      >
+        Fehlt noch: {{ quests.missing.join(', ') }}
+      </p>
+    </div>
 
     <footer class="dungeon-card__footer">
       <span
@@ -123,9 +128,10 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
 <style scoped lang="scss">
 .dungeon-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-4);
   height: 100%;
   padding: var(--space-5);
   transition: border-color var(--duration-base) var(--ease-out);
@@ -142,14 +148,10 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
   }
 
   &__header {
-    display: flex;
-    gap: var(--space-3);
-    align-items: flex-start;
-    justify-content: space-between;
-  }
-
-  &__titles {
-    min-width: 0;
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: var(--space-1);
   }
 
   &__name {
@@ -177,7 +179,7 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
     flex-wrap: wrap;
     gap: var(--space-2);
     align-items: center;
-    margin-top: var(--space-1);
+    align-self: start;
     font-size: var(--text-xs);
     color: var(--color-text-subtle);
   }
@@ -192,38 +194,49 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
   }
 
   &__badge {
-    flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    right: var(--space-4);
     padding: 0.125rem var(--space-2);
     font-size: var(--text-xs);
     font-weight: var(--font-weight-semibold);
     color: var(--color-blossom);
     white-space: nowrap;
+    background: var(--color-surface);
     border: 1px solid rgb(243 196 221 / 40%);
     border-radius: var(--radius-sm);
+    transform: translateY(-50%);
   }
 
   &__facts {
     display: grid;
-    grid-template-columns: repeat(4, auto);
-    justify-content: space-between;
+
+    // feste Spaltenbreiten: dieselbe Angabe steht in jeder Karte an derselben Stelle
+    grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
     gap: var(--space-2);
+    align-self: start;
     margin: 0;
   }
 
   &__fact {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 2px;
+    display: grid;
+
+    // Zahl · Platz für den Haken · Bezeichnung (dt steht im Markup zuerst)
+    grid-template-rows: auto 1rem auto;
+    grid-template-areas: 'value' 'mark' 'label';
 
     dt {
+      grid-area: label;
       font-size: var(--text-xs);
       color: var(--color-text-subtle);
     }
 
     dd {
+      grid-area: value;
       margin: 0;
       font-family: var(--font-display);
       font-size: var(--text-lg);
+      line-height: var(--line-height-snug);
       color: var(--color-text);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -235,13 +248,20 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
   }
 
   &__check {
-    margin-left: var(--space-1);
-    vertical-align: -0.1em;
+    grid-area: mark;
+    color: var(--color-success);
   }
 
   &__zone {
+    align-self: start;
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   &__note {
@@ -277,8 +297,8 @@ const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.ch
   }
 
   &__footer {
+    align-self: end;
     padding-top: var(--space-3);
-    margin-top: auto;
     border-top: 1px solid var(--color-border);
   }
 
