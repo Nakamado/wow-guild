@@ -12,7 +12,7 @@ interface CharacterResponse {
   character: Character
   media?: { avatarUrl: string | null, insetUrl: string | null, mainUrl: string | null } | null
   dungeonProgress?: {
-    dungeons: { groupId: string, name: string, done: number, total: number, complete: boolean }[]
+    dungeons: { groupId: string, name: string, done: number, total: number, complete: boolean, missing: string[] }[]
     dungeonQuests: number
     unassignedDungeonQuests: number
     groupQuests: number
@@ -325,6 +325,12 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
                 class="character-page__progress-done"
               >vollständig</span>
             </span>
+            <p
+              v-if="entry.missing.length"
+              class="character-page__progress-missing"
+            >
+              Fehlt noch: {{ entry.missing.join(', ') }}
+            </p>
           </li>
         </ul>
         <p
@@ -455,6 +461,13 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
     font-variant-numeric: tabular-nums;
     color: var(--color-text-muted);
     white-space: nowrap;
+  }
+
+  &__progress-missing {
+    grid-column: 1 / -1;
+    margin-top: calc(var(--space-1) * -1);
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
   }
 
   &__progress-done {

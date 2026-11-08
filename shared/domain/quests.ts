@@ -25,6 +25,13 @@ export interface ResolvedDungeonGroup {
 /** Questtitel vergleichbar machen (Groß-/Kleinschreibung, Leerzeichen, Apostrophe) */
 export const normalizeQuestTitle = (title: string) => title.toLocaleLowerCase('de-DE').replace(/[’`´]/g, '\'').replace(/\s+/g, ' ').trim()
 
+/** Anzeigename eines Slots (Titel aus den Questdaten, sonst die ID) */
+function slotTitle(slot: QuestSlot, catalog: ReadonlyMap<number, QuestInfo>): string {
+  if (typeof slot === 'string') return slot
+  const ids = Array.isArray(slot) ? slot : [slot]
+  return ids.map(id => catalog.get(id)?.title).find(Boolean) ?? `Quest ${ids[0]}`
+}
+
 /** IDs eines Slots; Titel-Slots werden über die erledigten Quests mit gleichem Titel aufgelöst */
 function slotIds(slot: QuestSlot, idsByTitle: ReadonlyMap<string, number[]>): number[] {
   if (typeof slot === 'string') return idsByTitle.get(normalizeQuestTitle(slot)) ?? []
@@ -37,6 +44,8 @@ export interface DungeonProgress {
   done: number
   total: number
   complete: boolean
+  /** Titel der noch fehlenden Quests */
+  missing: string[]
 }
 
 export interface QuestProgress {
@@ -95,8 +104,16 @@ export function questProgress(input: {
   const dungeons = input.faction
     ? input.groups.map((group) => {
         const required = group.questIds[input.faction!]
-        const finished = required.filter(slot => slotIds(slot, idsByTitle).some(id => done.has(id))).length
-        return { groupId: group.id, name: group.name, done: finished, total: required.length, complete: required.length > 0 && finished === required.length }
+        const open = required.filter(slot => !slotIds(slot, idsByTitle).some(id => done.has(id)))
+        const finished = required.length - open.length
+        return {
+          groupId: group.id,
+          name: group.name,
+          done: finished,
+          total: required.length,
+          complete: required.length > 0 && finished === required.length,
+          missing: open.map(slot => slotTitle(slot, input.catalog)),
+        }
       }).filter(entry => entry.total > 0)
     : []
 

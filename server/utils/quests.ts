@@ -99,7 +99,7 @@ export async function questProgressFor(characters: readonly { name: string, fact
   for (const { character, quests } of completed) {
     if (!quests) continue
     results.set(characterSlug(character.name), {
-      progress: questProgress({ completed: quests.ids, faction: character.faction, catalog, groups }),
+      progress: questProgress({ completed: quests.ids, faction: character.faction, catalog: new Map([...groupCatalog, ...catalog]), groups }),
       titles,
     })
   }

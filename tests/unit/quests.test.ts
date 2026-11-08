@@ -69,8 +69,8 @@ describe('Quest-Fortschritt', () => {
     const completed = [65, 166, 167, 168, 214, 2040, 373, 12, 1516, 96403, 96394, 96393, 96395, 98423]
     const progress = questProgress({ completed, faction: 'alliance', catalog, groups })
     expect(progress.dungeons).toEqual([
-      { groupId: 'the-deadmines', name: 'Die Todesminen', done: 6, total: 7, complete: false },
-      { groupId: 'hall-of-thanes', name: 'Halle der Thane', done: 5, total: 5, complete: true },
+      { groupId: 'the-deadmines', name: 'Die Todesminen', done: 6, total: 7, complete: false, missing: ['Quest 92753'] },
+      { groupId: 'hall-of-thanes', name: 'Halle der Thane', done: 5, total: 5, complete: true, missing: [] },
     ])
     // Dungeon-Quests: alle aus den Gruppen; Vorquest 65 und Klassenquest 1516 zählen nicht
     expect(progress.dungeonQuests).toEqual([166, 167, 168, 214, 373, 2040, 96393, 96394, 96395, 96403, 98423])
@@ -100,7 +100,7 @@ describe('Quest-Fortschritt', () => {
   it('Ruinen von Lordaeron: eine der beiden Wappen-IDs genügt', () => {
     const ruins = resolveDungeonGroup(dungeonQuestGroups.find(group => group.id === 'ruins-of-lordaeron')!, [], catalog)
     const progress = questProgress({ completed: [95250, 95195, 92415, 95204], faction: 'alliance', catalog, groups: [ruins] })
-    expect(progress.dungeons).toEqual([{ groupId: 'ruins-of-lordaeron', name: 'Ruinen von Lordaeron', done: 4, total: 4, complete: true }])
+    expect(progress.dungeons).toEqual([{ groupId: 'ruins-of-lordaeron', name: 'Ruinen von Lordaeron', done: 4, total: 4, complete: true, missing: [] }])
     expect(progress.dungeonQuests).toEqual([92415, 95195, 95204, 95250])
   })
 
@@ -111,7 +111,7 @@ describe('Quest-Fortschritt', () => {
     titled.set(99002, quest(99002, { title: 'Das Herz der Störung' }))
     titled.set(99003, quest(99003, { title: 'Etwas anderes' }))
     const progress = questProgress({ completed: [99001, 99002, 99003], faction: 'alliance', catalog: titled, groups: [dalaran] })
-    expect(progress.dungeons).toEqual([{ groupId: 'city-of-dalaran', name: 'Stadt Dalaran', done: 2, total: 4, complete: false }])
+    expect(progress.dungeons).toEqual([{ groupId: 'city-of-dalaran', name: 'Stadt Dalaran', done: 2, total: 4, complete: false, missing: ['Überwältigende Macht', 'Verhungernder Arkaner'] }])
     expect(progress.dungeonQuests).toEqual([99001, 99002])
   })
 
