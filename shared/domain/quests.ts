@@ -1,4 +1,4 @@
-import { dungeonQuestTitles, type DungeonQuestGroup, type QuestSlot } from '../data/dungeon-quests'
+import { dungeonQuestGroups, dungeonQuestTitles, type DungeonQuestGroup, type QuestSlot } from '../data/dungeon-quests'
 import type { ProgressEvent } from '../schemas/points'
 
 /** Quest-Arten laut Blizzard-API (`type.id`) */
@@ -127,4 +127,23 @@ export function questEvents(character: { memberId: string, characterId: string }
     ...progress.groupQuests.map(id => ({ ...base, type: 'group-quest' as const, objectId: `quest:${id}` })),
     ...progress.dungeons.filter(entry => entry.complete).map(entry => ({ ...base, type: 'dungeon-first' as const, objectId: `group:${entry.groupId}` })),
   ]
+}
+
+/** Zahl der Dungeon-Quests eines Dungeons für eine Fraktion (laut Dungeon Journal; 0 = keine) */
+export function dungeonQuestCount(slug: string, faction: 'alliance' | 'horde'): number {
+  return dungeonQuestGroups.find(group => group.dungeonSlugs.includes(slug))?.quests[faction].length ?? 0
+}
+
+/**
+ * Quests zur Auswahl beim Planen einer Gruppe: Allianz-Quests des Dungeons (Gildenfraktion),
+ * bei reinen Horde-Dungeons die Horde-Quests. Quests mit mehreren IDs stehen unter der ersten.
+ */
+export function dungeonQuestOptions(slug: string): { id: number, title: string }[] {
+  const group = dungeonQuestGroups.find(entry => entry.dungeonSlugs.includes(slug))
+  if (!group) return []
+  const slots = group.quests.alliance.length ? group.quests.alliance : group.quests.horde
+  return slots
+    .map(slot => (typeof slot === 'number' ? slot : Array.isArray(slot) ? slot[0] : undefined))
+    .filter((id): id is number => typeof id === 'number')
+    .map(id => ({ id, title: dungeonQuestTitles[id] ?? `Quest ${id}` }))
 }

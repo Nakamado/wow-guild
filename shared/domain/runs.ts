@@ -3,6 +3,7 @@ import type { Character, CommunityMember, Dungeon, GroupRun, Participant, RoleCa
 import { canPlayRole, defaultCatalog, type GameCatalog } from './characters'
 import { computeComposition, totalCapacity } from './composition'
 import { checkLevelFit } from './level'
+import { dungeonQuestOptions } from './quests'
 import { fail, ok, type DomainResult } from './result'
 
 /**
@@ -143,17 +144,20 @@ export type RunValidationCode
     | 'capacity-exceeds-group-size'
     | 'description-too-long'
     | 'capacity-below-participants'
+    | 'unknown-quest'
 
 export interface RunDraft {
   startsAt: string
   capacity: RoleCapacity
   description: string
+  /** geplante Dungeon-Quests (optional) */
+  questIds?: number[]
 }
 
 /** Prüft Eingaben beim Erstellen oder Bearbeiten eines Runs. */
 export function validateRunDraft(
   draft: RunDraft,
-  dungeon: Pick<Dungeon, 'groupSize' | 'name'>,
+  dungeon: Pick<Dungeon, 'groupSize' | 'name'> & { slug?: string },
   now: Date,
   existing?: Pick<GroupRun, 'participants'>,
 ): DomainResult<RunDraft, RunValidationCode> {
@@ -167,6 +171,12 @@ export function validateRunDraft(
   }
   if (draft.description.length > 500) {
     return fail('description-too-long', 'Die Beschreibung darf höchstens 500 Zeichen lang sein.')
+  }
+  if (draft.questIds?.length) {
+    const known = new Set(dungeonQuestOptions(dungeon.slug ?? '').map(option => option.id))
+    if (draft.questIds.some(id => !known.has(id))) {
+      return fail('unknown-quest', `Mindestens eine der gewählten Quests gehört nicht zu ${dungeon.name}.`)
+    }
   }
   if (existing) {
     const tooSmall = (Object.keys(draft.capacity) as RoleId[]).find(

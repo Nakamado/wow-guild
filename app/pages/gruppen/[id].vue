@@ -2,6 +2,7 @@
 import { findDungeon } from '#shared/data/dungeons'
 import { getRole, roles } from '#shared/data/roles'
 import { computeComposition } from '#shared/domain/composition'
+import { dungeonQuestOptions } from '#shared/domain/quests'
 import type { Participant } from '#shared/types'
 
 const route = useRoute()
@@ -13,6 +14,11 @@ const { status, getRun, memberById, characterById, myEntry, leaveRun, cancelRun 
 
 const run = computed(() => getRun(id.value))
 const dungeon = computed(() => (run.value ? findDungeon(run.value.dungeonSlug) : undefined))
+// Geplante Quests in der Reihenfolge des Journals
+const plannedQuests = computed(() => {
+  const ids = new Set(run.value?.questIds ?? [])
+  return run.value ? dungeonQuestOptions(run.value.dungeonSlug).filter(option => ids.has(option.id)) : []
+})
 const composition = computed(() => (run.value ? computeComposition(run.value) : null))
 const mine = computed(() => (run.value ? myEntry(run.value) : null))
 
@@ -272,6 +278,29 @@ function onSaved() {
           >
             Wer teilnimmt, sehen nur Gildenmitglieder.
           </p>
+
+          <section
+            v-if="plannedQuests.length"
+            aria-labelledby="group-quests"
+          >
+            <h2
+              id="group-quests"
+              class="group-page__section-title"
+            >
+              Geplante Quests
+            </h2>
+            <ul class="group-page__quests">
+              <li
+                v-for="quest in plannedQuests"
+                :key="quest.id"
+              >
+                {{ quest.title }}
+              </li>
+            </ul>
+            <p class="group-page__quests-hint">
+              Nimm die Quests am besten vorher an.
+            </p>
+          </section>
 
           <section
             v-if="run.description"
@@ -541,6 +570,24 @@ function onSaved() {
   &__privacy,
   &__closed {
     font-size: var(--text-sm);
+    color: var(--color-text-subtle);
+  }
+
+  &__quests {
+    display: grid;
+    gap: var(--space-1) var(--space-6);
+    padding-left: var(--space-5);
+    color: var(--color-text-muted);
+    list-style: disc;
+
+    @include mq('sm') {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__quests-hint {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
     color: var(--color-text-subtle);
   }
 

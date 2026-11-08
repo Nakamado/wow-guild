@@ -35,6 +35,8 @@ export interface RunRow {
   capacity_healer: number
   capacity_dps: number
   waitlist_enabled: boolean
+  /** fehlt, solange die Migration 20261111 nicht eingespielt ist */
+  quest_ids?: number[] | null
   discord_event_id: string | null
   created_at: string
   updated_at: string
@@ -81,6 +83,7 @@ export function rowToRun(row: RunRow): GroupRun {
     participants: entries.filter(entry => entry.placement === 'participant').map(rowToParticipant),
     waitlistEnabled: row.waitlist_enabled,
     waitlist: entries.filter(entry => entry.placement === 'waitlist').map(rowToParticipant),
+    questIds: row.quest_ids ?? [],
     discordEventId: row.discord_event_id,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),

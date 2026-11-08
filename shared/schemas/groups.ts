@@ -31,6 +31,8 @@ export const GroupRunSchema = z.object({
   participants: z.array(ParticipantSchema),
   waitlistEnabled: z.boolean(),
   waitlist: z.array(ParticipantSchema),
+  /** Optional: Dungeon-Quests, die die Gruppe erledigen will (Quest-IDs aus dem Dungeon Journal) */
+  questIds: z.array(z.number().int().positive()).max(30).optional(),
   /** Gesetzt, wenn der Run per Bot als Discord-Event angekündigt wurde (Duplikatvermeidung) */
   discordEventId: z.string().nullable(),
   createdAt: IsoDateTimeSchema,
@@ -45,6 +47,8 @@ export const RunInputSchema = z.object({
   startsAt: IsoDateTimeSchema,
   capacity: RoleCapacitySchema,
   waitlistEnabled: z.boolean(),
+  /** geplante Dungeon-Quests (optional, leer = keine Angabe) */
+  questIds: z.array(z.number().int().positive()).max(30).default([]),
 })
 
 export const JoinInputSchema = z.object({

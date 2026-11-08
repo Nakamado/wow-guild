@@ -75,7 +75,7 @@ export interface CharacterWriter {
   setMain(memberId: string, id: string): Promise<void>
 }
 
-export type RunWrite = Pick<GroupRun, 'dungeonSlug' | 'title' | 'description' | 'startsAt' | 'capacity' | 'waitlistEnabled'>
+export type RunWrite = Pick<GroupRun, 'dungeonSlug' | 'title' | 'description' | 'startsAt' | 'capacity' | 'waitlistEnabled'> & { questIds: number[] }
 
 export interface GroupWriter {
   create(organizerId: string, input: RunWrite): Promise<GroupRun>

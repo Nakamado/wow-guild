@@ -107,6 +107,7 @@ export function createSupabaseGroupRepository(db: SupabaseClient): GroupReposito
         capacity_healer: input.capacity.healer,
         capacity_dps: input.capacity.dps,
         waitlist_enabled: input.waitlistEnabled,
+        quest_ids: input.questIds,
       }).select(RUN_SELECT).single())
       return rowToRun(row as unknown as RunRow)
     },
@@ -120,6 +121,7 @@ export function createSupabaseGroupRepository(db: SupabaseClient): GroupReposito
         capacity_healer: input.capacity.healer,
         capacity_dps: input.capacity.dps,
         waitlist_enabled: input.waitlistEnabled,
+        quest_ids: input.questIds,
       }).eq('id', id).eq('status', 'open')
       if (result.error) throw fromPostgresError(result.error)
       return getOrFail(id)

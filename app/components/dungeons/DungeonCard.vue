@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { checkLevelFit, formatRange } from '#shared/domain/level'
-import type { DungeonQuestStatus } from '#shared/domain/quests'
+import { dungeonQuestCount, type DungeonQuestStatus } from '#shared/domain/quests'
 import type { Character, Dungeon } from '#shared/types'
 
 const props = defineProps<{
@@ -14,6 +14,8 @@ const props = defineProps<{
 
 const fit = computed(() => (props.character ? checkLevelFit(props.character.level, props.dungeon) : null))
 const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
+// Gesamtzahl der Quests – für die Fraktion des ausgewählten Charakters, sonst Allianz (Gildenfraktion)
+const questTotal = computed(() => dungeonQuestCount(props.dungeon.slug, props.character?.faction === 'horde' ? 'horde' : 'alliance'))
 </script>
 
 <template>
@@ -56,6 +58,26 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
         <dt>Spieler</dt>
         <dd>{{ dungeon.groupSize }}</dd>
       </div>
+      <div
+        class="dungeon-card__fact"
+        :class="{ 'dungeon-card__fact--complete': quests?.complete }"
+      >
+        <dt>Quests</dt>
+        <dd v-if="quests">
+          {{ quests.done }}/{{ quests.total }}<BaseIcon
+            v-if="quests.complete"
+            name="check"
+            :size="18"
+            class="dungeon-card__check"
+          /><span
+            v-if="quests.complete"
+            class="visually-hidden"
+          > – alle erledigt</span>
+        </dd>
+        <dd v-else>
+          {{ questTotal || '–' }}
+        </dd>
+      </div>
     </dl>
 
     <p class="dungeon-card__zone">
@@ -77,16 +99,10 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
     </p>
 
     <p
-      v-if="quests"
+      v-if="quests && !quests.complete && quests.missing.length <= 2"
       class="dungeon-card__quests"
-      :class="{ 'dungeon-card__quests--complete': quests.complete }"
     >
-      <span class="dungeon-card__quests-count">{{ quests.done }}/{{ quests.total }} Quests</span>
-      <span v-if="quests.complete"> · alle erledigt</span>
-      <span
-        v-else-if="quests.missing.length <= 2"
-        class="dungeon-card__quests-missing"
-      > · fehlt noch: {{ quests.missing.join(', ') }}</span>
+      Fehlt noch: {{ quests.missing.join(', ') }}
     </p>
 
     <footer class="dungeon-card__footer">
@@ -188,7 +204,8 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
 
   &__facts {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, auto);
+    justify-content: space-between;
     gap: var(--space-2);
     margin: 0;
   }
@@ -209,7 +226,17 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
       font-size: var(--text-lg);
       color: var(--color-text);
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
+
+    &--complete dd {
+      color: var(--color-success);
+    }
+  }
+
+  &__check {
+    margin-left: var(--space-1);
+    vertical-align: -0.1em;
   }
 
   &__zone {
@@ -246,19 +273,6 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
 
   &__quests {
     font-size: var(--text-xs);
-    color: var(--color-text-muted);
-
-    &--complete {
-      color: var(--color-success);
-    }
-  }
-
-  &__quests-count {
-    font-weight: var(--font-weight-semibold);
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__quests-missing {
     color: var(--color-text-subtle);
   }
 
