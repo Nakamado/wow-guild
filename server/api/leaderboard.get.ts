@@ -5,7 +5,6 @@ import { characterSlug, fetchCharacterProgress, parsePreviewCharacters, type Bli
 import { instances } from '#shared/data/dungeons'
 import { findProfession } from '#shared/data/professions'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
-import { leaderboardCharacterIds } from '#shared/domain/admin'
 import { questEvents } from '#shared/domain/quests'
 import type { CharacterQuestResult } from '../utils/quests'
 import type { ProgressEvent, ProgressType } from '#shared/schemas/points'
@@ -134,7 +133,7 @@ export default defineEventHandler(async (event) => {
   const clientSecret = String(config.blizzard.clientSecret ?? '')
   const store = useMemberSettingsStore()
   const entries = store
-    ? await optedInEntries(store)
+    ? await optedInEntries()
     // Ohne Datenbank: „Vorname Nachname“ oder „Vorname Nachname=DiscordID“ aus der Umgebungsvariable
     : parsePreviewCharacters(String(config.blizzard.previewCharacters ?? '')).map(entry => ({ name: entry.name, memberId: entry.discordId ?? null, characterId: null, isMain: false }))
   const isPreview = !store
@@ -200,24 +199,11 @@ interface LeaderboardEntry {
   isMain: boolean
 }
 
-/**
- * Charaktere mit Zustimmung: Selbstfreigabe des Mitglieds (alle seine Charaktere) oder Adminfreigabe
- * mit dokumentierter Zustimmung (nur genau dieser Charakter). Gezählt werden nur Charaktere in der
- * Gilde – ist die Gildenliste gerade nicht abrufbar, zählen vorübergehend alle.
- */
-async function optedInEntries(store: NonNullable<ReturnType<typeof useMemberSettingsStore>>): Promise<LeaderboardEntry[]> {
-  const [memberIds, grants] = await Promise.all([
-    store.listLeaderboardMembers(),
-    useGrantStore()?.listActive().catch(() => []) ?? [],
-  ])
-  if (!memberIds.length && !grants.length) return []
-  const [characters, roster] = await Promise.all([useProviders().characters.list(), guildRosterBySlug()])
-  const included = leaderboardCharacterIds({
-    characters: characters.map(character => ({ id: character.id, memberId: character.memberId, inGuild: !roster || roster.has(characterSlug(character.name)) })),
-    optedInMemberIds: new Set(memberIds),
-    grants,
-  })
-  return characters
-    .filter(character => included.has(character.id))
+/** Charaktere mit Zustimmung zur Rangliste (siehe server/utils/leaderboard-consent.ts) */
+async function optedInEntries(): Promise<LeaderboardEntry[]> {
+  const consent = await consentedCharacters()
+  if (!consent) return []
+  return consent.characters
+    .filter(character => consent.ids.has(character.id))
     .map(character => ({ name: character.name, memberId: character.memberId, characterId: character.id, isMain: character.isMain }))
 }
