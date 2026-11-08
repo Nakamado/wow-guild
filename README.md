@@ -122,6 +122,12 @@ haben, mit ihren eingetragenen Charakteren, soweit diese in der Gilde sind (Stuf
 30 Minuten neu abgerufen). Nur ohne Datenbank greift noch der Testlauf mit
 `NUXT_BLIZZARD_PREVIEW_CHARACTERS="Vorname Nachname=DiscordID"`.
 
+**Quests:** Abgeschlossene Quests kommen aus `/quests/completed`; Art, Gebiet und Fraktion jeder Quest schlägt die Seite
+einmal nach und speichert sie in `quest_catalog`. Dungeon-Quests (75), Gruppenquests (25) und „Dungeon vollständig“
+(alle Dungeon-Quests der eigenen Fraktion, 150) zählen rückwirkend; Klassenquests nie. Welche Quests zu welchem Dungeon
+gehören: `shared/data/dungeon-quests.ts` (klassisch per Gebiets-ID aus der API, Forever-Dungeons von Hand) – prüfen
+unter `/admin/blizzard` → „Dungeon-Quests prüfen“.
+
 **Chronik:** Gründung (Datum aus der API, sonst `guildFoundedOn` in `content/chronicle.ts`) sowie automatisch
 erkannte Meilensteine aus der Gildenliste (10/25/50/100 Mitglieder, erste Charaktere auf Stufe 40/50/60). Einmal erkannt,
 bleiben sie in der Tabelle `guild_milestones` stehen.

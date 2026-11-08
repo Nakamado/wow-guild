@@ -15,6 +15,7 @@ export interface BlizzardCharacterProgress {
   name: string
   level: number
   classId: string
+  faction: 'alliance' | 'horde' | null
   professions: Profession[]
   /** letzter Login laut API (ISO) – die Daten hinken dem Spiel rund 13 Stunden hinterher */
   lastLoginAt: string | null
@@ -131,6 +132,7 @@ export function parseCharacterProgress(slug: string, fallbackName: string, profi
     name,
     level,
     classId: (classNumber !== null && classIds[classNumber]) || 'unknown',
+    faction: isObject(profile.faction) && profile.faction.type === 'ALLIANCE' ? 'alliance' : isObject(profile.faction) && profile.faction.type === 'HORDE' ? 'horde' : null,
     professions: parseProfessions(professions),
     lastLoginAt: lastLogin ? new Date(lastLogin).toISOString() : null,
   }

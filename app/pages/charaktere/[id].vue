@@ -11,6 +11,11 @@ import type { Character } from '#shared/types'
 interface CharacterResponse {
   character: Character
   media?: { avatarUrl: string | null, insetUrl: string | null, mainUrl: string | null } | null
+  dungeonProgress?: {
+    dungeons: { groupId: string, name: string, done: number, total: number, complete: boolean }[]
+    dungeonQuests: number
+    groupQuests: number
+  } | null
   member: { id: string, displayName: string, avatarUrl: string | null }
   otherCharacters: Character[]
 }
@@ -282,6 +287,48 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
       </div>
 
       <section
+        v-if="data.dungeonProgress"
+        aria-labelledby="character-quests"
+        class="character-page__quests"
+      >
+        <h2
+          id="character-quests"
+          class="character-page__title"
+        >
+          Dungeon-Fortschritt
+        </h2>
+        <p class="character-page__muted">
+          {{ data.dungeonProgress.dungeonQuests }} Dungeon-Quests und {{ data.dungeonProgress.groupQuests }} Gruppenquests erledigt.
+          Ein Dungeon gilt als vollständig, wenn alle seine Dungeon-Quests der eigenen Fraktion erledigt sind (ohne Klassenquests).
+        </p>
+        <ul
+          v-if="data.dungeonProgress.dungeons.length"
+          class="character-page__progress"
+          role="list"
+        >
+          <li
+            v-for="entry in data.dungeonProgress.dungeons"
+            :key="entry.groupId"
+            class="character-page__progress-item"
+          >
+            <span class="character-page__progress-name">{{ entry.name }}</span>
+            <span
+              class="character-page__progress-bar"
+              aria-hidden="true"
+            ><span :style="{ width: `${Math.round(entry.done / entry.total * 100)}%` }" /></span>
+            <span class="character-page__progress-count">
+              {{ entry.done }}/{{ entry.total }}
+              <span class="visually-hidden">Quests</span>
+              <span
+                v-if="entry.complete"
+                class="character-page__progress-done"
+              >vollständig</span>
+            </span>
+          </li>
+        </ul>
+      </section>
+
+      <section
         v-if="data.otherCharacters.length"
         aria-labelledby="character-others"
       >
@@ -354,6 +401,57 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
     max-height: 26rem;
     object-fit: contain;
     object-position: center bottom;
+  }
+
+  &__quests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  &__progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  &__progress-item {
+    display: grid;
+    grid-template-columns: minmax(9rem, 14rem) 1fr auto;
+    gap: var(--space-3);
+    align-items: center;
+    font-size: var(--text-sm);
+  }
+
+  &__progress-name {
+    color: var(--color-text);
+  }
+
+  &__progress-bar {
+    height: 0.5rem;
+    overflow: hidden;
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-full, 999px);
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--color-accent);
+    }
+  }
+
+  &__progress-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  &__progress-done {
+    margin-left: var(--space-2);
+    color: var(--color-success);
   }
 
   &__source-note {

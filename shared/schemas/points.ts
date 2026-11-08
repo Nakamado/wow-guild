@@ -3,9 +3,10 @@ import { z } from 'zod'
 /** Fortschritts-Ereignisse, aus denen der Server Punkte berechnet (nie das Addon). */
 export const ProgressTypeSchema = z.enum([
   'level', // Stufe erreicht (objectId = Stufe)
-  'dungeon-first', // Erstabschluss eines Dungeons je Charakter (objectId = Dungeon-Slug)
+  'dungeon-first', // Dungeon vollständig je Charakter (objectId = Dungeon-Slug bzw. „group:<Quest-Gruppe>“)
   'dungeon-complete', // jeder Abschluss (objectId = Slug + laufende Nummer)
-  'dungeon-quest', // Dungeon-Quest abgeschlossen (objectId = Quest-ID)
+  'dungeon-quest', // Dungeon-Quest abgeschlossen (objectId = „quest:<ID>“)
+  'group-quest', // Gruppenquest abgeschlossen (objectId = „quest:<ID>“)
   'dungeon-boss', // Dungeon-Boss besiegt (wiederholbar)
   'raid-first', // Erstabschluss eines Raids je Charakter
   'raid-boss', // Raid-Boss besiegt (wiederholbar)

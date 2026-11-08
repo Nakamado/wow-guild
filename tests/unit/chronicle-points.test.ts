@@ -65,7 +65,7 @@ describe('Punktesystem', () => {
 
   it('zählt dasselbe Ereignis aus zwei Quellen nur einmal', () => {
     const quest = ev({ type: 'dungeon-quest', objectId: '1234' })
-    expect(scoreEvents([quest, { ...quest }], rules).total).toBe(150)
+    expect(scoreEvents([quest, { ...quest }], rules).total).toBe(rules.points['dungeon-quest'])
   })
 
   it('begrenzt wiederholbare Aktivität auf 300 Punkte pro Woche und Person', () => {

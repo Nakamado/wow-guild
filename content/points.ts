@@ -6,12 +6,15 @@ import type { PointsRules } from '../shared/schemas/points'
  * Details und Entscheidungen: docs/ADDON-PLAN.md, Abschnitt 7.
  */
 export const pointsRules: PointsRules = {
-  version: 1,
+  // v2 (08.11.2026): Quests aus der API – Dungeon-Quest 75, Gruppenquest 25,
+  // Dungeon vollständig (alle Dungeon-Quests der eigenen Fraktion) 150
+  version: 2,
   points: {
     'level': 100,
-    'dungeon-first': 100,
+    'dungeon-first': 150,
     'dungeon-complete': 10,
-    'dungeon-quest': 150,
+    'dungeon-quest': 75,
+    'group-quest': 25,
     'dungeon-boss': 2,
     'raid-first': 100,
     'raid-boss': 20,

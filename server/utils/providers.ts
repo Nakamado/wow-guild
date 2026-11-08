@@ -8,6 +8,7 @@ import { createSupabaseBoardStore, type BoardStore } from '../repositories/supab
 import { createSupabaseGrantStore, type GrantStore } from '../repositories/supabase/grants'
 import { createSupabaseMemberSettingsStore, type MemberSettingsStore } from '../repositories/supabase/member-settings'
 import { createSupabaseMilestoneStore, type MilestoneStore } from '../repositories/supabase/milestones'
+import { createSupabaseQuestCatalog, type QuestCatalogStore } from '../repositories/supabase/quest-catalog'
 import { createProviders, type ProviderConfig, type ProviderModeInfo } from '../providers/registry'
 import type { ProviderKey, Providers, Writers } from '../providers/types'
 
@@ -123,6 +124,11 @@ export function useActivityStore(): ActivityStore | null {
 /** Ranglistenfreigaben durch den Hauptadmin – null ohne Datenbank */
 export function useGrantStore(): GrantStore | null {
   return useStore('grants', createSupabaseGrantStore)
+}
+
+/** Quest-Katalog (einmal nachgeschlagene Questdaten) – null ohne Datenbank */
+export function useQuestCatalogStore(): QuestCatalogStore | null {
+  return useStore('quest-catalog', createSupabaseQuestCatalog)
 }
 
 /** Automatisch erkannte Chronik-Meilensteine – null ohne Datenbank */
