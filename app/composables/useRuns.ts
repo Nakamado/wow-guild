@@ -108,6 +108,7 @@ export function useRuns() {
       participants: [],
       waitlistEnabled: input.waitlistEnabled,
       waitlist: [],
+      questIds: input.questIds ?? [],
       discordEventId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -135,6 +136,7 @@ export function useRuns() {
       startsAt: input.startsAt,
       capacity: input.capacity,
       waitlistEnabled: input.waitlistEnabled,
+      questIds: input.questIds ?? [],
       updatedAt: new Date().toISOString(),
     }
     persist(updated)

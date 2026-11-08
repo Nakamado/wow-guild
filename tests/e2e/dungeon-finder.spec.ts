@@ -118,6 +118,32 @@ test.describe('Gruppenplaner (Demo)', () => {
     await expect(page.getByRole('link', { name: 'E2E-Verlies (verschoben)' })).toBeVisible()
   })
 
+  test('Organisator plant Quests für die Gruppe', async ({ page, context, baseURL }) => {
+    await asPersona(context, baseURL, 'organizer')
+    await page.goto('/dungeons/the-stockade')
+    await page.getByRole('button', { name: 'Gruppe erstellen' }).first().click()
+
+    const dialog = page.getByRole('dialog')
+    const quests = dialog.getByRole('group', { name: /Geplante Quests/ })
+    await expect(quests.getByRole('checkbox')).toHaveCount(6)
+    await quests.getByLabel('Verbrechen und Strafe').check()
+    await quests.getByLabel('Aufstand im Verlies').check()
+    await dialog.getByLabel('Titel').fill('E2E-Questrun')
+    await dialog.getByRole('button', { name: 'Gruppe erstellen' }).click()
+
+    await expect(page).toHaveURL(/\/gruppen\/demo-run-/)
+    const planned = page.getByRole('region', { name: 'Geplante Quests' })
+    await expect(planned.getByRole('listitem')).toHaveText(['Verbrechen und Strafe', 'Aufstand im Verlies'])
+
+    // Beim Bearbeiten sind die Haken gesetzt; „Alle auswählen“ hakt den Rest an
+    await page.getByRole('button', { name: 'Bearbeiten' }).click()
+    const edit = page.getByRole('dialog').getByRole('group', { name: /Geplante Quests/ })
+    await expect(edit.getByLabel('Verbrechen und Strafe')).toBeChecked()
+    await edit.getByRole('button', { name: 'Alle auswählen' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Änderungen speichern' }).click()
+    await expect(planned.getByRole('listitem')).toHaveCount(6)
+  })
+
   test('Mitglieder können fremde Gruppen nicht bearbeiten', async ({ page }) => {
     await page.goto('/gruppen/demo-run-01') // organisiert von Brummbart, Ansicht als Nebelpfote
     await expect(page.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0)

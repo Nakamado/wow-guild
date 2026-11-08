@@ -133,3 +133,17 @@ export function questEvents(character: { memberId: string, characterId: string }
 export function dungeonQuestCount(slug: string, faction: 'alliance' | 'horde'): number {
   return dungeonQuestGroups.find(group => group.dungeonSlugs.includes(slug))?.quests[faction].length ?? 0
 }
+
+/**
+ * Quests zur Auswahl beim Planen einer Gruppe: Allianz-Quests des Dungeons (Gildenfraktion),
+ * bei reinen Horde-Dungeons die Horde-Quests. Quests mit mehreren IDs stehen unter der ersten.
+ */
+export function dungeonQuestOptions(slug: string): { id: number, title: string }[] {
+  const group = dungeonQuestGroups.find(entry => entry.dungeonSlugs.includes(slug))
+  if (!group) return []
+  const slots = group.quests.alliance.length ? group.quests.alliance : group.quests.horde
+  return slots
+    .map(slot => (typeof slot === 'number' ? slot : Array.isArray(slot) ? slot[0] : undefined))
+    .filter((id): id is number => typeof id === 'number')
+    .map(id => ({ id, title: dungeonQuestTitles[id] ?? `Quest ${id}` }))
+}

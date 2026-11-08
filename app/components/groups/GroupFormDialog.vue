@@ -2,6 +2,7 @@
 import { findDungeon } from '#shared/data/dungeons'
 import { roles } from '#shared/data/roles'
 import { defaultCapacity, totalCapacity } from '#shared/domain/composition'
+import { dungeonQuestOptions } from '#shared/domain/quests'
 import type { GroupRun, RoleCapacity } from '#shared/types'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -30,6 +31,7 @@ interface FormState {
   description: string
   capacity: RoleCapacity
   waitlistEnabled: boolean
+  questIds: number[]
 }
 
 function tomorrow() {
@@ -47,6 +49,7 @@ function initialState(): FormState {
       description: props.run.description,
       capacity: { ...props.run.capacity },
       waitlistEnabled: props.run.waitlistEnabled,
+      questIds: [...(props.run.questIds ?? [])],
     }
   }
   const slug = props.dungeonSlug ?? ''
@@ -58,6 +61,7 @@ function initialState(): FormState {
     description: '',
     capacity: defaultCapacity(findDungeon(slug)?.groupSize ?? 5),
     waitlistEnabled: true,
+    questIds: [],
   }
 }
 
@@ -75,10 +79,19 @@ watch(open, (isOpen) => {
 
 const dungeon = computed(() => findDungeon(form.dungeonSlug))
 
-// Standardbesetzung an die Gruppengröße anpassen, solange sie nicht manuell geändert wurde
+// Standardbesetzung an die Gruppengröße anpassen, solange sie nicht manuell geändert wurde;
+// gewählte Quests gehören zum alten Dungeon und fallen weg
 watch(() => form.dungeonSlug, () => {
   if (!capacityTouched.value && dungeon.value) form.capacity = defaultCapacity(dungeon.value.groupSize)
+  form.questIds = []
 })
+
+// Optionale Questauswahl (Quests laut Dungeon Journal)
+const questOptions = computed(() => dungeonQuestOptions(form.dungeonSlug))
+const allQuestsSelected = computed(() => questOptions.value.length > 0 && form.questIds.length === questOptions.value.length)
+function toggleAllQuests() {
+  form.questIds = allQuestsSelected.value ? [] : questOptions.value.map(option => option.id)
+}
 
 const size = computed(() => totalCapacity(form.capacity))
 const isEdit = computed(() => Boolean(props.run))
@@ -105,6 +118,8 @@ async function submit() {
     startsAt,
     capacity: form.capacity,
     waitlistEnabled: form.waitlistEnabled,
+    // Reihenfolge wie im Journal
+    questIds: questOptions.value.map(option => option.id).filter(id => form.questIds.includes(id)),
   }
   saving.value = true
   const result = props.run ? await updateRun(props.run.id, input) : await createRun(input)
@@ -256,6 +271,42 @@ async function submit() {
         </p>
       </fieldset>
 
+      <fieldset
+        v-if="questOptions.length"
+        class="group-form__quests"
+      >
+        <legend class="group-form__label">
+          Geplante Quests <span class="group-form__optional">(optional)</span>
+        </legend>
+        <p class="group-form__hint">
+          Hake an, welche Dungeon-Quests ihr machen wollt – so sehen alle, was sie vorher annehmen sollten.
+        </p>
+        <ul class="group-form__quest-list">
+          <li
+            v-for="quest in questOptions"
+            :key="quest.id"
+          >
+            <label class="group-form__toggle">
+              <input
+                v-model="form.questIds"
+                type="checkbox"
+                class="group-form__checkbox"
+                :value="quest.id"
+              >
+              {{ quest.title }}
+            </label>
+          </li>
+        </ul>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          class="group-form__quest-all"
+          @click="toggleAllQuests"
+        >
+          {{ allQuestsSelected ? 'Keine auswählen' : 'Alle auswählen' }}
+        </BaseButton>
+      </fieldset>
+
       <div class="group-form__field">
         <label
           :for="ids.description"
@@ -378,6 +429,31 @@ async function submit() {
     &--textarea {
       resize: vertical;
     }
+  }
+
+  &__quests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  &__quest-list {
+    display: grid;
+    gap: var(--space-2) var(--space-4);
+    padding: 0;
+    margin: var(--space-1) 0 0;
+    list-style: none;
+
+    @include mq('sm') {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__quest-all {
+    align-self: flex-start;
   }
 
   &__capacity {

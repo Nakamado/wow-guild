@@ -157,3 +157,15 @@ describe('Quest-Anzahl je Dungeon', () => {
     expect(dungeonQuestCount('gibt-es-nicht', 'alliance')).toBe(0)
   })
 })
+
+describe('Questauswahl beim Planen einer Gruppe', () => {
+  it('liefert die Allianz-Quests mit Titel, bei Horde-Dungeons die Horde-Quests', async () => {
+    const { dungeonQuestOptions } = await import('../../shared/domain/quests')
+    expect(dungeonQuestOptions('the-stockade')).toHaveLength(6)
+    expect(dungeonQuestOptions('the-stockade')).toContainEqual({ id: 377, title: 'Verbrechen und Strafe' })
+    expect(dungeonQuestOptions('ragefire-chasm')).toHaveLength(6)
+    // Wappen von Lordaeron (zwei IDs) steht einmal unter der ersten ID
+    expect(dungeonQuestOptions('ruins-of-lordaeron').map(option => option.id)).toEqual([95250, 95195, 95189, 92415])
+    expect(dungeonQuestOptions('molten-core')).toEqual([])
+  })
+})

@@ -41,6 +41,7 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
       <p class="group-card__meta">
         <span>{{ weekday }}, {{ formatTime(run.startsAt) }} Uhr</span>
         <span v-if="showDungeon">{{ dungeon?.name }}</span>
+        <span v-if="run.questIds?.length">{{ run.questIds.length === 1 ? '1 Quest geplant' : `${run.questIds.length} Quests geplant` }}</span>
       </p>
       <GroupComposition :run="run" />
     </div>

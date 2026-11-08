@@ -173,6 +173,13 @@ describe('validateRunDraft / cancelRun', () => {
     expect(validateRunDraft({ ...draft, capacity: { tank: 0, healer: 0, dps: 0 } }, dungeon, NOW)).toMatchObject({ ok: false, error: { code: 'capacity-empty' } })
   })
 
+  it('akzeptiert nur Quests des gewählten Dungeons', () => {
+    const stockade = { name: 'Das Verlies', groupSize: 5, slug: 'the-stockade' }
+    expect(validateRunDraft({ ...draft, questIds: [377, 391] }, stockade, NOW).ok).toBe(true)
+    expect(validateRunDraft({ ...draft, questIds: [] }, stockade, NOW).ok).toBe(true)
+    expect(validateRunDraft({ ...draft, questIds: [96403] }, stockade, NOW)).toMatchObject({ ok: false, error: { code: 'unknown-quest' } })
+  })
+
   it('verhindert beim Bearbeiten, dass Plätze unter die Anmeldungen fallen', () => {
     const existing = run({ participants: [participant('a', 'dps'), participant('b', 'dps')] })
     const result = validateRunDraft({ ...draft, capacity: { tank: 1, healer: 1, dps: 1 } }, dungeon, NOW, existing)
