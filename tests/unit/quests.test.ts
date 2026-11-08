@@ -88,6 +88,14 @@ describe('Quest-Fortschritt', () => {
     expect(withClassQuest.questIds.alliance).toEqual([166])
   })
 
+  it('wertet gleichnamige Quests mit verschiedenen IDs nur einmal', () => {
+    const withTwins = new Map(catalog)
+    withTwins.set(95189, quest(95189, { title: 'Wappen von Lordaeron', typeId: 81 }))
+    withTwins.set(95204, quest(95204, { title: 'Wappen von Lordaeron', typeId: 81 }))
+    const progress = questProgress({ completed: [95204, 95189], faction: 'alliance', catalog: withTwins, groups })
+    expect(progress.dungeonQuests).toEqual([95189])
+  })
+
   it('macht daraus einmalige Punkte-Ereignisse je Charakter', () => {
     const progress = questProgress({ completed: [96403, 96394, 96393, 96395, 98423, 12], faction: 'alliance', catalog, groups })
     const events = questEvents({ memberId: 'm', characterId: 'c' }, progress)

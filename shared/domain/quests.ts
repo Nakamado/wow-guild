@@ -70,9 +70,9 @@ export function questProgress(input: {
   const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde]))
   const counts = (id: number) => !input.catalog.get(id)?.restricted && input.catalog.get(id)?.typeId !== QUEST_TYPE.class
 
-  const dungeonQuests = [...done].filter(id => counts(id) && (inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon))
-  const dungeonSet = new Set(dungeonQuests)
-  const groupQuests = [...done].filter(id => counts(id) && !dungeonSet.has(id) && input.catalog.get(id)?.typeId === QUEST_TYPE.group)
+  const dungeonQuests = onePerTitle([...done].filter(id => counts(id) && (inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon)), input.catalog)
+  const dungeonSet = new Set([...done].filter(id => inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon))
+  const groupQuests = onePerTitle([...done].filter(id => counts(id) && !dungeonSet.has(id) && input.catalog.get(id)?.typeId === QUEST_TYPE.group), input.catalog)
 
   const dungeons = input.faction
     ? input.groups.map((group) => {
@@ -83,6 +83,19 @@ export function questProgress(input: {
     : []
 
   return { dungeonQuests: dungeonQuests.sort((a, b) => a - b), groupQuests: groupQuests.sort((a, b) => a - b), dungeons }
+}
+
+/**
+ * Gleichnamige Quests nur einmal werten: Manche Quests gibt es unter mehreren IDs (z. B. „Wappen von
+ * Lordaeron“ einmal per Gegenstand und einmal beim Questgeber). Es zählt jeweils die kleinste ID.
+ */
+function onePerTitle(ids: readonly number[], catalog: ReadonlyMap<number, QuestInfo>): number[] {
+  const byTitle = new Map<string, number>()
+  for (const id of [...ids].sort((a, b) => a - b)) {
+    const key = catalog.get(id)?.title.trim().toLocaleLowerCase('de-DE') ?? `#${id}`
+    if (!byTitle.has(key)) byTitle.set(key, id)
+  }
+  return [...byTitle.values()]
 }
 
 /** Punkte-Ereignisse aus dem Quest-Fortschritt (rückwirkend, einmalig je Charakter) */
