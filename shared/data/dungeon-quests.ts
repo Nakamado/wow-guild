@@ -11,8 +11,14 @@
  *
  * Klassen- und Volksquests zählen nie (Angabe `requirements` in den Questdaten).
  */
-/** Quest-ID oder Alternativen derselben Quest (z. B. Allianz-/Horde-Variante mit fehlerhafter Fraktionsangabe) */
-export type QuestSlot = number | number[]
+/**
+ * Eine Quest eines Dungeons:
+ * - Zahl: Quest-ID
+ * - Zahlen-Array: dieselbe Quest unter mehreren IDs (eine genügt)
+ * - Text: Questtitel (deutsch wie im Spiel) – für Forever-Dungeons, deren IDs wir noch nicht kennen.
+ *   Die Seite erkennt die Quest am Titel aus der Blizzard-API, sobald jemand sie erledigt hat.
+ */
+export type QuestSlot = number | number[] | string
 
 export interface DungeonQuestGroup {
   /** eigene Kennung (bei einflügeligen Dungeons = Dungeon-Slug) */
@@ -57,6 +63,33 @@ export const dungeonQuestGroups: DungeonQuestGroup[] = [
   // + 373 „Der nicht abgeschickte Brief“ (Drop von van Cleef, Abgabe in Sturmwind) – laut Dungeon Journal 7 Quests
   { id: 'the-deadmines', name: 'Die Todesminen', dungeonSlugs: ['the-deadmines'], areaId: 1581, extraQuestIds: [373] },
   { id: 'shadowfang-keep', name: 'Burg Schattenfang', dungeonSlugs: ['shadowfang-keep'], areaId: 209 },
+  {
+    id: 'excavation-site-wetlands',
+    name: 'Ausgrabungsstätte: Sumpfland',
+    dungeonSlugs: ['excavation-site-wetlands'],
+    // Laut Dungeon-Journal 7 Allianz-Quests – die siebte war im Video nicht lesbar, bitte nachtragen
+    quests: { alliance: ['Hochlandhäute', 'Songblades Suche', 'Schrecken im Hochland', 'Verloren im Dickicht', 'Herzgeflecht', 'Urzeitliches Prisma'], horde: [] },
+  },
+  {
+    id: 'city-of-dalaran',
+    name: 'Stadt Dalaran',
+    dungeonSlugs: ['city-of-dalaran'],
+    quests: { alliance: ['Eine grüne Probe', 'Überwältigende Macht', 'Verhungernder Arkaner', 'Das Herz der Störung'], horde: [] },
+  },
+  {
+    id: 'the-drowned-city',
+    name: 'The Drowned City',
+    dungeonSlugs: ['the-drowned-city'],
+    // Titel noch aus der Beta (englisch) – durch die deutschen ersetzen, sobald der Dungeon erscheint
+    quests: { alliance: ['Findings for the Explorer\'s League', 'The Web of Magic', 'Ancient Gurubashi Secrets', 'Shady Saltseers', 'The Saltseer Captain'], horde: [] },
+  },
+  {
+    id: 'krol-dok-stronghold',
+    name: 'Krol\'dok Stronghold',
+    dungeonSlugs: ['krol-dok-stronghold'],
+    // Titel noch aus der Beta (englisch)
+    quests: { alliance: ['Eye of Mugg', 'Twilight Mementos', 'Tome of Twilight', 'Vengeance of the Highborne'], horde: [] },
+  },
   { id: 'blackfathom-deeps', name: 'Tiefschwarze Grotte', dungeonSlugs: ['blackfathom-deeps'], areaId: 719 },
   { id: 'the-stockade', name: 'Das Verlies', dungeonSlugs: ['the-stockade'], areaId: 717 },
   { id: 'gnomeregan', name: 'Gnomeregan', dungeonSlugs: ['gnomeregan'], areaId: 721 },

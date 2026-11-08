@@ -104,6 +104,17 @@ describe('Quest-Fortschritt', () => {
     expect(progress.dungeonQuests).toEqual([92415, 95195, 95204, 95250])
   })
 
+  it('erkennt Forever-Quests ohne bekannte ID am Titel', () => {
+    const dalaran = resolveDungeonGroup(dungeonQuestGroups.find(group => group.id === 'city-of-dalaran')!, [], catalog)
+    const titled = new Map(catalog)
+    titled.set(99001, quest(99001, { title: 'Eine grüne  Probe' }))
+    titled.set(99002, quest(99002, { title: 'Das Herz der Störung' }))
+    titled.set(99003, quest(99003, { title: 'Etwas anderes' }))
+    const progress = questProgress({ completed: [99001, 99002, 99003], faction: 'alliance', catalog: titled, groups: [dalaran] })
+    expect(progress.dungeons).toEqual([{ groupId: 'city-of-dalaran', name: 'Stadt Dalaran', done: 2, total: 4, complete: false }])
+    expect(progress.dungeonQuests).toEqual([99001, 99002])
+  })
+
   it('macht daraus einmalige Punkte-Ereignisse je Charakter', () => {
     const progress = questProgress({ completed: [96403, 96394, 96393, 96395, 98423, 12], faction: 'alliance', catalog, groups })
     const events = questEvents({ memberId: 'm', characterId: 'c' }, progress)
