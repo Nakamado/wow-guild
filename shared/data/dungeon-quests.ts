@@ -1,113 +1,308 @@
 /**
- * Dungeon-Quests je Dungeon – Grundlage für „Dungeon vollständig“ (alle Dungeon-Quests der eigenen
- * Fraktion erledigt), solange die Dungeon-API von WoW: Forever keine Abschlüsse liefert.
+ * Dungeon-Quests je Dungeon (bzw. Flügel) – Grundlage für den Quest-Fortschritt auf dem Charakterprofil
+ * und für „Dungeon vollständig“ (alle Dungeon-Quests der eigenen Fraktion erledigt).
  *
- * - Klassische Dungeons: Die Quests kommen automatisch aus der Blizzard-API
- *   (`/data/wow/quest/area/{areaId}`). Mehrflügelige Instanzen (Kloster, Düsterbruch, Stratholme,
- *   Blackrockspitze) teilen sich dort ein Gebiet und werden deshalb gemeinsam gewertet.
- *   Prüfen lässt sich die Zuordnung unter /admin/blizzard → „Dungeon-Quests prüfen“.
- * - Neue Forever-Dungeons: Ihre Quests hängen in der API am umliegenden Gebiet (z. B. Dun Morogh),
- *   deshalb pflegen wir sie hier selbst – IDs aus `/quests/completed` bzw. Guides.
+ * Quelle: Addon „DungeonJournal“ von Exehn (Version 1.7.3, Datei `Data/Dungeons.lua` samt
+ * `Data/QuestUpdates.lua`). Übernommen sind die Quests, die das Journal in seiner Hauptliste zeigt:
+ * - ohne Klassenquests, ohne ausgeblendete Vorquests und ohne wiederholbare Quests
+ * - ohne Berufsquests (Der spektrale Kelch, Ein verbindlicher Vertrag, Die Dämonenschmiede) – die
+ *   kann nicht jeder Charakter annehmen, deshalb zählen sie wie Klassenquests nicht
+ * - ohne Quests, deren ID das Journal noch nicht kennt (Zul'Farrak „The Witch Doctor's Head“ und
+ *   Hügel von Razorfen „The Coldbringer's Eye“ für die Allianz, Alcaz Prison) – nachtragen, sobald bekannt
  *
- * Klassen- und Volksquests zählen nie (Angabe `requirements` in den Questdaten).
+ * Bei Updates des Addons: Liste neu erzeugen und unter /admin/blizzard → „Dungeon-Quests prüfen“
+ * kontrollieren, ob die Blizzard-API alle IDs kennt.
  */
+
 /**
  * Eine Quest eines Dungeons:
  * - Zahl: Quest-ID
  * - Zahlen-Array: dieselbe Quest unter mehreren IDs (eine genügt)
- * - Text: Questtitel (deutsch wie im Spiel) – für Forever-Dungeons, deren IDs wir noch nicht kennen.
- *   Die Seite erkennt die Quest am Titel aus der Blizzard-API, sobald jemand sie erledigt hat.
+ * - Text: Questtitel (deutsch wie im Spiel), falls die ID unbekannt ist. Die Seite erkennt die Quest
+ *   dann am Titel aus der Blizzard-API, sobald jemand sie erledigt hat.
  */
 export type QuestSlot = number | number[] | string
 
 export interface DungeonQuestGroup {
-  /** eigene Kennung (bei einflügeligen Dungeons = Dungeon-Slug) */
+  /** eigene Kennung (= Dungeon-Slug) */
   id: string
   name: string
   /** zugehörige Dungeon-Slugs aus shared/data/dungeons.ts */
   dungeonSlugs: string[]
-  /** Gebiet in der Blizzard-API (klassische Dungeons) */
-  areaId?: number
-  /**
-   * Dungeon-Quests, die in der API an einem anderen Gebiet hängen (z. B. per Drop gestartet und in
-   * einer Stadt abgegeben). Abgleich: Addon „Dungeon Journal“ im Spiel.
-   */
-  extraQuestIds?: number[]
-  /**
-   * von Hand gepflegte Quests (Forever-Dungeons). Ein Array innerhalb der Liste = dieselbe Quest
-   * unter mehreren IDs (eine davon genügt).
-   */
-  quests?: { alliance: QuestSlot[], horde: QuestSlot[] }
+  quests: { alliance: QuestSlot[], horde: QuestSlot[] }
 }
 
 export const dungeonQuestGroups: DungeonQuestGroup[] = [
-  { id: 'ragefire-chasm', name: 'Der Flammenschlund', dungeonSlugs: ['ragefire-chasm'], areaId: 2437 },
-  {
-    id: 'hall-of-thanes',
-    name: 'Halle der Thane',
-    dungeonSlugs: ['hall-of-thanes'],
-    // Important Heirlooms, The Restless Dead, Old Ironforge Incursion, An Ancient Grudge, The Treaty of Understanding
-    // (Horde: nur Important Heirlooms und An Ancient Grudge)
-    quests: { alliance: [96403, 96394, 96393, 96395, 98423], horde: [96403, 96395] },
-  },
-  {
-    id: 'ruins-of-lordaeron',
-    name: 'Ruinen von Lordaeron',
-    dungeonSlugs: ['ruins-of-lordaeron'],
-    // Allianz: Abominable Creatures, Bloodied Insignia, Remember That I Love You, Crest of Lordaeron
-    // („Crest of Lordaeron“ gibt es unter zwei IDs, eine davon ohne Fraktionsangabe – eine genügt).
-    // Horde (6 Quests): IDs noch nicht erfasst – nachtragen, sobald bekannt.
-    quests: { alliance: [95250, 95195, 92415, [95189, 95204]], horde: [] },
-  },
-  { id: 'wailing-caverns', name: 'Die Höhlen des Wehklagens', dungeonSlugs: ['wailing-caverns'], areaId: 718 },
-  // + 373 „Der nicht abgeschickte Brief“ (Drop von van Cleef, Abgabe in Sturmwind) – laut Dungeon Journal 7 Quests
-  { id: 'the-deadmines', name: 'Die Todesminen', dungeonSlugs: ['the-deadmines'], areaId: 1581, extraQuestIds: [373] },
-  { id: 'shadowfang-keep', name: 'Burg Schattenfang', dungeonSlugs: ['shadowfang-keep'], areaId: 209 },
-  {
-    id: 'excavation-site-wetlands',
-    name: 'Ausgrabungsstätte: Sumpfland',
-    dungeonSlugs: ['excavation-site-wetlands'],
-    // 7 Allianz-Quests laut Dungeon-Journal
-    quests: { alliance: ['Hochlandhäute', 'Songblades Suche', 'Schrecken im Hochland', 'Verloren im Dickicht', 'Herzgeflecht', 'Urzeitliches Prisma', 'Gefallen im Moor'], horde: [] },
-  },
-  {
-    id: 'city-of-dalaran',
-    name: 'Stadt Dalaran',
-    dungeonSlugs: ['city-of-dalaran'],
-    quests: { alliance: ['Eine grüne Probe', 'Überwältigende Macht', 'Verhungernder Arkaner', 'Das Herz der Störung'], horde: [] },
-  },
-  {
-    id: 'the-drowned-city',
-    name: 'The Drowned City',
-    dungeonSlugs: ['the-drowned-city'],
-    // Titel noch aus der Beta (englisch) – durch die deutschen ersetzen, sobald der Dungeon erscheint
-    quests: { alliance: ['Findings for the Explorer\'s League', 'The Web of Magic', 'Ancient Gurubashi Secrets', 'Shady Saltseers', 'The Saltseer Captain'], horde: [] },
-  },
-  {
-    id: 'krol-dok-stronghold',
-    name: 'Krol\'dok Stronghold',
-    dungeonSlugs: ['krol-dok-stronghold'],
-    // Titel noch aus der Beta (englisch)
-    quests: { alliance: ['Eye of Mugg', 'Twilight Mementos', 'Tome of Twilight', 'Vengeance of the Highborne'], horde: [] },
-  },
-  { id: 'blackfathom-deeps', name: 'Tiefschwarze Grotte', dungeonSlugs: ['blackfathom-deeps'], areaId: 719 },
-  { id: 'the-stockade', name: 'Das Verlies', dungeonSlugs: ['the-stockade'], areaId: 717 },
-  { id: 'gnomeregan', name: 'Gnomeregan', dungeonSlugs: ['gnomeregan'], areaId: 721 },
-  { id: 'razorfen-kraul', name: 'Kral der Klingenhauer', dungeonSlugs: ['razorfen-kraul'], areaId: 491 },
-  {
-    id: 'scarlet-monastery',
-    name: 'Scharlachrotes Kloster',
-    dungeonSlugs: ['scarlet-monastery-graveyard', 'scarlet-monastery-library', 'scarlet-monastery-armory', 'scarlet-monastery-cathedral'],
-    areaId: 796,
-  },
-  { id: 'razorfen-downs', name: 'Hügel von Razorfen', dungeonSlugs: ['razorfen-downs'], areaId: 722 },
-  { id: 'uldaman', name: 'Uldaman', dungeonSlugs: ['uldaman'], areaId: 1337 },
-  { id: 'zulfarrak', name: 'Zul\'Farrak', dungeonSlugs: ['zulfarrak'], areaId: 1176 },
-  { id: 'maraudon', name: 'Maraudon', dungeonSlugs: ['maraudon'], areaId: 2100 },
-  { id: 'temple-of-atal-hakkar', name: 'Versunkener Tempel', dungeonSlugs: ['temple-of-atal-hakkar'], areaId: 1477 },
-  { id: 'blackrock-depths', name: 'Blackrocktiefen', dungeonSlugs: ['blackrock-depths'], areaId: 1584 },
-  { id: 'blackrock-spire', name: 'Blackrockspitze', dungeonSlugs: ['lower-blackrock-spire', 'upper-blackrock-spire'], areaId: 1583 },
-  { id: 'dire-maul', name: 'Düsterbruch', dungeonSlugs: ['dire-maul-east', 'dire-maul-west', 'dire-maul-north'], areaId: 2557 },
-  { id: 'stratholme', name: 'Stratholme', dungeonSlugs: ['stratholme-living', 'stratholme-undead'], areaId: 2017 },
-  { id: 'scholomance', name: 'Scholomance', dungeonSlugs: ['scholomance'], areaId: 2057 },
+  { id: 'ragefire-chasm', name: 'Der Flammenschlund', dungeonSlugs: ['ragefire-chasm'], quests: { alliance: [], horde: [5723, 5722, 5724, 5728, 5761, 5725] } },
+  { id: 'hall-of-thanes', name: 'Halle der Thane', dungeonSlugs: ['hall-of-thanes'], quests: { alliance: [96395, 96403, 96394, 96393, 98423], horde: [96395, 96403] } },
+  // „Wappen von Lordaeron“ gibt es unter zwei IDs (95189 Allianz, 95204 Horde) – manche Charaktere
+  // haben die jeweils andere erledigt, deshalb genügt eine von beiden
+  { id: 'ruins-of-lordaeron', name: 'Ruinen von Lordaeron', dungeonSlugs: ['ruins-of-lordaeron'], quests: { alliance: [95250, 95195, [95189, 95204], 92415], horde: [97288, 92401, [95204, 95189], 92421, 95216, 92422] } },
+  { id: 'wailing-caverns', name: 'Die Höhlen des Wehklagens', dungeonSlugs: ['wailing-caverns'], quests: { alliance: [1486, 1491, 959, 1487, 6981], horde: [1486, 1491, 959, 1487, 6981, 914, 962] } },
+  { id: 'the-deadmines', name: 'Die Todesminen', dungeonSlugs: ['the-deadmines'], quests: { alliance: [214, 168, 92819, 167, 2040, 166, 373], horde: [] } },
+  { id: 'shadowfang-keep', name: 'Burg Schattenfang', dungeonSlugs: ['shadowfang-keep'], quests: { alliance: [], horde: [1098, 1013, 1014] } },
+  { id: 'blackfathom-deeps', name: 'Tiefschwarze Grotte', dungeonSlugs: ['blackfathom-deeps'], quests: { alliance: [971, 1275, 1198, 1199, 1200], horde: [6563, 6565, 6561, 6921, 6922] } },
+  { id: 'the-stockade', name: 'Das Verlies', dungeonSlugs: ['the-stockade'], quests: { alliance: [386, 377, 387, 388, 378, 391], horde: [] } },
+  { id: 'excavation-site-wetlands', name: 'Ausgrabungsstätte: Sumpfland', dungeonSlugs: ['excavation-site-wetlands'], quests: { alliance: [98815, 95772, 95646, 95647, 95809, 98824, 95795], horde: [95682, 95697, 98823] } },
+  { id: 'city-of-dalaran', name: 'Stadt Dalaran', dungeonSlugs: ['city-of-dalaran'], quests: { alliance: [92456, 92489, 92457, 92458], horde: [96984, 96987, 96988, 96986] } },
+  { id: 'gnomeregan', name: 'Gnomeregan', dungeonSlugs: ['gnomeregan'], quests: { alliance: [2922, 2962, 2928, 2924, 2930, 2929, 2904, 2951, 2948], horde: [2843, 2841, 2904, 2951, 2950] } },
+  { id: 'razorfen-kraul', name: 'Kral der Klingenhauer', dungeonSlugs: ['razorfen-kraul'], quests: { alliance: [1221, 1144, 1142, 1101], horde: [1221, 1144, 1102, 1109, 6521] } },
+  { id: 'scarlet-monastery-graveyard', name: 'Scharlachrotes Kloster: Friedhof', dungeonSlugs: ['scarlet-monastery-graveyard'], quests: { alliance: [], horde: [1051, 1113] } },
+  { id: 'scarlet-monastery-library', name: 'Scharlachrotes Kloster: Bibliothek', dungeonSlugs: ['scarlet-monastery-library'], quests: { alliance: [1050, 96800], horde: [1049, 1394, 1113] } },
+  { id: 'the-drowned-city', name: 'The Drowned City', dungeonSlugs: ['the-drowned-city'], quests: { alliance: [95799, 95798, 97130, 95789, 95791], horde: [95775, 95776, 96774, 95789, 95791] } },
+  { id: 'scarlet-monastery-armory', name: 'Scharlachrotes Kloster: Waffenkammer', dungeonSlugs: ['scarlet-monastery-armory'], quests: { alliance: [1053], horde: [1048, 1113] } },
+  { id: 'razorfen-downs', name: 'Hügel von Razorfen', dungeonSlugs: ['razorfen-downs'], quests: { alliance: [3525, 6626, 3636], horde: [3525, 6626, 3341, 6521, 97196] } },
+  { id: 'scarlet-monastery-cathedral', name: 'Scharlachrotes Kloster: Kathedrale', dungeonSlugs: ['scarlet-monastery-cathedral'], quests: { alliance: [1053], horde: [1048, 1113] } },
+  { id: 'uldaman', name: 'Uldaman', dungeonSlugs: ['uldaman'], quests: { alliance: [2240, 704, 17, 709, 2418, 1360, 1139, 2204, 2279], horde: [2202, 709, 2418, 2342, 2339, 2280] } },
+  { id: 'zulfarrak', name: 'Zul\'Farrak', dungeonSlugs: ['zulfarrak'], quests: { alliance: [2770, 2846, 2768, 2865, 3042, 3527, 2991], horde: [2770, 2846, 2768, 2865, 3042, 3527, 2936] } },
+  { id: 'krol-dok-stronghold', name: 'Krol\'dok Stronghold', dungeonSlugs: ['krol-dok-stronghold'], quests: { alliance: [94982, 94983, 94984, 96771], horde: [94968, 94972, 94975] } },
+  { id: 'maraudon', name: 'Maraudon', dungeonSlugs: ['maraudon'], quests: { alliance: [7067, 7070, 7041, 7028, 7044, 7046, 7065, 7066], horde: [7067, 7068, 7029, 7028, 7044, 7046, 7064, 7066] } },
+  { id: 'temple-of-atal-hakkar', name: 'Versunkener Tempel', dungeonSlugs: ['temple-of-atal-hakkar'], quests: { alliance: [1475, 3446, 3447, 1446, 3528, 3373, 4143], horde: [1445, 3446, 3447, 1446, 3528, 3373, 4146] } },
+  { id: 'blackrock-depths', name: 'Blackrocktiefen', dungeonSlugs: ['blackrock-depths'], quests: { alliance: [3802, 4123, 4136, 4201, 4126, 4263, 4322, 4024, 4362, 4286, 7848, 4295], horde: [3802, 4123, 4136, 4201, 4134, 3907, 7201, 4063, 4132, 4024, 4003, 7848, 4295] } },
+  { id: 'lower-blackrock-spire', name: 'Untere Blackrockspitze', dungeonSlugs: ['lower-blackrock-spire'], quests: { alliance: [4742, 5081, 4701, 4729, 4862, 4866, 4867, 5089, 4788], horde: [4742, 4981, 4982, 4903, 4724, 4729, 4862, 4866, 4867, 4788] } },
+  { id: 'upper-blackrock-spire', name: 'Obere Blackrockspitze', dungeonSlugs: ['upper-blackrock-spire'], quests: { alliance: [4743, 7761, 4735, 5102, 6502, 4764, 5047, 5160], horde: [4743, 7761, 4735, 6602, 4768, 5047, 5160] } },
+  { id: 'dire-maul-east', name: 'Düsterbruch: Ost', dungeonSlugs: ['dire-maul-east'], quests: { alliance: [7441, 7488, 5526], horde: [7441, 7489, 5526] } },
+  { id: 'dire-maul-west', name: 'Düsterbruch: West', dungeonSlugs: ['dire-maul-west'], quests: { alliance: [7461, 7482, 5247, 7703], horde: [7461, 7481, 7703] } },
+  { id: 'dire-maul-north', name: 'Düsterbruch: Nord', dungeonSlugs: ['dire-maul-north'], quests: { alliance: [7703, 5525, 5518, 7482, 7507], horde: [7703, 5525, 5518, 7481, 7507] } },
+  { id: 'stratholme-living', name: 'Stratholme: Lebend', dungeonSlugs: ['stratholme-living'], quests: { alliance: [5262, 5212, 5243, 5214, 5848, 5122, 5282], horde: [5262, 5212, 5243, 5214, 5848, 5122, 5282] } },
+  { id: 'stratholme-undead', name: 'Stratholme: Untot', dungeonSlugs: ['stratholme-undead'], quests: { alliance: [5263, 5213, 5282, 5125, 8945, 5463], horde: [5263, 5213, 5282, 6163, 5125, 8945, 5463] } },
+  { id: 'scholomance', name: 'Scholomance', dungeonSlugs: ['scholomance'], quests: { alliance: [5466, 5343, 4771, 5529], horde: [5466, 5341, 4771, 5529] } },
 ]
+
+/**
+ * Questtitel laut Journal (deutsch, wo das Addon eine Übersetzung hat) – Ersatz, solange die
+ * Blizzard-API eine Quest noch nicht kennt.
+ */
+export const dungeonQuestTitles: Readonly<Record<number, string>> = {
+  17: 'Reagenzsuche in Uldaman',
+  166: 'Die Bruderschaft der Defias',
+  167: 'Oh Bruder...',
+  168: 'Erinnerungen sammeln',
+  214: 'Rote Seidenkopftücher',
+  373: 'Der nicht abgeschickte Brief',
+  377: 'Verbrechen und Strafe',
+  378: 'Tief empfundener Zorn',
+  386: 'Wie man in den Wald hineinruft...',
+  387: 'Niederschlagung des Aufstandes',
+  388: 'Die Farbe von Blut',
+  391: 'Aufstand im Verlies',
+  704: 'Agmonds Schicksal',
+  709: 'Lösung der Verdammnis',
+  914: 'Anführer des Giftzahns',
+  959: 'Ärger an den Docks',
+  962: 'Schlangenflaum',
+  971: 'Wissen in der Tiefe',
+  1013: 'Das Buch von Ur',
+  1014: 'Arugal muss sterben',
+  1048: 'In das Scharlachrote Kloster',
+  1049: 'Kompendium der Gefallenen',
+  1050: 'Mythologie der Titanen',
+  1051: 'Vorrels Rache',
+  1053: 'Im Namen des Lichts',
+  1098: 'Todespirscher in Burg Schattenfang',
+  1101: 'Die Vettel des Krals',
+  1102: 'Ein rachsüchtiges Schicksal',
+  1109: 'Guano, guano!',
+  1113: 'Herzen des Eifers',
+  1139: 'Die verlorene Tafel des Willens',
+  1142: 'Die Sterblichkeit schwindet',
+  1144: 'Willix der Importeur',
+  1198: 'Auf der Suche nach Thaelrid',
+  1199: 'Wenn das Zwielicht fällt',
+  1200: 'Schurkerei in der Tiefschwarzen Grotte',
+  1221: 'Blaublattknollen',
+  1275: 'Die Verderbnis erforschen',
+  1360: 'Wiederbeschaffte Schätze',
+  1394: 'Letzte Überfahrt',
+  1445: 'Der Tempel von Atal\'Hakkar',
+  1446: 'Jammal\'an der Prophet',
+  1475: 'Im Tempel von Atal\'Hakkar',
+  1486: 'Deviatbälge',
+  1487: 'Ausrottung der Deviat',
+  1491: 'Kluge Getränke',
+  2040: 'Angriff aus dem Untergrund',
+  2202: 'Reagenzsuche in Uldaman',
+  2204: 'Restaurierung der Halskette',
+  2240: 'Die geheime Kammer',
+  2279: 'Die Platinscheiben',
+  2280: 'Die Platinscheiben',
+  2339: 'Findet die Edelsteine und die Kraftquelle',
+  2342: 'Wiederbeschaffte Schätze',
+  2418: 'Kraftsteine',
+  2768: 'Wünschel-mato-Rute',
+  2770: 'Gahz\'rilla',
+  2841: 'Bohrturmkriege',
+  2843: 'Gnomer-weeeeeg!',
+  2846: 'Tiara der Tiefen',
+  2865: 'Skarabäuspanzerschalen',
+  2904: 'Ein feines Durcheinander',
+  2922: 'Rettet Techbots Gehirn!',
+  2924: 'Essenzielle Artefakte',
+  2928: 'Gyrobohrmatische Exkavatoren',
+  2929: 'Der große Verrat',
+  2930: 'Datenrettung',
+  2936: 'Der Spinnengott',
+  2948: 'Gnomenverbesserung',
+  2950: 'Noggs Ringreparatur',
+  2951: 'Der Glitzermatic 5200!',
+  2962: 'Gegen grünes Leuchten hilft nur mehr grünes Leuchten',
+  2991: 'Nekrums Medaillon',
+  3042: 'Trollaushärter',
+  3341: 'Das Ende bringen',
+  3373: 'Die Essenz des Eranikus',
+  3446: 'In die Tiefen',
+  3447: 'Das Geheimnis des Kreises',
+  3525: 'Ausschalten des Götzen',
+  3527: 'Die Prophezeiung von Mosh\'aru',
+  3528: 'Der Gott Hakkar',
+  3636: 'Das Licht bringen',
+  3802: 'Dunkeleisenerbe',
+  3907: 'Disharmonie des Feuers',
+  4003: 'Die königliche Rettung',
+  4024: 'Eine Kostprobe der Flamme',
+  4063: 'Aufstieg der Maschinen',
+  4123: 'Das Herz des Berges',
+  4126: 'Hurley Pestatem',
+  4132: 'Operation: Tod dem Zornesschmied',
+  4134: 'Verlorenes Donnerbräurezept',
+  4136: 'Ribbly Screwspigot',
+  4143: 'Der Dunst des Bösen',
+  4146: 'Schrumpf-Treibstoff',
+  4201: 'Der Liebestrank',
+  4263: 'Incendius!',
+  4286: 'Feine Sachen',
+  4295: 'Rocknots Bier',
+  4322: 'Gefängnisausbruch!',
+  4362: 'Das Schicksal des Königreichs',
+  4701: 'Stellt sie ab',
+  4724: 'Die Herrin der Meute',
+  4729: 'Kiblers Exotische Tiere',
+  4735: 'Eiersammlung',
+  4742: 'Siegel des Aufstiegs',
+  4743: 'Siegel des Aufstiegs',
+  4764: 'Doomriggers Schnalle',
+  4768: 'Die Darkstone-Schrifttafel',
+  4771: 'Dämmerungstrickfalle',
+  4788: 'Die letzten Schrifttafeln',
+  4862: 'Be-Öh-Es-Eh',
+  4866: 'Muttermilch',
+  4867: 'Urok Schreckensbote',
+  4903: 'Befehl des Kriegsherrn',
+  4981: 'Agentin Bijou',
+  4982: 'Bijous Habseligkeiten',
+  5047: 'Finkle Einhorn, At Your Service!',
+  5081: 'Maxwells Mission',
+  5089: 'General Drakkisaths Befehl',
+  5102: 'General Drakkisaths Niedergang',
+  5122: 'Das Medaillon des Glaubens',
+  5125: 'Aurius\' Abrechnung',
+  5160: 'Die oberste Beschützerin',
+  5212: 'Das Fleisch lügt nicht',
+  5213: 'Der aktive Wirkstoff',
+  5214: 'Der große Fras Siabi',
+  5243: 'Häuser der Heiligen',
+  5247: 'Fragmente der Vergangenheit',
+  5262: 'Die Wahrheit zeigt sich mit Macht',
+  5263: 'Übertroffen',
+  5282: 'Die ruhelosen Seelen',
+  5341: 'Das Familienvermögen der Barovs',
+  5343: 'Das Familienvermögen der Barovs',
+  5463: 'Menethils Geschenk',
+  5466: 'Der Lich Ras Frostraunen',
+  5518: 'Der Ogeranzug der Gordok',
+  5525: 'Befreit Knot!',
+  5526: 'Die Splitter der Teufelsranke',
+  5529: 'Verseuchte Jungtiere',
+  5722: 'Suche nach der verlorenen Tasche',
+  5723: 'Die Stärke des Feindes testen',
+  5724: 'Die verlorene Tasche zurückbringen',
+  5725: 'Die Macht der Zerstörung...',
+  5728: 'Verborgene Feinde',
+  5761: 'Die Bestie erschlagen',
+  5848: 'Von Liebe und Familie',
+  6163: 'Ramstein',
+  6502: 'Drachenfeueramulett',
+  6521: 'Eine unheilige Allianz',
+  6561: 'Schurkerei in der Tiefschwarzen Grotte',
+  6563: 'Die Essenz von Aku\'mai',
+  6565: 'Treue zu den Alten Göttern',
+  6602: 'Blut des schwarzen Großdrachen-Helden',
+  6626: 'Ein Hort des Bösen',
+  6921: 'Inmitten der Ruinen',
+  6922: 'Baron Aquanis',
+  6981: 'Der leuchtende Splitter',
+  7028: 'Dunkles Böses',
+  7029: 'Schlangenzunges Verderbnis',
+  7041: 'Schlangenzunges Verderbnis',
+  7044: 'Legenden von Maraudon',
+  7046: 'Das Szepter von Celebras',
+  7064: 'Verderbnis von Erde und Samenkorn',
+  7065: 'Verderbnis von Erde und Samenkorn',
+  7066: 'Samenkorn des Lebens',
+  7067: 'Die Anweisungen des Pariahs',
+  7068: 'Schattensplitter',
+  7070: 'Schattensplitter',
+  7201: 'Das letzte Element',
+  7441: 'Pusillin und der Älteste Azj\'Tordin',
+  7461: 'Der innere Wahnsinn',
+  7481: 'Elfische Legenden',
+  7482: 'Elfische Legenden',
+  7488: 'Lethtendris\' Netz',
+  7489: 'Lethtendris\' Netz',
+  7507: 'Nostros Kompendium',
+  7703: 'Die offene Rechnung der Gordok',
+  7761: 'Blackhands Befehl',
+  7848: 'Abstimmung mit dem Kern',
+  8945: 'Die letzte Bitte eines toten Mannes',
+  92401: 'Eine verängstigte Bitte',
+  92415: 'Denk daran, dass ich dich liebe',
+  92421: 'Gerechtigkeit des Lichts',
+  92422: 'Rath\'maels Zorn',
+  92456: 'Eine grüne Probe',
+  92457: 'Verhungernder Arkaner',
+  92458: 'Das Herz der Störung',
+  92489: 'Überwältigende Macht',
+  92819: 'Zerstörung in den Todesminen',
+  94968: 'Eye of Mugg',
+  94972: 'Tome of Twilight',
+  94975: 'A Token of Vengeance',
+  94982: 'Eye of Mugg',
+  94983: 'Twilight Mementos',
+  94984: 'Tome of Twilight',
+  95189: 'Wappen von Lordaeron',
+  95195: 'Blutbefleckte Insignie',
+  95204: 'Wappen von Lordaeron',
+  95216: 'Die neue Seuche',
+  95250: 'Abscheuliche Kreaturen',
+  95646: 'Schrecken im Hochland',
+  95647: 'Verloren im Dickicht',
+  95682: 'Das Maul öffnen',
+  95697: 'Geschmackswandel',
+  95772: 'Songblades Suche',
+  95775: 'The Drowned City',
+  95776: 'The Only Good Brinescale...',
+  95789: 'Shady Saltseers',
+  95791: 'The Saltseer Captain',
+  95795: 'Gefallen im Moor',
+  95798: 'The Web of Magic',
+  95799: 'Findings for the Explorer\'s League',
+  95809: 'Herzgeflecht',
+  96393: 'Vorstoß ins alte Eisenschmiede',
+  96394: 'Die ruhelosen Toten',
+  96395: 'Ein alter Groll',
+  96403: 'Wichtige Erbstücke',
+  96771: 'Vengeance of the Highborne',
+  96774: 'Ancient Gurubashi Idol',
+  96800: 'Überfällig',
+  96984: 'Das Herz der Störung',
+  96986: 'Der Grabritter',
+  96987: 'Berechnende Bildung',
+  96988: 'Quelle der Macht',
+  97130: 'Ancient Gurubashi Secrets',
+  97196: 'The Coldbringer\'s Eye',
+  97288: 'Endlose Qual',
+  98423: 'Der Vertrag der Verständigung',
+  98815: 'Hochlandhäute',
+  98823: 'Irdenes Echo',
+  98824: 'Urzeitliches Prisma',
+}
