@@ -93,7 +93,7 @@ export async function questProgressFor(characters: readonly { name: string, fact
   const namespace = completed.find(entry => entry.quests?.staticNamespace)?.quests?.staticNamespace ?? `static-forever-${blizzard.region}`
   const { groups } = await resolvedDungeonGroups(namespace)
   const catalog = await catalogFor(completed.flatMap(entry => entry.quests?.ids ?? []), namespace)
-  const groupCatalog = await catalogFor(groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flat()), namespace)
+  const groupCatalog = await catalogFor(groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flat()).filter((slot): slot is number => typeof slot === 'number'), namespace)
   const titles = new Map([...groupCatalog, ...catalog].map(([id, quest]) => [id, quest.title]))
 
   for (const { character, quests } of completed) {

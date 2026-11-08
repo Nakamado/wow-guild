@@ -22,7 +22,14 @@ export interface ResolvedDungeonGroup {
   questIds: { alliance: QuestSlot[], horde: QuestSlot[] }
 }
 
-const slotIds = (slot: QuestSlot) => (Array.isArray(slot) ? slot : [slot])
+/** Questtitel vergleichbar machen (Groß-/Kleinschreibung, Leerzeichen, Apostrophe) */
+export const normalizeQuestTitle = (title: string) => title.toLocaleLowerCase('de-DE').replace(/[’`´]/g, '\'').replace(/\s+/g, ' ').trim()
+
+/** IDs eines Slots; Titel-Slots werden über die erledigten Quests mit gleichem Titel aufgelöst */
+function slotIds(slot: QuestSlot, idsByTitle: ReadonlyMap<string, number[]>): number[] {
+  if (typeof slot === 'string') return idsByTitle.get(normalizeQuestTitle(slot)) ?? []
+  return Array.isArray(slot) ? slot : [slot]
+}
 
 export interface DungeonProgress {
   groupId: string
@@ -71,7 +78,14 @@ export function questProgress(input: {
   groups: readonly ResolvedDungeonGroup[]
 }): QuestProgress {
   const done = new Set(input.completed)
-  const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flatMap(slotIds)))
+  const idsByTitle = new Map<string, number[]>()
+  for (const id of done) {
+    const title = input.catalog.get(id)?.title
+    if (!title) continue
+    const key = normalizeQuestTitle(title)
+    idsByTitle.set(key, [...(idsByTitle.get(key) ?? []), id])
+  }
+  const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flatMap(slot => slotIds(slot, idsByTitle))))
   const counts = (id: number) => !input.catalog.get(id)?.restricted && input.catalog.get(id)?.typeId !== QUEST_TYPE.class
 
   const dungeonQuests = onePerTitle([...done].filter(id => counts(id) && (inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon)), input.catalog)
@@ -81,7 +95,7 @@ export function questProgress(input: {
   const dungeons = input.faction
     ? input.groups.map((group) => {
         const required = group.questIds[input.faction!]
-        const finished = required.filter(slot => slotIds(slot).some(id => done.has(id))).length
+        const finished = required.filter(slot => slotIds(slot, idsByTitle).some(id => done.has(id))).length
         return { groupId: group.id, name: group.name, done: finished, total: required.length, complete: required.length > 0 && finished === required.length }
       }).filter(entry => entry.total > 0)
     : []
