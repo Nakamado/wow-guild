@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MAX_COMPARE } from '#shared/domain/compare'
 import type { ProgressType } from '#shared/schemas/points'
 
 useSeoMeta({ title: 'Rangliste', description: 'Punkte für Levelaufstiege, Dungeons, Raids und Berufe – Main und Gesamt.' })
@@ -33,6 +34,30 @@ const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeSty
 const openRow = ref<string | null>(null)
 watch(board, () => (openRow.value = null))
 const toggleRow = (memberId: string) => (openRow.value = openRow.value === memberId ? null : memberId)
+
+// Vergleich: Auswahlmodus einschalten, 2–4 Einträge abhaken, dann „Vergleich anzeigen“
+const compareMode = ref(false)
+const compareIds = ref<string[]>([])
+const compareOpen = ref(false)
+function resetCompare() {
+  compareIds.value = []
+  compareOpen.value = false
+}
+watch(board, resetCompare)
+function toggleCompareMode() {
+  compareMode.value = !compareMode.value
+  resetCompare()
+}
+function toggleCompare(memberId: string) {
+  const selected = compareIds.value
+  if (selected.includes(memberId)) compareIds.value = selected.filter(id => id !== memberId)
+  else if (selected.length < MAX_COMPARE) compareIds.value = [...selected, memberId]
+}
+const compareRows = computed(() => compareIds.value
+  .map(id => rows.value.find(row => row.memberId === id))
+  .filter((row): row is NonNullable<typeof row> => Boolean(row)))
+const rowName = (row: { displayName: string, mainCharacter: { name: string } | null }) =>
+  board.value === 'main' ? row.mainCharacter?.name ?? row.displayName : row.displayName
 </script>
 
 <template>
@@ -74,24 +99,35 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
         >
           Rangliste
         </h2>
-        <div
-          class="ranking-page__switch"
-          role="group"
-          aria-label="Rangliste wählen"
-        >
-          <button
-            v-for="entry in boards"
-            :key="entry.id"
-            type="button"
-            class="ranking-page__switch-button"
-            :aria-pressed="board === entry.id"
-            @click="board = entry.id"
+        <div class="ranking-page__toolbar">
+          <div
+            class="ranking-page__switch"
+            role="group"
+            aria-label="Rangliste wählen"
           >
-            {{ entry.label }}
-          </button>
+            <button
+              v-for="entry in boards"
+              :key="entry.id"
+              type="button"
+              class="ranking-page__switch-button"
+              :aria-pressed="board === entry.id"
+              @click="board = entry.id"
+            >
+              {{ entry.label }}
+            </button>
+          </div>
+          <BaseButton
+            v-if="rows.length > 1"
+            size="sm"
+            :variant="compareMode ? 'primary' : 'secondary'"
+            :aria-pressed="compareMode"
+            @click="toggleCompareMode"
+          >
+            {{ compareMode ? 'Vergleich beenden' : 'Vergleichen' }}
+          </BaseButton>
         </div>
         <p class="ranking-page__hint">
-          {{ activeHint }}
+          {{ compareMode ? `Hake zwei bis ${MAX_COMPARE} Einträge ab, um sie zu vergleichen.` : activeHint }}
         </p>
 
         <EmptyState
@@ -111,52 +147,68 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
             class="ranking-page__row"
             :class="{ [`ranking-page__row--top${row.rank}`]: row.rank <= 3, 'ranking-page__row--open': openRow === row.memberId }"
           >
-            <button
-              type="button"
-              class="ranking-page__summary"
-              :aria-expanded="openRow === row.memberId"
-              :aria-controls="`breakdown-${board}-${row.memberId}`"
-              @click="toggleRow(row.memberId)"
-            >
-              <span
-                class="ranking-page__rank"
-                :aria-label="`Platz ${row.rank}`"
-              >{{ row.rank }}</span>
-              <MemberAvatar
-                :name="row.displayName"
-                :src="row.avatarUrl"
-                size="sm"
-              />
-              <span class="ranking-page__who">
-                <!-- Main: Charaktername · Gesamt: Discord-Name der Person (gleiches Profilbild verbindet beide Listen) -->
-                <span class="ranking-page__name">{{ board === 'main' ? (row.mainCharacter?.name ?? row.displayName) : row.displayName }}</span>
+            <div class="ranking-page__head">
+              <button
+                type="button"
+                class="ranking-page__summary"
+                :aria-expanded="openRow === row.memberId"
+                :aria-controls="`breakdown-${board}-${row.memberId}`"
+                @click="toggleRow(row.memberId)"
+              >
                 <span
-                  v-if="board === 'main'"
-                  class="ranking-page__detail"
-                >
-                  <ClassBadge
-                    v-if="row.mainCharacter"
-                    :class-id="row.mainCharacter.classId"
-                  />
-                  <span v-if="row.mainCharacter">Stufe {{ row.mainCharacter.level }}</span>
+                  class="ranking-page__rank"
+                  :aria-label="`Platz ${row.rank}`"
+                >{{ row.rank }}</span>
+                <MemberAvatar
+                  :name="row.displayName"
+                  :src="row.avatarUrl"
+                  size="sm"
+                />
+                <span class="ranking-page__who">
+                  <!-- Main: Charaktername · Gesamt: Discord-Name der Person (gleiches Profilbild verbindet beide Listen) -->
+                  <span class="ranking-page__name">{{ board === 'main' ? (row.mainCharacter?.name ?? row.displayName) : row.displayName }}</span>
+                  <span
+                    v-if="board === 'main'"
+                    class="ranking-page__detail"
+                  >
+                    <ClassBadge
+                      v-if="row.mainCharacter"
+                      :class-id="row.mainCharacter.classId"
+                    />
+                    <span v-if="row.mainCharacter">Stufe {{ row.mainCharacter.level }}</span>
+                  </span>
+                  <span
+                    v-else
+                    class="ranking-page__detail"
+                  >
+                    {{ row.characterCount === 1 ? '1 Charakter' : `${row.characterCount} Charaktere` }}
+                  </span>
                 </span>
-                <span
-                  v-else
-                  class="ranking-page__detail"
-                >
-                  {{ row.characterCount === 1 ? '1 Charakter' : `${row.characterCount} Charaktere` }}
+                <span class="ranking-page__points">
+                  {{ points.format(row.points) }}
+                  <span class="ranking-page__unit">Punkte</span>
                 </span>
-              </span>
-              <span class="ranking-page__points">
-                {{ points.format(row.points) }}
-                <span class="ranking-page__unit">Punkte</span>
-              </span>
-              <BaseIcon
-                name="chevronDown"
-                :size="18"
-                class="ranking-page__chevron"
-              />
-            </button>
+                <BaseIcon
+                  name="chevronDown"
+                  :size="18"
+                  class="ranking-page__chevron"
+                />
+              </button>
+              <label
+                v-if="compareMode"
+                class="ranking-page__compare-toggle"
+                :class="{ 'ranking-page__compare-toggle--checked': compareIds.includes(row.memberId) }"
+              >
+                <input
+                  type="checkbox"
+                  class="ranking-page__compare-check"
+                  :checked="compareIds.includes(row.memberId)"
+                  :disabled="compareIds.length >= MAX_COMPARE && !compareIds.includes(row.memberId)"
+                  @change="toggleCompare(row.memberId)"
+                >
+                <span class="visually-hidden">{{ rowName(row) }} zum Vergleich auswählen</span>
+              </label>
+            </div>
 
             <div
               v-show="openRow === row.memberId"
@@ -210,6 +262,49 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
             </div>
           </li>
         </ol>
+
+        <div
+          v-if="compareMode && compareIds.length"
+          class="ranking-page__compare-bar"
+          role="status"
+        >
+          <span v-if="compareRows.length === 1">
+            <strong>{{ rowName(compareRows[0]!) }}</strong> ausgewählt – hake mindestens einen weiteren Eintrag ab.
+          </span>
+          <span v-else>
+            {{ compareRows.length }} ausgewählt: {{ compareRows.map(rowName).join(', ') }}
+          </span>
+          <span class="ranking-page__compare-actions">
+            <BaseButton
+              size="sm"
+              :disabled="compareRows.length < 2"
+              @click="compareOpen = true"
+            >
+              Vergleich anzeigen
+            </BaseButton>
+            <BaseButton
+              size="sm"
+              variant="ghost"
+              @click="resetCompare"
+            >
+              Auswahl aufheben
+            </BaseButton>
+          </span>
+        </div>
+
+        <BaseDialog
+          v-if="compareRows.length >= 2"
+          v-model:open="compareOpen"
+          title="Vergleich"
+          :description="board === 'main' ? 'Main-Charaktere im Vergleich' : 'Personen im Vergleich (Main und Twinks zusammen)'"
+          size="lg"
+        >
+          <RankingCompare
+            :entries="compareRows"
+            :board="board"
+            :order="ruleOrder"
+          />
+        </BaseDialog>
       </section>
 
       <section
@@ -345,16 +440,82 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
     }
   }
 
+  &__head {
+    display: flex;
+    align-items: stretch;
+  }
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__compare-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    cursor: pointer;
+    border-left: 1px solid var(--color-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+
+    &--checked {
+      background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    }
+
+    &:has(:disabled) {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+  }
+
+  &__compare-check {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: inherit;
+    accent-color: var(--color-accent);
+
+    @include focus-ring(2px);
+  }
+
+  &__compare-bar {
+    position: sticky;
+    bottom: var(--space-4);
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    background: var(--color-surface-raised, var(--color-surface));
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg, 0 8px 24px rgb(0 0 0 / 35%));
+  }
+
+  &__compare-actions {
+    display: inline-flex;
+    gap: var(--space-2);
+  }
+
   &__summary {
     display: grid;
     grid-template-columns: 2.5rem auto 1fr auto auto;
     gap: var(--space-3);
+    flex: 1;
     align-items: center;
-    width: 100%;
+    min-width: 0;
     padding: var(--space-3) var(--space-4);
     text-align: left;
     cursor: pointer;
-    border-radius: inherit;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
 
     @include focus-ring(2px);
 
