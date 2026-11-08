@@ -28,6 +28,7 @@ export default defineEventHandler(async (event) => {
       ? {
           dungeons: progress.dungeons.filter(entry => entry.done > 0).sort((a, b) => Number(b.complete) - Number(a.complete) || b.done / b.total - a.done / a.total),
           dungeonQuests: progress.dungeonQuests.length,
+          unassignedDungeonQuests: progress.unassignedDungeonQuests.length,
           groupQuests: progress.groupQuests.length,
         }
       : null,

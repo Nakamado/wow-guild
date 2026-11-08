@@ -14,6 +14,7 @@ interface CharacterResponse {
   dungeonProgress?: {
     dungeons: { groupId: string, name: string, done: number, total: number, complete: boolean }[]
     dungeonQuests: number
+    unassignedDungeonQuests: number
     groupQuests: number
   } | null
   member: { id: string, displayName: string, avatarUrl: string | null }
@@ -326,6 +327,13 @@ useSeoMeta({ title: () => character.value?.name ?? 'Charakter', robots: 'noindex
             </span>
           </li>
         </ul>
+        <p
+          v-if="data.dungeonProgress.unassignedDungeonQuests"
+          class="character-page__muted"
+        >
+          Dazu {{ data.dungeonProgress.unassignedDungeonQuests }} weitere Dungeon-Quest{{ data.dungeonProgress.unassignedDungeonQuests === 1 ? '' : 's' }}
+          aus Dungeons, deren Quest-Liste wir noch nicht erfasst haben – die Punkte zählen trotzdem.
+        </p>
       </section>
 
       <section

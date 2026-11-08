@@ -67,7 +67,7 @@ export async function resolvedDungeonGroups(namespace: string): Promise<{ groups
   await Promise.all(dungeonQuestGroups.filter(group => group.areaId).map(async (group) => {
     areas.set(group.id, await cachedArea(group.areaId!, namespace).catch(() => null))
   }))
-  const allIds = [...areas.values()].flatMap(area => area?.questIds ?? [])
+  const allIds = [...[...areas.values()].flatMap(area => area?.questIds ?? []), ...dungeonQuestGroups.flatMap(group => group.extraQuestIds ?? [])]
   const catalog = await catalogFor(allIds, namespace)
   const groups = dungeonQuestGroups.map(group => resolveDungeonGroup(group, areas.get(group.id)?.questIds ?? [], catalog))
   return { groups, areas }
@@ -93,7 +93,7 @@ export async function questProgressFor(characters: readonly { name: string, fact
   const namespace = completed.find(entry => entry.quests?.staticNamespace)?.quests?.staticNamespace ?? `static-forever-${blizzard.region}`
   const { groups } = await resolvedDungeonGroups(namespace)
   const catalog = await catalogFor(completed.flatMap(entry => entry.quests?.ids ?? []), namespace)
-  const groupCatalog = await catalogFor(groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde]), namespace)
+  const groupCatalog = await catalogFor(groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flat()), namespace)
   const titles = new Map([...groupCatalog, ...catalog].map(([id, quest]) => [id, quest.title]))
 
   for (const { character, quests } of completed) {

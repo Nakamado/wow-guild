@@ -11,6 +11,9 @@
  *
  * Klassen- und Volksquests zählen nie (Angabe `requirements` in den Questdaten).
  */
+/** Quest-ID oder Alternativen derselben Quest (z. B. Allianz-/Horde-Variante mit fehlerhafter Fraktionsangabe) */
+export type QuestSlot = number | number[]
+
 export interface DungeonQuestGroup {
   /** eigene Kennung (bei einflügeligen Dungeons = Dungeon-Slug) */
   id: string
@@ -19,8 +22,16 @@ export interface DungeonQuestGroup {
   dungeonSlugs: string[]
   /** Gebiet in der Blizzard-API (klassische Dungeons) */
   areaId?: number
-  /** von Hand gepflegte Quests (Forever-Dungeons) */
-  quests?: { alliance: number[], horde: number[] }
+  /**
+   * Dungeon-Quests, die in der API an einem anderen Gebiet hängen (z. B. per Drop gestartet und in
+   * einer Stadt abgegeben). Abgleich: Addon „Dungeon Journal“ im Spiel.
+   */
+  extraQuestIds?: number[]
+  /**
+   * von Hand gepflegte Quests (Forever-Dungeons). Ein Array innerhalb der Liste = dieselbe Quest
+   * unter mehreren IDs (eine davon genügt).
+   */
+  quests?: { alliance: QuestSlot[], horde: QuestSlot[] }
 }
 
 export const dungeonQuestGroups: DungeonQuestGroup[] = [
@@ -33,8 +44,18 @@ export const dungeonQuestGroups: DungeonQuestGroup[] = [
     // (Horde: nur Important Heirlooms und An Ancient Grudge)
     quests: { alliance: [96403, 96394, 96393, 96395, 98423], horde: [96403, 96395] },
   },
+  {
+    id: 'ruins-of-lordaeron',
+    name: 'Ruinen von Lordaeron',
+    dungeonSlugs: ['ruins-of-lordaeron'],
+    // Allianz: Abominable Creatures, Bloodied Insignia, Remember That I Love You, Crest of Lordaeron
+    // („Crest of Lordaeron“ gibt es unter zwei IDs, eine davon ohne Fraktionsangabe – eine genügt).
+    // Horde (6 Quests): IDs noch nicht erfasst – nachtragen, sobald bekannt.
+    quests: { alliance: [95250, 95195, 92415, [95189, 95204]], horde: [] },
+  },
   { id: 'wailing-caverns', name: 'Die Höhlen des Wehklagens', dungeonSlugs: ['wailing-caverns'], areaId: 718 },
-  { id: 'the-deadmines', name: 'Die Todesminen', dungeonSlugs: ['the-deadmines'], areaId: 1581 },
+  // + 373 „Der nicht abgeschickte Brief“ (Drop von van Cleef, Abgabe in Sturmwind) – laut Dungeon Journal 7 Quests
+  { id: 'the-deadmines', name: 'Die Todesminen', dungeonSlugs: ['the-deadmines'], areaId: 1581, extraQuestIds: [373] },
   { id: 'shadowfang-keep', name: 'Burg Schattenfang', dungeonSlugs: ['shadowfang-keep'], areaId: 209 },
   { id: 'blackfathom-deeps', name: 'Tiefschwarze Grotte', dungeonSlugs: ['blackfathom-deeps'], areaId: 719 },
   { id: 'the-stockade', name: 'Das Verlies', dungeonSlugs: ['the-stockade'], areaId: 717 },

@@ -65,27 +65,28 @@ describe('Quest-Fortschritt', () => {
     resolveDungeonGroup(hall, [], catalog),
   ]
 
-  it('Nak Totembart: Todesminen 5/6, Halle der Thane vollständig', () => {
-    const completed = [65, 166, 167, 168, 214, 2040, 12, 1516, 96403, 96394, 96393, 96395, 98423]
+  it('Nak Totembart: Todesminen 6/7 (inkl. Der nicht abgeschickte Brief), Halle der Thane vollständig', () => {
+    const completed = [65, 166, 167, 168, 214, 2040, 373, 12, 1516, 96403, 96394, 96393, 96395, 98423]
     const progress = questProgress({ completed, faction: 'alliance', catalog, groups })
     expect(progress.dungeons).toEqual([
-      { groupId: 'the-deadmines', name: 'Die Todesminen', done: 5, total: 6, complete: false },
+      { groupId: 'the-deadmines', name: 'Die Todesminen', done: 6, total: 7, complete: false },
       { groupId: 'hall-of-thanes', name: 'Halle der Thane', done: 5, total: 5, complete: true },
     ])
     // Dungeon-Quests: alle aus den Gruppen; Vorquest 65 und Klassenquest 1516 zählen nicht
-    expect(progress.dungeonQuests).toEqual([166, 167, 168, 214, 2040, 96393, 96394, 96395, 96403, 98423])
+    expect(progress.dungeonQuests).toEqual([166, 167, 168, 214, 373, 2040, 96393, 96394, 96395, 96403, 98423])
+    expect(progress.unassignedDungeonQuests).toEqual([])
     expect(progress.groupQuests).toEqual([12])
   })
 
   it('zählt für die Horde nur Horde-taugliche Quests', () => {
     const progress = questProgress({ completed: [96403, 96395], faction: 'horde', catalog, groups })
     expect(progress.dungeons.find(entry => entry.groupId === 'hall-of-thanes')).toMatchObject({ done: 2, total: 2, complete: true })
-    expect(progress.dungeons.find(entry => entry.groupId === 'the-deadmines')).toMatchObject({ total: 4 })
+    expect(progress.dungeons.find(entry => entry.groupId === 'the-deadmines')).toMatchObject({ total: 5 })
   })
 
   it('wertet Klassenquests in einem Dungeon-Gebiet nicht', () => {
     const withClassQuest = resolveDungeonGroup(deadmines, [166, 1516], catalog)
-    expect(withClassQuest.questIds.alliance).toEqual([166])
+    expect(withClassQuest.questIds.alliance).toEqual([166, 373])
   })
 
   it('wertet gleichnamige Quests mit verschiedenen IDs nur einmal', () => {
@@ -94,6 +95,13 @@ describe('Quest-Fortschritt', () => {
     withTwins.set(95204, quest(95204, { title: 'Wappen von Lordaeron', typeId: 81 }))
     const progress = questProgress({ completed: [95204, 95189], faction: 'alliance', catalog: withTwins, groups })
     expect(progress.dungeonQuests).toEqual([95189])
+  })
+
+  it('Ruinen von Lordaeron: eine der beiden Wappen-IDs genügt', () => {
+    const ruins = resolveDungeonGroup(dungeonQuestGroups.find(group => group.id === 'ruins-of-lordaeron')!, [], catalog)
+    const progress = questProgress({ completed: [95250, 95195, 92415, 95204], faction: 'alliance', catalog, groups: [ruins] })
+    expect(progress.dungeons).toEqual([{ groupId: 'ruins-of-lordaeron', name: 'Ruinen von Lordaeron', done: 4, total: 4, complete: true }])
+    expect(progress.dungeonQuests).toEqual([92415, 95195, 95204, 95250])
   })
 
   it('macht daraus einmalige Punkte-Ereignisse je Charakter', () => {
