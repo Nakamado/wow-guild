@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { filterDungeons } from '#shared/domain/dungeons'
+import type { DungeonQuestStatus } from '#shared/domain/quests'
 import { isUpcoming } from '#shared/domain/runs'
 import type { DungeonFilterState } from '~/components/dungeons/DungeonFilters.vue'
 
@@ -40,6 +41,17 @@ const filter = computed<DungeonFilterState>({
 })
 
 const selectedCharacter = computed(() => myCharacters.value.find(character => character.id === filter.value.characterId) ?? null)
+
+// Quest-Fortschritt des ausgewählten Charakters je Dungeon (nur mit Blizzard-Daten)
+const selectedId = computed(() => selectedCharacter.value?.id ?? null)
+const { data: questData } = useLazyAsyncData(
+  'dungeon-finder-quests',
+  () => selectedId.value
+    ? $fetch<{ dungeons: Record<string, DungeonQuestStatus> | null }>(`/api/me/characters/${selectedId.value}/quests`).catch(() => null)
+    : Promise.resolve(null),
+  { server: false, watch: [selectedId] },
+)
+const questsBySlug = computed(() => (selectedId.value ? questData.value?.dungeons ?? null : null))
 
 const openRunsBySlug = computed(() => {
   const now = new Date()
@@ -113,6 +125,7 @@ function onSaved(run: { id: string }) {
             :dungeon="dungeon"
             :open-runs="openRunsBySlug.get(dungeon.slug) ?? 0"
             :character="selectedCharacter"
+            :quests="questsBySlug?.[dungeon.slug] ?? null"
           />
         </li>
       </ul>

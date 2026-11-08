@@ -34,14 +34,18 @@ function slotIds(slot: QuestSlot, idsByTitle: ReadonlyMap<string, number[]>): nu
   return Array.isArray(slot) ? slot : [slot]
 }
 
-export interface DungeonProgress {
-  groupId: string
-  name: string
+/** Quest-Stand eines Charakters in einem Dungeon */
+export interface DungeonQuestStatus {
   done: number
   total: number
   complete: boolean
   /** Titel der noch fehlenden Quests */
   missing: string[]
+}
+
+export interface DungeonProgress extends DungeonQuestStatus {
+  groupId: string
+  name: string
 }
 
 export interface QuestProgress {

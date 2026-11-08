@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { checkLevelFit, formatRange } from '#shared/domain/level'
+import type { DungeonQuestStatus } from '#shared/domain/quests'
 import type { Character, Dungeon } from '#shared/types'
 
 const props = defineProps<{
@@ -7,6 +8,8 @@ const props = defineProps<{
   openRuns: number
   /** Ausgewählter eigener Charakter für die Levelprüfung */
   character?: Character | null
+  /** Quest-Stand des ausgewählten Charakters in diesem Dungeon */
+  quests?: DungeonQuestStatus | null
 }>()
 
 const fit = computed(() => (props.character ? checkLevelFit(props.character.level, props.dungeon) : null))
@@ -71,6 +74,19 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
       class="dungeon-card__note"
     >
       {{ dungeon.note }}
+    </p>
+
+    <p
+      v-if="quests"
+      class="dungeon-card__quests"
+      :class="{ 'dungeon-card__quests--complete': quests.complete }"
+    >
+      <span class="dungeon-card__quests-count">{{ quests.done }}/{{ quests.total }} Quests</span>
+      <span v-if="quests.complete"> · alle erledigt</span>
+      <span
+        v-else-if="quests.missing.length <= 2"
+        class="dungeon-card__quests-missing"
+      > · fehlt noch: {{ quests.missing.join(', ') }}</span>
     </p>
 
     <footer class="dungeon-card__footer">
@@ -226,6 +242,24 @@ const showEnglish = computed(() => props.dungeon.nameEn !== props.dungeon.name)
       color: var(--color-danger);
       background: rgb(255 138 138 / 8%);
     }
+  }
+
+  &__quests {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+
+    &--complete {
+      color: var(--color-success);
+    }
+  }
+
+  &__quests-count {
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__quests-missing {
+    color: var(--color-text-subtle);
   }
 
   &__footer {
