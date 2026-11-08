@@ -7,7 +7,7 @@ import type { Character, Profession } from '#shared/types'
 let cachedClient: { key: string, client: BlizzardClient } | null = null
 
 /** Ein Client pro Zugangsdaten – so wird das App-Token zwischen Anfragen wiederverwendet */
-function blizzardClient(event?: H3Event): { client: BlizzardClient, region: string } | null {
+export function blizzardClient(event?: H3Event): { client: BlizzardClient, region: string } | null {
   const config = useRuntimeConfig(event)
   if (config.public.demoMode) return null
   const clientId = String(config.blizzard.clientId ?? '')

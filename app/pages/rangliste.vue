@@ -16,15 +16,16 @@ const activeHint = computed(() => boards.find(entry => entry.id === board.value)
 
 const ruleLabels: Record<ProgressType, string> = {
   'level': 'Levelaufstieg',
-  'dungeon-first': 'Dungeon-Erstabschluss (Bonus)',
+  'dungeon-first': 'Dungeon vollständig (alle Dungeon-Quests)',
   'dungeon-complete': 'Dungeon-Abschluss',
   'dungeon-quest': 'Dungeon-Quest abgeschlossen',
+  'group-quest': 'Gruppenquest abgeschlossen',
   'dungeon-boss': 'Dungeon-Boss besiegt',
   'raid-first': 'Raid-Erstabschluss (Bonus)',
   'raid-boss': 'Raid-Boss besiegt',
   'profession-milestone': 'Berufsmeilenstein',
 }
-const ruleOrder: ProgressType[] = ['level', 'dungeon-first', 'dungeon-complete', 'dungeon-quest', 'dungeon-boss', 'raid-first', 'raid-boss', 'profession-milestone']
+const ruleOrder: ProgressType[] = ['level', 'dungeon-quest', 'group-quest', 'dungeon-first', 'dungeon-complete', 'dungeon-boss', 'raid-first', 'raid-boss', 'profession-milestone']
 const points = new Intl.NumberFormat('de-DE')
 const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' })
 
@@ -61,7 +62,7 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
           :size="18"
         />
         <span>
-          <template v-if="data.isPreview">Testlauf: </template>Die Punkte kommen direkt aus der Blizzard-API – bisher nur Stufe und Berufe, Dungeons und Raids folgen.
+          <template v-if="data.isPreview">Testlauf: </template>Die Punkte kommen direkt aus der Blizzard-API – Stufe, Berufe und Quests; einzelne Dungeon-Läufe und Raids folgen.
           Die Daten können dem Spiel etwas hinterherhinken<template v-if="data.updatedAt"> (Stand: letzter Login {{ dateTime.format(new Date(data.updatedAt)) }})</template>.
         </span>
       </p>
@@ -252,7 +253,12 @@ const toggleRow = (memberId: string) => (openRow.value = openRow.value === membe
         <ul class="ranking-page__notes">
           <li>Wiederholbare Aktivität zählt höchstens {{ points.format(data.rules.weeklyRepeatableCap) }} Punkte pro Woche und Person (Wochenwechsel am Mittwoch).</li>
           <li>Berufsmeilensteine bei Skill {{ data.rules.professionMilestones.join(', ') }}.</li>
-          <li>Bereits erreichte Stufen, Berufsmeilensteine und Dungeon-Quests werden rückwirkend gezählt.</li>
+          <li>Bereits erreichte Stufen, Berufsmeilensteine und Quests werden rückwirkend gezählt; jede Quest zählt einmal pro Charakter.</li>
+          <li>
+            Ein Dungeon gilt als <strong>vollständig</strong>, wenn alle seine Dungeon-Quests deiner Fraktion erledigt sind –
+            Klassenquests zählen nicht. So rechnen wir, bis die Blizzard-API Dungeon-Abschlüsse liefert. Den Fortschritt je
+            Dungeon zeigt das Charakterprofil.
+          </li>
           <li>Punkte berechnet nur die Webseite; dieselbe Leistung zählt nie doppelt.</li>
           <li>
             In der Rangliste erscheinen nur Mitglieder, die zugestimmt haben – das geht in den

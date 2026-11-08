@@ -69,7 +69,7 @@ describe('Blizzard-Fortschritt lesen', () => {
 
   it('liest Profil, Klasse und letzten Login', () => {
     const progress = parseCharacterProgress('nak-totembart', 'Nak Totembart', {
-      id: 6815512, name: 'Nak', surname: 'Totembart', level: 19, character_class: { id: 7 }, last_login_timestamp: 1793892901000,
+      id: 6815512, name: 'Nak', surname: 'Totembart', level: 19, character_class: { id: 7 }, faction: { type: 'ALLIANCE' }, last_login_timestamp: 1793892901000,
     }, null)
     expect(progress).toEqual({
       characterId: 'bnet-6815512',
@@ -77,6 +77,7 @@ describe('Blizzard-Fortschritt lesen', () => {
       name: 'Nak Totembart',
       level: 19,
       classId: 'shaman',
+      faction: 'alliance',
       professions: [],
       lastLoginAt: new Date(1793892901000).toISOString(),
     })

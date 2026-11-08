@@ -199,6 +199,15 @@ describe('Mitglieder-Einstellungen und Chronik', () => {
   })
 })
 
+describe('quest_catalog', () => {
+  it('speichert Questdaten ohne Personenbezug und hat RLS aktiv', async () => {
+    await db.query(`insert into quest_catalog (id, title, type_id, area_id, faction) values (166, 'Die Bruderschaft der Defias', 81, 1581, null)`)
+    await expect(db.query(`insert into quest_catalog (id, title, faction) values (1, 'x', 'neutral')`)).rejects.toThrow()
+    const rls = await db.query<{ relrowsecurity: boolean }>(`select relrowsecurity from pg_class where relname = 'quest_catalog'`)
+    expect(rls.rows[0]!.relrowsecurity).toBe(true)
+  })
+})
+
 describe('board_notes', () => {
   it('speichert Aushänge und prüft Titel, Text und Ersteller', async () => {
     const { rows } = await db.query<{ id: string, expires_on: string | null }>(

@@ -6,10 +6,12 @@ import { instances } from '#shared/data/dungeons'
 import { findProfession } from '#shared/data/professions'
 import { buildLeaderboards, explainScore, retroactiveEvents, type LeaderboardRow } from '#shared/domain/points'
 import { leaderboardCharacterIds } from '#shared/domain/admin'
+import { questEvents } from '#shared/domain/quests'
+import type { CharacterQuestResult } from '../utils/quests'
 import type { ProgressEvent, ProgressType } from '#shared/schemas/points'
 
-/** Was die Blizzard-API für WoW: Forever derzeit liefert – Dungeons und Raids noch nicht */
-const LIVE_TRACKED: ProgressType[] = ['level', 'profession-milestone']
+/** Was die Blizzard-API für WoW: Forever derzeit liefert – Quests ja, Dungeon-Läufe und Raids noch nicht */
+const LIVE_TRACKED: ProgressType[] = ['level', 'profession-milestone', 'dungeon-quest', 'group-quest', 'dungeon-first']
 
 /**
  * Ranglisten (Main + Gesamt). Punkte berechnet ausschließlich der Server – jede Zeile bringt ihre
@@ -39,11 +41,25 @@ const instanceName = (objectId: string) =>
   instances.filter(instance => objectId === instance.slug || objectId.startsWith(`${instance.slug}:`) || objectId.startsWith(`${instance.slug}-`))
     .sort((a, b) => b.slug.length - a.slug.length)[0]?.name ?? objectId
 
-function describer(extraProfessionNames: Record<string, string>) {
+interface Names {
+  professions?: Record<string, string>
+  quests?: Map<number, string>
+  groups?: Map<string, string>
+}
+
+function describer(names: Names) {
   return (event: ProgressEvent): string => {
     if (event.type === 'profession-milestone') {
       const [id = '', milestone = ''] = event.objectId.split(':')
-      return `${findProfession(id)?.name ?? extraProfessionNames[id] ?? id} – Skill ${milestone}`
+      return `${findProfession(id)?.name ?? names.professions?.[id] ?? id} – Skill ${milestone}`
+    }
+    if (event.objectId.startsWith('quest:')) {
+      const id = Number(event.objectId.slice(6))
+      return names.quests?.get(id) ?? `Quest ${id}`
+    }
+    if (event.objectId.startsWith('group:')) {
+      const id = event.objectId.slice(6)
+      return names.groups?.get(id) ?? id
     }
     return instanceName(event.objectId)
   }
@@ -55,9 +71,9 @@ function buildResponse(
   members: MemberInfo[],
   characters: CharacterInfo[],
   mainIds: Map<string, string>,
-  extraProfessionNames: Record<string, string> = {},
+  names: Names = {},
 ) {
-  const describe = describer(extraProfessionNames)
+  const describe = describer(names)
   const boards = buildLeaderboards(events, members.map(member => ({ memberId: member.id, mainCharacterId: mainIds.get(member.id) ?? null })), pointsRules)
   const memberById = new Map(members.map(member => [member.id, member]))
   const characterById = new Map(characters.map(character => [character.id, character]))
@@ -106,7 +122,7 @@ export default defineEventHandler(async (event) => {
     const [members, characters] = await Promise.all([providers.members.listGuildMembers(), providers.characters.list()])
     const mains = new Map(characters.filter(character => character.isMain).map(character => [character.memberId, character.id]))
     return buildResponse(
-      { isDemo: true, isPreview: false, updatedAt: null, tracked: [...pointsRules.repeatable, 'level', 'dungeon-first', 'dungeon-quest', 'raid-first', 'profession-milestone'] },
+      { isDemo: true, isPreview: false, updatedAt: null, tracked: [...pointsRules.repeatable, 'level', 'dungeon-first', 'dungeon-quest', 'group-quest', 'raid-first', 'profession-milestone'] },
       createDemoProgress(characters, pointsRules, new Date()),
       members.map(member => ({ id: member.id, displayName: member.displayName, avatarUrl: member.avatarUrl ?? null })),
       characters.map(character => ({ id: character.id, memberId: character.memberId, name: character.name, classId: character.classId, level: character.level })),
@@ -146,12 +162,20 @@ export default defineEventHandler(async (event) => {
     return { id, displayName: member?.displayName ?? fallback, avatarUrl: member?.avatarUrl ?? null }
   }))
   const characters = loaded.map(character => ({ id: idOf(character), memberId: ownerOf(character), name: character.name, classId: character.classId, level: character.level }))
-  const events = loaded.flatMap(character => retroactiveEvents({
-    memberId: ownerOf(character),
-    characterId: idOf(character),
-    level: character.level,
-    professions: character.professions,
-  }, pointsRules))
+  // Quests (Dungeon- und Gruppenquests, Dungeon vollständig) – fällt die Abfrage aus, zählen nur Stufe und Berufe
+  const quests = await questProgressFor(loaded.map(character => ({ name: character.name, faction: character.faction }))).catch((error: unknown) => {
+    console.warn('[leaderboard] Quests nicht abrufbar:', error instanceof Error ? error.message : 'unbekannt')
+    return { results: new Map<string, CharacterQuestResult>(), groupNames: new Map<string, string>() }
+  })
+  const events = loaded.flatMap((character) => {
+    const owner = { memberId: ownerOf(character), characterId: idOf(character) }
+    const questResult = quests.results.get(character.slug)
+    return [
+      ...retroactiveEvents({ ...owner, level: character.level, professions: character.professions }, pointsRules),
+      ...(questResult ? questEvents(owner, questResult.progress) : []),
+    ]
+  })
+  const questTitles = new Map([...quests.results.values()].flatMap(result => [...result.titles]))
   // Main je Person: der als Hauptcharakter markierte, sonst der erste
   const mainIds = new Map<string, string>()
   for (const character of loaded) if (entryOf(character)?.isMain) mainIds.set(ownerOf(character), idOf(character))
@@ -165,7 +189,7 @@ export default defineEventHandler(async (event) => {
     members,
     characters,
     mainIds,
-    professionNamesById,
+    { professions: professionNamesById, quests: questTitles, groups: quests.groupNames },
   )
 })
 

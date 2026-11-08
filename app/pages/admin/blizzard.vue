@@ -53,6 +53,25 @@ const lastLogin = computed(() => {
   return typeof body?.last_login_timestamp === 'number' ? new Date(body.last_login_timestamp).toLocaleString('de-DE') : null
 })
 
+// Dungeon-Quest-Zuordnung prüfen
+interface QuestGroupCheck { id: string, name: string, source: 'api' | 'manuell', areaId: number | null, apiAreaName: string | null, areaQuestCount: number | null, alliance: number, horde: number }
+const questCheck = ref<QuestGroupCheck[] | null>(null)
+const questCheckLoading = ref(false)
+const questCheckError = ref<string | null>(null)
+async function checkDungeonQuests() {
+  questCheckLoading.value = true
+  questCheckError.value = null
+  try {
+    questCheck.value = (await $fetch<{ groups: QuestGroupCheck[] }>('/api/admin/dungeon-quests')).groups
+  }
+  catch (err) {
+    questCheckError.value = (err as { data?: { message?: string } }).data?.message ?? 'Abruf fehlgeschlagen.'
+  }
+  finally {
+    questCheckLoading.value = false
+  }
+}
+
 const resultLabels: Record<string, string> = { ok: 'OK', missing: '404', forbidden: 'gesperrt', error: 'Fehler', skipped: 'übersprungen' }
 
 async function run() {
@@ -226,6 +245,75 @@ async function copy() {
             </p>
             <pre class="probe-page__json">{{ JSON.stringify(rawResult.body, null, 2) }}</pre>
           </template>
+        </BaseCard>
+
+        <BaseCard class="probe-page__controls">
+          <h2 class="probe-page__title">
+            Dungeon-Quests prüfen
+          </h2>
+          <p class="probe-page__note">
+            Zeigt je Dungeon das Gebiet laut Blizzard-API und wie viele Quests für „vollständig“ zählen. Passt ein
+            Gebietsname nicht zum Dungeon, stimmt die Gebiets-ID in <code>shared/data/dungeon-quests.ts</code> nicht.
+            Der erste Abruf kann etwas dauern (Questdaten werden nachgeschlagen).
+          </p>
+          <div>
+            <BaseButton
+              :loading="questCheckLoading"
+              @click="checkDungeonQuests"
+            >
+              Zuordnung prüfen
+            </BaseButton>
+          </div>
+          <p
+            v-if="questCheckError"
+            class="probe-page__error"
+            role="alert"
+          >
+            {{ questCheckError }}
+          </p>
+          <div
+            v-if="questCheck"
+            class="probe-page__table-wrap"
+            role="region"
+            aria-label="Dungeon-Quest-Zuordnung"
+            tabindex="0"
+          >
+            <table class="probe-page__table">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    Dungeon
+                  </th>
+                  <th scope="col">
+                    Quelle
+                  </th>
+                  <th scope="col">
+                    Gebiet laut API
+                  </th>
+                  <th scope="col">
+                    Allianz
+                  </th>
+                  <th scope="col">
+                    Horde
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="group in questCheck"
+                  :key="group.id"
+                >
+                  <th scope="row">
+                    {{ group.name }}
+                  </th>
+                  <td>{{ group.source === 'api' ? `API (Gebiet ${group.areaId})` : 'manuell' }}</td>
+                  <td>{{ group.source === 'api' ? (group.apiAreaName ?? 'nicht gefunden') : '–' }}</td>
+                  <td>{{ group.alliance }}</td>
+                  <td>{{ group.horde }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </BaseCard>
 
         <template v-if="report">
