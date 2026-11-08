@@ -54,7 +54,7 @@ const lastLogin = computed(() => {
 })
 
 // Dungeon-Quest-Zuordnung prüfen
-interface QuestGroupCheck { id: string, name: string, source: 'api' | 'manuell', areaId: number | null, apiAreaName: string | null, areaQuestCount: number | null, alliance: number, horde: number }
+interface QuestGroupCheck { id: string, name: string, alliance: number, horde: number, unknown: { id: number, title: string | null }[] }
 const questCheck = ref<QuestGroupCheck[] | null>(null)
 const questCheckLoading = ref(false)
 const questCheckError = ref<string | null>(null)
@@ -252,8 +252,9 @@ async function copy() {
             Dungeon-Quests prüfen
           </h2>
           <p class="probe-page__note">
-            Zeigt je Dungeon das Gebiet laut Blizzard-API und wie viele Quests für „vollständig“ zählen. Passt ein
-            Gebietsname nicht zum Dungeon, stimmt die Gebiets-ID in <code>shared/data/dungeon-quests.ts</code> nicht.
+            Die Quest-Listen stammen aus dem Addon „DungeonJournal“ (<code>shared/data/dungeon-quests.ts</code>).
+            Die Tabelle zeigt je Dungeon, wie viele Quests für „vollständig“ zählen, und welche Quest-IDs die
+            Blizzard-API nicht kennt – solche Quests kann die Seite nicht als erledigt erkennen.
             Der erste Abruf kann etwas dauern (Questdaten werden nachgeschlagen).
           </p>
           <div>
@@ -285,16 +286,13 @@ async function copy() {
                     Dungeon
                   </th>
                   <th scope="col">
-                    Quelle
-                  </th>
-                  <th scope="col">
-                    Gebiet laut API
-                  </th>
-                  <th scope="col">
                     Allianz
                   </th>
                   <th scope="col">
                     Horde
+                  </th>
+                  <th scope="col">
+                    Der API unbekannt
                   </th>
                 </tr>
               </thead>
@@ -306,10 +304,9 @@ async function copy() {
                   <th scope="row">
                     {{ group.name }}
                   </th>
-                  <td>{{ group.source === 'api' ? `API (Gebiet ${group.areaId})` : 'manuell' }}</td>
-                  <td>{{ group.source === 'api' ? (group.apiAreaName ?? 'nicht gefunden') : '–' }}</td>
                   <td>{{ group.alliance }}</td>
                   <td>{{ group.horde }}</td>
+                  <td>{{ group.unknown.length ? group.unknown.map(quest => `${quest.title ?? 'Quest'} (${quest.id})`).join(', ') : '–' }}</td>
                 </tr>
               </tbody>
             </table>

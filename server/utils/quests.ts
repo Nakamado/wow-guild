@@ -1,13 +1,13 @@
-import { dungeonQuestGroups } from '#shared/data/dungeon-quests'
-import { questProgress, resolveDungeonGroup, type QuestInfo, type QuestProgress, type ResolvedDungeonGroup } from '#shared/domain/quests'
+import { dungeonQuestGroups, type DungeonQuestGroup } from '#shared/data/dungeon-quests'
+import { questProgress, type QuestInfo, type QuestProgress } from '#shared/domain/quests'
 import { characterSlug } from '../providers/blizzard/progress'
-import { fetchCompletedQuests, fetchQuestArea, fetchQuestInfo, type CompletedQuests } from '../providers/blizzard/quests'
+import { fetchCompletedQuests, fetchQuestInfo, type CompletedQuests } from '../providers/blizzard/quests'
 
 /**
  * Quests aus der Blizzard-API für Punkte und Dungeon-Fortschritt.
  * - abgeschlossene Quests je Charakter: 30 Minuten zwischengespeichert
- * - Questdaten (Art, Gebiet, Fraktion): einmal nachschlagen, dauerhaft in Supabase (`quest_catalog`)
- * - Quest-Listen der Dungeon-Gebiete: 24 Stunden zwischengespeichert
+ * - Questdaten (Titel, Art, Fraktion): einmal nachschlagen, dauerhaft in Supabase (`quest_catalog`)
+ * - welche Quests zu welchem Dungeon gehören: shared/data/dungeon-quests.ts (aus dem Dungeon Journal)
  */
 
 /** höchstens so viele unbekannte Quests pro Aufruf nachschlagen – der Rest folgt beim nächsten Mal */
@@ -15,6 +15,9 @@ const MAX_LOOKUPS = 250
 const LOOKUP_CONCURRENCY = 8
 
 const memoryCatalog = new Map<number, QuestInfo>()
+/** Quests, die Blizzard (noch) nicht kennt – nicht bei jedem Aufruf erneut nachschlagen */
+const notFound = new Map<number, number>()
+const NOT_FOUND_RETRY_MS = 60 * 60 * 1000
 
 const cachedCompleted = defineCachedFunction(async (name: string): Promise<CompletedQuests> => {
   const blizzard = blizzardClient()
@@ -26,16 +29,8 @@ const cachedCompleted = defineCachedFunction(async (name: string): Promise<Compl
   return result
 }, { name: 'quests-completed', maxAge: 30 * 60, swr: true, getKey: (name: string) => characterSlug(name) })
 
-const cachedArea = defineCachedFunction(async (areaId: number, namespace: string) => {
-  const blizzard = blizzardClient()
-  if (!blizzard) throw new Error('Blizzard-API nicht eingerichtet')
-  const app = await blizzard.client.getAppToken()
-  if (!app.token) throw new Error('Kein Blizzard-App-Token')
-  return fetchQuestArea(blizzard.client, app.token, namespace, areaId)
-}, { name: 'quest-area', maxAge: 24 * 60 * 60, swr: true, getKey: (areaId: number, namespace: string) => `${namespace}:${areaId}` })
-
 /** Questdaten für diese IDs: Speicher → Datenbank → Blizzard (neu Gefundenes wird gespeichert) */
-async function catalogFor(ids: readonly number[], namespace: string): Promise<Map<number, QuestInfo>> {
+export async function catalogFor(ids: readonly number[], namespace: string): Promise<Map<number, QuestInfo>> {
   const wanted = [...new Set(ids)]
   let missing = wanted.filter(id => !memoryCatalog.has(id))
   const store = useQuestCatalogStore()
@@ -43,6 +38,7 @@ async function catalogFor(ids: readonly number[], namespace: string): Promise<Ma
     for (const quest of await store.get(missing).catch(() => [])) memoryCatalog.set(quest.id, quest)
     missing = missing.filter(id => !memoryCatalog.has(id))
   }
+  missing = missing.filter(id => (notFound.get(id) ?? 0) < Date.now())
   const blizzard = blizzardClient()
   if (missing.length && blizzard) {
     const app = await blizzard.client.getAppToken()
@@ -54,6 +50,7 @@ async function catalogFor(ids: readonly number[], namespace: string): Promise<Ma
         found.push(...results.filter((quest): quest is QuestInfo => quest !== null))
       }
       for (const quest of found) memoryCatalog.set(quest.id, quest)
+      for (const id of batch) if (!memoryCatalog.has(id)) notFound.set(id, Date.now() + NOT_FOUND_RETRY_MS)
       if (store && found.length) await store.save(found).catch(error => console.warn('[quests] Katalog nicht gespeichert:', error instanceof Error ? error.message : 'unbekannt'))
       if (missing.length > MAX_LOOKUPS) console.info(`[quests] ${missing.length - MAX_LOOKUPS} Quests werden beim nächsten Aufruf nachgeschlagen`)
     }
@@ -61,17 +58,9 @@ async function catalogFor(ids: readonly number[], namespace: string): Promise<Ma
   return new Map(wanted.filter(id => memoryCatalog.has(id)).map(id => [id, memoryCatalog.get(id)!]))
 }
 
-/** Dungeon-Gruppen mit aufgelösten Quest-Listen (klassisch aus der API, Forever von Hand) */
-export async function resolvedDungeonGroups(namespace: string): Promise<{ groups: ResolvedDungeonGroup[], areas: Map<string, { name: string | null, questIds: number[] } | null> }> {
-  const areas = new Map<string, { name: string | null, questIds: number[] } | null>()
-  await Promise.all(dungeonQuestGroups.filter(group => group.areaId).map(async (group) => {
-    areas.set(group.id, await cachedArea(group.areaId!, namespace).catch(() => null))
-  }))
-  const allIds = [...[...areas.values()].flatMap(area => area?.questIds ?? []), ...dungeonQuestGroups.flatMap(group => group.extraQuestIds ?? [])]
-  const catalog = await catalogFor(allIds, namespace)
-  const groups = dungeonQuestGroups.map(group => resolveDungeonGroup(group, areas.get(group.id)?.questIds ?? [], catalog))
-  return { groups, areas }
-}
+/** alle Quest-IDs der Dungeon-Liste */
+export const dungeonQuestIds = (groups: readonly DungeonQuestGroup[] = dungeonQuestGroups) =>
+  [...new Set(groups.flatMap(group => [...group.quests.alliance, ...group.quests.horde].flat()).filter((slot): slot is number => typeof slot === 'number'))]
 
 export interface CharacterQuestResult {
   progress: QuestProgress
@@ -91,15 +80,14 @@ export async function questProgressFor(characters: readonly { name: string, fact
 
   const completed = await Promise.all(characters.map(async character => ({ character, quests: await cachedCompleted(character.name).catch(() => null) })))
   const namespace = completed.find(entry => entry.quests?.staticNamespace)?.quests?.staticNamespace ?? `static-forever-${blizzard.region}`
-  const { groups } = await resolvedDungeonGroups(namespace)
   const catalog = await catalogFor(completed.flatMap(entry => entry.quests?.ids ?? []), namespace)
-  const groupCatalog = await catalogFor(groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flat()).filter((slot): slot is number => typeof slot === 'number'), namespace)
+  const groupCatalog = await catalogFor(dungeonQuestIds(), namespace)
   const titles = new Map([...groupCatalog, ...catalog].map(([id, quest]) => [id, quest.title]))
 
   for (const { character, quests } of completed) {
     if (!quests) continue
     results.set(characterSlug(character.name), {
-      progress: questProgress({ completed: quests.ids, faction: character.faction, catalog: new Map([...groupCatalog, ...catalog]), groups }),
+      progress: questProgress({ completed: quests.ids, faction: character.faction, catalog: new Map([...groupCatalog, ...catalog]), groups: dungeonQuestGroups }),
       titles,
     })
   }

@@ -1,4 +1,4 @@
-import type { DungeonQuestGroup, QuestSlot } from '../data/dungeon-quests'
+import { dungeonQuestTitles, type DungeonQuestGroup, type QuestSlot } from '../data/dungeon-quests'
 import type { ProgressEvent } from '../schemas/points'
 
 /** Quest-Arten laut Blizzard-API (`type.id`) */
@@ -15,21 +15,17 @@ export interface QuestInfo {
   restricted: boolean
 }
 
-/** Dungeon-Gruppe mit aufgelösten Quests (klassisch: aus der Gebiets-Liste der API) */
-export interface ResolvedDungeonGroup {
-  id: string
-  name: string
-  questIds: { alliance: QuestSlot[], horde: QuestSlot[] }
-}
+/** Dungeon-Gruppe, wie sie die Auswertung braucht */
+export type QuestGroup = Pick<DungeonQuestGroup, 'id' | 'name' | 'quests'>
 
 /** Questtitel vergleichbar machen (Groß-/Kleinschreibung, Leerzeichen, Apostrophe) */
 export const normalizeQuestTitle = (title: string) => title.toLocaleLowerCase('de-DE').replace(/[’`´]/g, '\'').replace(/\s+/g, ' ').trim()
 
-/** Anzeigename eines Slots (Titel aus den Questdaten, sonst die ID) */
+/** Anzeigename eines Slots (Titel aus der API, sonst aus dem Journal, sonst die ID) */
 function slotTitle(slot: QuestSlot, catalog: ReadonlyMap<number, QuestInfo>): string {
   if (typeof slot === 'string') return slot
   const ids = Array.isArray(slot) ? slot : [slot]
-  return ids.map(id => catalog.get(id)?.title).find(Boolean) ?? `Quest ${ids[0]}`
+  return ids.map(id => catalog.get(id)?.title ?? dungeonQuestTitles[id]).find(Boolean) ?? `Quest ${ids[0]}`
 }
 
 /** IDs eines Slots; Titel-Slots werden über die erledigten Quests mit gleichem Titel aufgelöst */
@@ -57,23 +53,6 @@ export interface QuestProgress {
 }
 
 /**
- * Quests einer Gebiets-Liste für beide Fraktionen aufteilen (ohne Klassen-/Volksquests).
- * Unbekannte Quests (noch nicht nachgeschlagen) zählen vorerst für beide Fraktionen.
- */
-export function resolveDungeonGroup(group: DungeonQuestGroup, areaQuestIds: readonly number[], catalog: ReadonlyMap<number, QuestInfo>): ResolvedDungeonGroup {
-  if (group.quests) return { id: group.id, name: group.name, questIds: group.quests }
-  const usable = [...new Set([...areaQuestIds, ...(group.extraQuestIds ?? [])])].filter(id => !catalog.get(id)?.restricted)
-  return {
-    id: group.id,
-    name: group.name,
-    questIds: {
-      alliance: usable.filter(id => catalog.get(id)?.faction !== 'horde'),
-      horde: usable.filter(id => catalog.get(id)?.faction !== 'alliance'),
-    },
-  }
-}
-
-/**
  * Was zählt aus den abgeschlossenen Quests eines Charakters?
  * - Dungeon-Quest: steht in einer Dungeon-Gruppe oder hat den Typ „Dungeon“
  * - Gruppenquest: Typ „Gruppe“, sofern keine Dungeon-Quest
@@ -84,7 +63,7 @@ export function questProgress(input: {
   completed: readonly number[]
   faction: 'alliance' | 'horde' | null
   catalog: ReadonlyMap<number, QuestInfo>
-  groups: readonly ResolvedDungeonGroup[]
+  groups: readonly QuestGroup[]
 }): QuestProgress {
   const done = new Set(input.completed)
   const idsByTitle = new Map<string, number[]>()
@@ -94,7 +73,7 @@ export function questProgress(input: {
     const key = normalizeQuestTitle(title)
     idsByTitle.set(key, [...(idsByTitle.get(key) ?? []), id])
   }
-  const inGroups = new Set(input.groups.flatMap(group => [...group.questIds.alliance, ...group.questIds.horde].flatMap(slot => slotIds(slot, idsByTitle))))
+  const inGroups = new Set(input.groups.flatMap(group => [...group.quests.alliance, ...group.quests.horde].flatMap(slot => slotIds(slot, idsByTitle))))
   const counts = (id: number) => !input.catalog.get(id)?.restricted && input.catalog.get(id)?.typeId !== QUEST_TYPE.class
 
   const dungeonQuests = onePerTitle([...done].filter(id => counts(id) && (inGroups.has(id) || input.catalog.get(id)?.typeId === QUEST_TYPE.dungeon)), input.catalog)
@@ -103,7 +82,7 @@ export function questProgress(input: {
 
   const dungeons = input.faction
     ? input.groups.map((group) => {
-        const required = group.questIds[input.faction!]
+        const required = group.quests[input.faction!]
         const open = required.filter(slot => !slotIds(slot, idsByTitle).some(id => done.has(id)))
         const finished = required.length - open.length
         return {
