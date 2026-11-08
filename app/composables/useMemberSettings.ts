@@ -13,9 +13,10 @@ export interface MemberSettingsView {
 
 /** Eigene Einstellungen (Rangliste, Twitch-Kanal) – nur für Gildenmitglieder */
 export function useMemberSettings() {
-  const { can } = useViewer()
-  const allowed = computed(() => can('characters:manage'))
-  const { data, status } = useProtectedFetchSync<MemberSettingsView>('member-settings', '/api/me/settings', allowed)
+  const { can, viewer } = useViewer()
+  // eigenes Konto als Ressource – ohne ownerId wäre das nur für Admins erlaubt
+  const allowed = computed(() => can('characters:manage', { ownerId: viewer.value.memberId ?? undefined }))
+  const { data, status, error, refresh } = useProtectedFetchSync<MemberSettingsView>('member-settings', '/api/me/settings', allowed)
 
   async function save(patch: MemberSettingsPatch): Promise<DomainResult<MemberSettingsView>> {
     try {
@@ -30,5 +31,12 @@ export function useMemberSettings() {
     }
   }
 
-  return { settings: data, loaded: computed(() => status.value === 'success' || status.value === 'error'), save }
+  return {
+    settings: data,
+    loaded: computed(() => status.value === 'success' || status.value === 'error'),
+    /** Laden fehlgeschlagen – ohne Hinweis wäre das Häkchen nur still gesperrt */
+    loadError: computed(() => (error.value ? (error.value.data as { message?: string } | undefined)?.message ?? 'Deine Einstellungen konnten nicht geladen werden.' : null)),
+    refresh,
+    save,
+  }
 }

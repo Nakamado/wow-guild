@@ -3,7 +3,9 @@ import { MemberSettingsPatchSchema, normalizeTwitchLogin, TwitchLoginSchema } fr
 /** Eigene Einstellungen ändern (Rangliste ein/aus, Twitch-Kanal). */
 export default defineEventHandler(async (event) => {
   assertSameOrigin(event)
-  const viewer = await requirePermission(event, 'characters:manage')
+  // eigene Einstellungen: Ressource ist das eigene Konto (ohne ownerId würde die Prüfung für Mitglieder scheitern)
+  const viewer = await getViewer(event)
+  assertPermission(viewer, 'characters:manage', { ownerId: viewer.memberId ?? undefined })
   const store = useMemberSettingsStore()
   if (!store || !viewer.memberId) {
     throw createError({ statusCode: 409, statusMessage: 'Conflict', message: 'Einstellungen lassen sich gerade nicht speichern.' })
