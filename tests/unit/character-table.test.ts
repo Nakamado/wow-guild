@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findProfession } from '../../shared/data/professions'
-import { defaultCharacterSort, nextSort, primaryProfessions, secondaryProfessions, sortCharacterRows, type CharacterTableRow } from '../../shared/domain/character-table'
+import { defaultCharacterSort, groupCharacterRows, nextSort, primaryProfessions, secondaryProfessions, sortCharacterRows, type CharacterTableRow } from '../../shared/domain/character-table'
 import type { Character, Profession } from '../../shared/types'
 
 const prof = (id: string, skill: number): Profession => {
@@ -76,5 +76,34 @@ describe('Berufe und Sortierwechsel', () => {
     expect(nextSort({ key: 'name', direction: 'asc' }, 'name')).toEqual({ key: 'name', direction: 'desc' })
     expect(nextSort({ key: 'name', direction: 'desc' }, 'name')).toEqual({ key: 'name', direction: 'asc' })
     expect(nextSort(defaultCharacterSort, 'skill')).toEqual({ key: 'skill', direction: 'asc' })
+  })
+})
+
+describe('Twinks unter dem Main gruppieren', () => {
+  const entry = (name: string, player: string, level: number, isMain: boolean) =>
+    ({ ...row(name, { level, isMain }), player: { id: player } })
+
+  it('stellt Twinks direkt unter ihren Main, Gruppen in der Reihenfolge der Mains', () => {
+    const rows = [
+      entry('Jahed', 'p1', 29, true),
+      entry('Minyu', 'p2', 24, true),
+      entry('Nak', 'p3', 24, true),
+      entry('Schminyu', 'p2', 16, false),
+      entry('Nacht', 'p3', 7, false),
+    ]
+    const grouped = groupCharacterRows(sortCharacterRows(rows, { key: 'level', direction: 'desc' }))
+    expect(grouped.map(item => [item.character.name, item.twink])).toEqual([
+      ['Jahed', false], ['Minyu', false], ['Schminyu', true], ['Nak', false], ['Nacht', true],
+    ])
+  })
+
+  it('der Main bleibt oben, auch wenn ein Twink höher sortiert wäre', () => {
+    const grouped = groupCharacterRows(sortCharacterRows([entry('Main', 'p1', 10, true), entry('Twink', 'p1', 40, false)], { key: 'level', direction: 'desc' }))
+    expect(grouped.map(item => item.character.name)).toEqual(['Main', 'Twink'])
+  })
+
+  it('ohne Main führt der erste Charakter in der Sortierung', () => {
+    const grouped = groupCharacterRows(sortCharacterRows([entry('A', 'p1', 10, false), entry('B', 'p1', 20, false)], { key: 'level', direction: 'desc' }))
+    expect(grouped.map(item => [item.character.name, item.twink])).toEqual([['B', false], ['A', true]])
   })
 })
