@@ -28,6 +28,28 @@ describe('Aufschlüsselung der Punkte', () => {
     expect(lines[0]!.type).toBe('level')
   })
 
+  it('zeigt in der Gesamtwertung die Stufen je Charakter, fasst andere Posten zusammen', () => {
+    const quest = (characterId: string): ProgressEvent => ({ ...base, characterId, type: 'dungeon-quest', objectId: 'quest:373', occurredAt: null })
+    const events: ProgressEvent[] = [
+      ...retroactiveEvents({ ...base, level: 24 }, pointsRules),
+      ...retroactiveEvents({ ...base, characterId: 'c2', level: 16 }, pointsRules),
+      quest('c1'),
+      quest('c2'),
+    ]
+    const names: Record<string, string> = { c1: 'Minyu Souleater', c2: 'Schminyu Spackolatius' }
+    const lines = explainScore(scoreEvents(events, pointsRules), () => 'Der nie verschickte Brief', id => names[id])
+    const level = lines.find(line => line.type === 'level')!
+    expect(level).toMatchObject({ count: 38, points: 3800 })
+    expect(level.items).toEqual([
+      { label: 'Stufe 2 bis 24', count: 23, points: 2300, character: 'Minyu Souleater' },
+      { label: 'Stufe 2 bis 16', count: 15, points: 1500, character: 'Schminyu Spackolatius' },
+    ])
+    // dieselbe Quest von zwei Charakteren: ein Posten „×2“
+    expect(lines.find(line => line.type === 'dungeon-quest')!.items).toEqual([
+      { label: 'Der nie verschickte Brief', count: 2, points: 150 },
+    ])
+  })
+
   it('weist Punkte über dem Wochenlimit aus', () => {
     const events: ProgressEvent[] = Array.from({ length: 20 }, (_, index) => ({
       ...base, type: 'raid-boss' as const, objectId: `raid:${index}`, occurredAt: '2026-11-05T20:00:00Z',

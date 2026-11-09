@@ -244,9 +244,12 @@ const rowName = (row: { displayName: string, mainCharacter: { name: string } | n
                     <ul class="ranking-page__items">
                       <li
                         v-for="item in line.items"
-                        :key="item.label"
+                        :key="`${item.character ?? ''}|${item.label}`"
                       >
-                        <span>{{ item.label }}<template v-if="item.count > 1 && line.type !== 'level'"> ×{{ item.count }}</template></span>
+                        <span>{{ item.label }}<template v-if="item.count > 1 && line.type !== 'level'"> ×{{ item.count }}</template><span
+                          v-if="item.character"
+                          class="ranking-page__item-character"
+                        > · {{ item.character }}</span></span>
                         <span>{{ points.format(item.points) }}</span>
                       </li>
                     </ul>
@@ -571,6 +574,11 @@ const rowName = (row: { displayName: string, mainCharacter: { name: string } | n
   }
 
   &__count {
+    color: var(--color-text-subtle);
+  }
+
+  &__item-character {
+    font-size: var(--text-xs);
     color: var(--color-text-subtle);
   }
 

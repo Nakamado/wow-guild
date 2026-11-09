@@ -92,7 +92,7 @@ function buildResponse(
       points: row.points,
       capped: row.score.capped,
       breakdown: {
-        lines: explainScore(row.score, describe),
+        lines: explainScore(row.score, describe, id => characterById.get(id)?.name),
         characters: [...perCharacter.entries()]
           .map(([id, points]) => ({ id, name: characterById.get(id)?.name ?? 'Unbekannt', points }))
           .sort((a, b) => b.points - a.points),
