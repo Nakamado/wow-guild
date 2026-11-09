@@ -79,6 +79,26 @@ export function sortCharacterRows<T extends CharacterTableRow>(rows: readonly T[
   })
 }
 
+/**
+ * Twinks unter ihren Main gruppieren: Die Gruppen stehen in der Reihenfolge ihres Mains
+ * (bzw. des ersten Charakters, falls niemand als Main markiert ist), die Twinks darunter
+ * in der gewählten Sortierung. `twink` = eingerückt unter dem Main anzeigen.
+ */
+export function groupCharacterRows<T extends CharacterTableRow & { player: { id: string } }>(sorted: readonly T[]): (T & { twink: boolean })[] {
+  const groups = new Map<string, T[]>()
+  for (const row of sorted) {
+    const group = groups.get(row.player.id)
+    if (group) group.push(row)
+    else groups.set(row.player.id, [row])
+  }
+  const heads = [...groups.values()].map(rows => rows.find(row => row.character.isMain) ?? rows[0]!)
+  heads.sort((a, b) => sorted.indexOf(a) - sorted.indexOf(b))
+  return heads.flatMap(head => [
+    { ...head, twink: false },
+    ...groups.get(head.player.id)!.filter(row => row !== head).map(row => ({ ...row, twink: true })),
+  ])
+}
+
 /** Klick auf eine Spalte: gleiche Spalte → Richtung umdrehen; neue Spalte → aufsteigend beginnen */
 export function nextSort(current: CharacterSort, key: CharacterSortKey): CharacterSort {
   if (current.key === key) return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }

@@ -2,6 +2,7 @@
 import { guildRankLabel } from '~~/content/guild-ranks'
 import { findRace } from '#shared/data/races'
 import {
+  groupCharacterRows,
   nextSort,
   primaryProfessions,
   sortCharacterRows,
@@ -32,7 +33,8 @@ const columns: { key: CharacterSortKey, label: string, numeric?: boolean }[] = [
   { key: 'skill', label: 'Skill', numeric: true },
 ]
 
-const sorted = computed(() => sortCharacterRows(props.rows, sort.value))
+// Twinks stehen eingerückt unter ihrem Main
+const sorted = computed(() => groupCharacterRows(sortCharacterRows(props.rows, sort.value)))
 
 const ariaSort = (key: CharacterSortKey) =>
   sort.value.key === key ? (sort.value.direction === 'asc' ? 'ascending' : 'descending') : undefined
@@ -93,22 +95,38 @@ const announcement = computed(() => {
             v-for="row in sorted"
             :key="row.character.id"
             class="character-table__row"
+            :class="{ 'character-table__row--twink': row.twink }"
           >
             <th
               scope="row"
               class="character-table__cell character-table__cell--name"
             >
+              <span
+                v-if="row.twink"
+                class="character-table__branch"
+                aria-hidden="true"
+              >↳</span>
               <NuxtLink
                 :to="`/charaktere/${row.character.id}`"
                 class="character-table__link"
               >{{ row.character.name }}</NuxtLink>
+              <span
+                v-if="row.twink"
+                class="visually-hidden"
+              > (Twink)</span>
               <span
                 v-if="row.character.isMain"
                 class="character-table__main"
               >Main</span>
             </th>
             <td class="character-table__cell">
+              <!-- beim Twink steht der Spieler schon eine Zeile darüber – nur für Screenreader -->
+              <span
+                v-if="row.twink"
+                class="visually-hidden"
+              >{{ row.player.displayName }}</span>
               <NuxtLink
+                v-else
                 :to="`/mitglieder/${row.player.id}`"
                 class="character-table__player"
               >
@@ -263,6 +281,37 @@ const announcement = computed(() => {
     &:last-child { border-bottom: 0; }
 
     &:hover { background: rgb(150 190 255 / 4%); }
+
+    // Twink: kleiner, eingerückt, ohne Trennlinie zum Main darüber
+    &--twink {
+      font-size: var(--text-xs);
+
+      .character-table__cell {
+        padding-block: var(--space-1) var(--space-2);
+      }
+
+      .character-table__cell--name {
+        padding-left: var(--space-6);
+      }
+
+      .character-table__link {
+        font-weight: var(--font-weight-medium);
+      }
+    }
+
+    // Zwischen Main und seinen Twinks nur eine blasse, gestrichelte Linie
+    &:has(+ .character-table__row--twink) {
+      border-bottom: 1px dashed rgb(150 190 255 / 10%);
+
+      .character-table__cell {
+        padding-bottom: var(--space-2);
+      }
+    }
+  }
+
+  &__branch {
+    margin-right: var(--space-2);
+    color: var(--color-text-subtle);
   }
 
   &__cell {
