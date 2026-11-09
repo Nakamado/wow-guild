@@ -129,6 +129,8 @@ export interface ExplanationItem {
   label: string
   count: number
   points: number
+  /** Charaktername – nur bei Stufen, wenn mehrere Charaktere beteiligt sind (Gesamtwertung) */
+  character?: string
 }
 
 export interface ExplanationLine {
@@ -143,10 +145,19 @@ export interface ExplanationLine {
 /**
  * Punkte nachvollziehbar machen: je Typ Anzahl und Summe, darunter die einzelnen Posten
  * (gleiche Bezeichnung zusammengefasst, z. B. „Die Todesminen ×3“). Stufen werden als Spanne gezeigt.
- * `describe` liefert die Bezeichnung eines Ereignisses (Dungeon-Name, Beruf + Stufe …).
+ * Sind mehrere Charaktere beteiligt (Gesamtwertung), bekommt bei den Stufen jeder Charakter eine
+ * eigene Spanne mit Namen; alle anderen Posten bleiben zusammengefasst (z. B. „Die Todesminen ×2“).
+ * `describe` liefert die Bezeichnung eines Ereignisses (Dungeon-Name, Beruf + Stufe …),
+ * `characterName` den Namen zu einer Charakter-ID.
  */
-export function explainScore(score: ScoreBreakdown, describe: (event: ProgressEvent) => string): ExplanationLine[] {
+export function explainScore(
+  score: ScoreBreakdown,
+  describe: (event: ProgressEvent) => string,
+  characterName: (characterId: string) => string | undefined = () => undefined,
+): ExplanationLine[] {
   const lines = new Map<ProgressType, ExplanationLine & { byLabel: Map<string, ExplanationItem> }>()
+  const several = new Set(score.entries.map(entry => entry.event.characterId)).size > 1
+  const nameOf = (characterId: string) => (several ? characterName(characterId) ?? 'Unbekannt' : undefined)
   for (const { event, granted, capped } of score.entries) {
     const line = lines.get(event.type) ?? { type: event.type, count: 0, points: 0, capped: 0, items: [], byLabel: new Map() }
     line.count += 1
@@ -163,9 +174,22 @@ export function explainScore(score: ScoreBreakdown, describe: (event: ProgressEv
   }
   for (const line of lines.values()) {
     if (line.type === 'level') {
-      const levels = score.entries.filter(entry => entry.event.type === 'level').map(entry => Number(entry.event.objectId)).sort((a, b) => a - b)
-      const label = levels.length > 1 ? `Stufe ${levels[0]} bis ${levels.at(-1)}` : `Stufe ${levels[0]}`
-      line.items = [{ label, count: levels.length, points: line.points }]
+      const byCharacter = new Map<string, { levels: number[], points: number }>()
+      for (const entry of score.entries) {
+        if (entry.event.type !== 'level') continue
+        const group = byCharacter.get(entry.event.characterId) ?? { levels: [], points: 0 }
+        group.levels.push(Number(entry.event.objectId))
+        group.points += entry.granted
+        byCharacter.set(entry.event.characterId, group)
+      }
+      line.items = [...byCharacter.entries()]
+        .map(([characterId, { levels, points }]): ExplanationItem => {
+          levels.sort((a, b) => a - b)
+          const label = levels.length > 1 ? `Stufe ${levels[0]} bis ${levels.at(-1)}` : `Stufe ${levels[0]}`
+          const character = nameOf(characterId)
+          return { label, count: levels.length, points, ...(character ? { character } : {}) }
+        })
+        .sort((a, b) => b.points - a.points || a.label.localeCompare(b.label, 'de'))
     }
     else {
       line.items = [...line.byLabel.values()].sort((a, b) => b.points - a.points || a.label.localeCompare(b.label, 'de', { numeric: true }))
