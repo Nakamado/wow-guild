@@ -41,6 +41,7 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
       <p class="group-card__meta">
         <span>{{ weekday }}, {{ formatTime(run.startsAt) }} Uhr</span>
         <span v-if="showDungeon">{{ dungeon?.name }}</span>
+        <span v-if="run.participants.some(entry => entry.support)">{{ run.participants.filter(entry => entry.support).length }} Supporter</span>
         <span v-if="run.questIds?.length">{{ run.questIds.length === 1 ? '1 Quest geplant' : `${run.questIds.length} Quests geplant` }}</span>
       </p>
       <GroupComposition :run="run" />
@@ -55,7 +56,7 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
         v-else-if="composition.isFull"
         class="group-card__status group-card__status--full"
       >
-        Voll<template v-if="run.waitlistEnabled">, Warteliste offen</template>
+        Voll<template v-if="run.participants.some(entry => entry.support)">, Supporter machen Platz</template><template v-else-if="run.waitlistEnabled">, Warteliste offen</template>
       </span>
       <span
         v-else

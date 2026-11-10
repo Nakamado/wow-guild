@@ -21,6 +21,8 @@ export interface ParticipantRow {
   role: RoleId
   placement: 'participant' | 'waitlist'
   joined_at: string
+  /** fehlt, solange die Migration 20261112 nicht eingespielt ist */
+  support?: boolean | null
 }
 
 export interface RunRow {
@@ -66,7 +68,13 @@ export function rowToCharacter(row: CharacterRow): Character {
 }
 
 function rowToParticipant(row: ParticipantRow): Participant {
-  return { memberId: row.member_id, characterId: row.character_id, role: row.role, joinedAt: iso(row.joined_at) }
+  return {
+    memberId: row.member_id,
+    characterId: row.character_id,
+    role: row.role,
+    joinedAt: iso(row.joined_at),
+    ...(row.support ? { support: true } : {}),
+  }
 }
 
 export function rowToRun(row: RunRow): GroupRun {

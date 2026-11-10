@@ -78,11 +78,31 @@ test.describe('Gruppenplaner (Demo)', () => {
     await expect(dialog.getByRole('button', { name: 'Beitreten' })).toBeDisabled()
   })
 
-  test('volle Rolle mit Warteliste', async ({ page }) => {
-    await page.goto('/gruppen/demo-run-02') // voll, Warteliste erlaubt
-    await page.getByRole('button', { name: 'Auf die Warteliste' }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Auf die Warteliste' }).click()
+  test('volle Rolle mit Warteliste (als Supporter)', async ({ page }) => {
+    await page.goto('/gruppen/demo-run-02') // voll, Warteliste erlaubt, ein DD-Supporter
+    await page.getByRole('button', { name: 'Gruppe beitreten' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('radio', { name: /Als Supporter/ }).check()
+    await dialog.getByRole('button', { name: 'Auf die Warteliste' }).click()
     await expect(page.getByText('Du stehst auf der Warteliste als')).toBeVisible()
+  })
+
+  test('feste Anmeldung verdrängt einen Supporter auf die Warteliste', async ({ page }) => {
+    await page.goto('/gruppen/demo-run-02')
+    const participants = page.getByRole('region', { name: 'Teilnehmer' })
+    await expect(participants.getByText('Supporter', { exact: true })).toHaveCount(1)
+
+    await page.getByRole('button', { name: 'Gruppe beitreten' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('radio', { name: /Fest dabei/ })).toBeChecked()
+    await expect(dialog.getByText('Supporter macht Platz')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Beitreten' }).click()
+    await expect(page.getByText('Du bist dabei als')).toBeVisible()
+
+    // Windhauch (Supporter) steht jetzt auf der Warteliste
+    const waitlist = participants.getByRole('heading', { name: 'Warteliste' }).locator('xpath=..')
+    await expect(waitlist.getByText('Windhauch Wolkenreiter')).toBeVisible()
+    await expect(waitlist.getByText('Supporter', { exact: true })).toBeVisible()
   })
 
   test('Organisator erstellt, bearbeitet und sagt eine Gruppe ab', async ({ page, context, baseURL }) => {

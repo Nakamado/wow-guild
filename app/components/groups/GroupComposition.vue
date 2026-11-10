@@ -14,7 +14,9 @@ const props = withDefaults(
 
 const icons: Record<RoleId, IconName> = { tank: 'shield', healer: 'heal', dps: 'swords' }
 const composition = computed(() => computeComposition(props.run))
-const slots = computed(() => composition.value.slots.filter(slot => slot.capacity > 0 || slot.filled > 0))
+const slots = computed(() => composition.value.slots
+  .filter(slot => slot.capacity > 0 || slot.filled > 0)
+  .map(slot => ({ ...slot, supporters: props.run.participants.filter(entry => entry.role === slot.role && entry.support).length })))
 </script>
 
 <template>
@@ -35,7 +37,10 @@ const slots = computed(() => composition.value.slots.filter(slot => slot.capacit
         :size="variant === 'full' ? 18 : 14"
       />
       <span class="group-composition__label">{{ getRole(slot.role).short }}</span>
-      <span class="group-composition__count">{{ slot.filled }}/{{ slot.capacity }}</span>
+      <span class="group-composition__count">{{ slot.filled }}/{{ slot.capacity }}<span
+        v-if="slot.supporters"
+        class="visually-hidden"
+      >, davon {{ slot.supporters }} Supporter</span></span>
       <span
         v-if="variant === 'full'"
         class="group-composition__pips"
@@ -45,7 +50,10 @@ const slots = computed(() => composition.value.slots.filter(slot => slot.capacit
           v-for="index in slot.capacity"
           :key="index"
           class="group-composition__pip"
-          :class="{ 'group-composition__pip--filled': index <= slot.filled }"
+          :class="{
+            'group-composition__pip--filled': index <= slot.filled - slot.supporters,
+            'group-composition__pip--support': index > slot.filled - slot.supporters && index <= slot.filled,
+          }"
         />
       </span>
     </li>
@@ -110,6 +118,12 @@ const slots = computed(() => composition.value.slots.filter(slot => slot.capacit
     border: 1.5px solid var(--role-color);
     border-radius: 50%;
     opacity: 0.6;
+
+    // Supporter: halb gefüllt – Platz ist belegt, wird aber für feste Anmeldungen frei
+    &--support {
+      background: linear-gradient(90deg, var(--role-color) 50%, transparent 50%);
+      opacity: 0.85;
+    }
 
     &--filled {
       background: var(--role-color);

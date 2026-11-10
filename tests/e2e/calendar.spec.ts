@@ -46,6 +46,8 @@ test.describe('Eventkalender', () => {
     await details.getByRole('button', { name: 'Beitreten' }).click()
 
     const signup = page.getByRole('dialog', { name: 'Gruppe beitreten' })
+    // als Supporter verdrängt man niemanden – also Warteliste
+    await signup.getByRole('radio', { name: /Als Supporter/ }).check()
     await signup.getByRole('button', { name: 'Auf die Warteliste' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Warteliste' })).toContainText('steht auf der Warteliste')
   })

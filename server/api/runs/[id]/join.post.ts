@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const { writers, viewer } = await beginWrite(event)
   assertPermission(viewer, 'runs:join')
   const run = await loadRunForWrite(event)
-  const { characterId, role } = await readValidatedBody(event, JoinInputSchema.parse)
+  const { characterId, role, support } = await readValidatedBody(event, JoinInputSchema.parse)
 
   const dungeon = findDungeon(run.dungeonSlug)
   // Stufe/Klasse live aus der Blizzard-API, damit die Mindeststufe am aktuellen Stand gemessen wird
@@ -21,10 +21,10 @@ export default defineEventHandler(async (event) => {
     rejectWith({ code: 'character-not-owned', message: 'Bitte wähle einen deiner Charaktere aus.' }, 403)
   }
 
-  const check = canJoinRun({ run, dungeon, member: { id: viewer.memberId, isGuildMember: true }, character, role, now: new Date() })
+  const check = canJoinRun({ run, dungeon, member: { id: viewer.memberId, isGuildMember: true }, character, role, support, now: new Date() })
   if (!check.ok) rejectWith(check.error, 409)
 
-  const placement = await persist(() => writers.groups.join(run.id, viewer.memberId, character.id, role))
+  const placement = await persist(() => writers.groups.join(run.id, viewer.memberId, character.id, role, support))
   const updated = await useProviders().groups.get(run.id)
   return { placement, warnings: check.value.warnings, run: updated && redactRun(updated, viewer) }
 })

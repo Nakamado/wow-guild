@@ -34,14 +34,27 @@ export interface JoinInput {
   character: Character
   role: RoleId
   now: Date
+  /** als Supporter: hilft aus, macht aber Platz für feste Anmeldungen */
+  support?: boolean
   catalog?: GameCatalog
 }
 
 export interface JoinCheck {
-  /** `participant` = fester Platz, `waitlist` = Rolle voll, Warteliste aktiv */
+  /** `participant` = Platz in der Gruppe, `waitlist` = Rolle voll, Warteliste aktiv */
   placement: 'participant' | 'waitlist'
   /** Nicht-blockierende Hinweise, z. B. zum Levelbereich */
   warnings: string[]
+  /** Supporter, der für diese feste Anmeldung auf die Warteliste rückt */
+  bumped?: Participant | null
+}
+
+/**
+ * Supporter, der für eine feste Anmeldung Platz macht: der zuletzt angemeldete Supporter
+ * derselben Rolle mit Platz in der Gruppe.
+ */
+export function supporterToBump(run: Pick<GroupRun, 'participants'>, role: RoleId): Participant | null {
+  const supporters = run.participants.filter(entry => entry.role === role && entry.support)
+  return supporters.sort((a, b) => Date.parse(b.joinedAt) - Date.parse(a.joinedAt))[0] ?? null
 }
 
 /** Prüft, ob ein Mitglied mit Charakter und Rolle einem Run beitreten darf. */
@@ -79,6 +92,11 @@ export function canJoinRun(input: JoinInput): DomainResult<JoinCheck, JoinErrorC
 
   const slot = computeComposition(run).slots.find(entry => entry.role === role)
   if (!slot || slot.open === 0) {
+    // Feste Anmeldung verdrängt einen Supporter derselben Rolle auf die Warteliste
+    const bumped = input.support ? null : supporterToBump(run, role)
+    if (bumped) {
+      return ok({ placement: 'participant', warnings, bumped })
+    }
     if (run.waitlistEnabled) {
       return ok({ placement: 'waitlist', warnings: [...warnings, `Alle ${getRole(role).name}-Plätze sind belegt – du kommst auf die Warteliste.`] })
     }
@@ -98,10 +116,17 @@ export function joinRun(input: JoinInput): DomainResult<{ run: GroupRun, check: 
     characterId: input.character.id,
     role: input.role,
     joinedAt: input.now.toISOString(),
+    ...(input.support ? { support: true } : {}),
   }
+  const { bumped } = check.value
+  const participants = bumped ? input.run.participants.filter(entry => entry !== bumped) : input.run.participants
+  // verdrängter Supporter rückt an seiner Anmeldezeit in die Warteliste ein
+  const waitlist = bumped
+    ? [...input.run.waitlist, bumped].sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt))
+    : input.run.waitlist
   const run: GroupRun = check.value.placement === 'participant'
-    ? { ...input.run, participants: [...input.run.participants, participant], updatedAt: participant.joinedAt }
-    : { ...input.run, waitlist: [...input.run.waitlist, participant], updatedAt: participant.joinedAt }
+    ? { ...input.run, participants: [...participants, participant], waitlist, updatedAt: participant.joinedAt }
+    : { ...input.run, waitlist: [...waitlist, participant], updatedAt: participant.joinedAt }
 
   return ok({ run, check: check.value })
 }
@@ -109,8 +134,8 @@ export function joinRun(input: JoinInput): DomainResult<{ run: GroupRun, check: 
 export type LeaveErrorCode = 'not-joined' | 'run-not-open'
 
 /**
- * Meldet ein Mitglied ab. Wird ein fester Platz frei, rückt der/die Erste
- * mit derselben Rolle von der Warteliste nach.
+ * Meldet ein Mitglied ab. Wird ein Platz frei, rückt von der Warteliste nach: zuerst feste
+ * Anmeldungen derselben Rolle, dann Supporter – jeweils in Anmeldereihenfolge.
  */
 export function leaveRun(
   run: GroupRun,
@@ -129,7 +154,9 @@ export function leaveRun(
   }
 
   const participants = run.participants.filter(entry => entry.memberId !== memberId)
-  const promoted = run.waitlist.find(entry => entry.role === participant.role) ?? null
+  const promoted = run.waitlist.find(entry => entry.role === participant.role && !entry.support)
+    ?? run.waitlist.find(entry => entry.role === participant.role)
+    ?? null
   const waitlist = promoted ? run.waitlist.filter(entry => entry !== promoted) : run.waitlist
 
   return ok({

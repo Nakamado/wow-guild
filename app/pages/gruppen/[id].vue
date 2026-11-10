@@ -26,6 +26,8 @@ const canSeeMembers = computed(() => can('members:view'))
 const canJoin = computed(() => can('runs:join'))
 const canEdit = computed(() => (run.value ? can('runs:edit', { organizerId: run.value.organizerId }) : false))
 const isOpen = computed(() => run.value?.status === 'open' && Date.parse(run.value.startsAt) > Date.now())
+// Supporter belegen Plätze, machen aber für feste Anmeldungen Platz
+const hasSupporters = computed(() => run.value?.participants.some(entry => entry.support) ?? false)
 
 const signupOpen = ref(false)
 const editOpen = ref(false)
@@ -153,7 +155,9 @@ function onSaved() {
           v-else-if="composition.isFull"
           class="group-page__status"
         >
-          Voll besetzt
+          Voll besetzt<template v-if="hasSupporters">
+            – Supporter machen Platz
+          </template>
         </p>
         <p
           v-else
@@ -204,7 +208,7 @@ function onSaved() {
             >
               <h3 class="group-page__role-title">
                 <RoleBadge :role="group.role.id" />
-                <span class="group-page__role-count">{{ group.entries.length }}/{{ run.capacity[group.role.id] }}</span>
+                <span class="group-page__role-count">{{ group.entries.length }}/{{ run.capacity[group.role.id] }}<template v-if="group.entries.some(entry => entry.support)"> · davon {{ group.entries.filter(entry => entry.support).length }} Supporter</template></span>
               </h3>
               <ul
                 v-if="group.entries.length"
@@ -215,6 +219,7 @@ function onSaved() {
                   v-for="entry in group.entries"
                   :key="entry.memberId"
                   class="group-page__participant"
+                  :class="{ 'group-page__participant--support': entry.support }"
                 >
                   <MemberAvatar
                     :name="describe(entry).member?.displayName ?? '?'"
@@ -236,6 +241,11 @@ function onSaved() {
                     v-if="describe(entry).character"
                     class="group-page__participant-level"
                   >Stufe {{ describe(entry).character?.level }}</span>
+                  <span
+                    v-if="entry.support"
+                    class="group-page__support-tag"
+                    title="Hilft aus und macht Platz, wenn sich jemand fest anmeldet"
+                  >Supporter</span>
                 </li>
               </ul>
               <p
@@ -245,6 +255,13 @@ function onSaved() {
                 Noch niemand
               </p>
             </div>
+
+            <p
+              v-if="[...run.participants, ...run.waitlist].some(entry => entry.support)"
+              class="group-page__support-hint"
+            >
+              Supporter helfen aus und machen Platz, sobald sich jemand fest anmeldet, der den Dungeon braucht.
+            </p>
 
             <div
               v-if="run.waitlist.length"
@@ -258,6 +275,7 @@ function onSaved() {
                   v-for="entry in run.waitlist"
                   :key="entry.memberId"
                   class="group-page__participant"
+                  :class="{ 'group-page__participant--support': entry.support }"
                 >
                   <MemberAvatar
                     :name="describe(entry).member?.displayName ?? '?'"
@@ -268,6 +286,10 @@ function onSaved() {
                     <span class="group-page__participant-member">{{ describe(entry).member?.displayName }}</span>
                   </span>
                   <span class="group-page__participant-level">{{ getRole(entry.role).name }}</span>
+                  <span
+                    v-if="entry.support"
+                    class="group-page__support-tag"
+                  >Supporter</span>
                 </li>
               </ol>
             </div>
@@ -327,8 +349,8 @@ function onSaved() {
               <template v-if="canJoin && isOpen">
                 <template v-if="mine">
                   <p class="group-page__mine">
-                    {{ mine.placement === 'participant' ? 'Du bist dabei als' : 'Du stehst auf der Warteliste als' }}
-                    <strong>{{ getRole(mine.role).name }}</strong>.
+                    {{ mine.placement === 'participant' ? (mine.support ? 'Du hilfst aus als' : 'Du bist dabei als') : 'Du stehst auf der Warteliste als' }}
+                    <strong>{{ mine.support ? `Supporter (${getRole(mine.role).name})` : getRole(mine.role).name }}</strong>.
                   </p>
                   <BaseButton
                     variant="secondary"
@@ -343,7 +365,7 @@ function onSaved() {
                   block
                   @click="signupOpen = true"
                 >
-                  {{ composition.isFull && run.waitlistEnabled ? 'Auf die Warteliste' : 'Gruppe beitreten' }}
+                  {{ composition.isFull && run.waitlistEnabled && !hasSupporters ? 'Auf die Warteliste' : 'Gruppe beitreten' }}
                 </BaseButton>
               </template>
               <SignInHint
@@ -547,6 +569,28 @@ function onSaved() {
     flex-wrap: wrap;
     gap: var(--space-3);
     align-items: center;
+
+    // Supporter: gestrichelt abgesetzt, damit man feste Teilnehmer auf einen Blick erkennt
+    &--support {
+      padding: var(--space-1) var(--space-2);
+      margin-left: calc(var(--space-2) * -1);
+      border: 1px dashed rgb(143 211 255 / 35%);
+      border-radius: var(--radius-md);
+    }
+  }
+
+  &__support-tag {
+    padding: 0 var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-frost);
+    border: 1px dashed rgb(143 211 255 / 50%);
+    border-radius: var(--radius-sm);
+  }
+
+  &__support-hint {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
   }
 
   &__participant-name {
