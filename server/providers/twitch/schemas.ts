@@ -16,7 +16,6 @@ export const HelixStreamSchema = z.object({
   game_name: z.string().nullish(),
   type: z.string(),
   title: z.string().nullish(),
-  viewer_count: z.number().int().nonnegative(),
   started_at: z.string(),
   /** Vorschaubild mit Platzhaltern {width}x{height} */
   thumbnail_url: z.string().nullish(),

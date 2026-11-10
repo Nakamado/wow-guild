@@ -1,5 +1,7 @@
 <script setup lang="ts">
 const { guild } = useSiteConfig()
+// Live: nur die große Vorschau rechts, sonst der kleine Twitch-Hinweis über dem Namen
+const { isLive } = useStreamStatus()
 
 const heroRef = ref<HTMLElement | null>(null)
 let frame = 0
@@ -38,7 +40,10 @@ onBeforeUnmount(() => {
 
     <div class="hero__content container">
       <div class="hero__main">
-        <TwitchLiveIndicator class="hero__live" />
+        <TwitchLiveIndicator
+          v-if="!isLive"
+          class="hero__live"
+        />
 
         <h1
           id="hero-title"

@@ -6,7 +6,6 @@ export const StreamStatusSchema = z.object({
   isLive: z.boolean(),
   title: z.string().nullable(),
   gameName: z.string().nullable(),
-  viewerCount: z.number().int().min(0).nullable(),
   startedAt: IsoDateTimeSchema.nullable(),
   /**
    * Vorschaubild des laufenden Streams (Twitch-CDN, 640×360). Wird über den eigenen Server

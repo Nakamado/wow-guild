@@ -8,7 +8,7 @@ test.describe('Live-Hinweis im Header (Demo)', () => {
 
   test('erscheint auf Unterseiten, nicht auf der Startseite, und lässt sich ausblenden', async ({ page }) => {
     await gotoReady(page, '/')
-    await expect(page.getByText('Miinyu ist live').first()).toBeVisible()
+    await expect(page.getByRole('link', { name: /Miinyu ist gerade live/ })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Live-Hinweis ausblenden' })).toHaveCount(0)
 
     await gotoReady(page, '/kalender')
@@ -29,7 +29,9 @@ test.describe('Live-Hinweis im Header (Demo)', () => {
     await expect(preview).toBeVisible()
     await expect(preview).toHaveAttribute('href', /twitch\.tv/)
     await expect(preview).toHaveAttribute('target', '_blank')
-    await expect(preview.getByText('321 Zuschauer')).toBeVisible()
+    await expect(preview.getByText(/Zuschauer/)).toHaveCount(0)
+    // kleiner Hinweis über dem Namen nur, solange sie nicht live ist
+    await expect(page.locator('.hero__live')).toHaveCount(0)
   })
 
   test('ohne Livestream kein Hinweis', async ({ page, context }) => {
@@ -38,5 +40,6 @@ test.describe('Live-Hinweis im Header (Demo)', () => {
     await expect(page.getByRole('button', { name: 'Live-Hinweis ausblenden' })).toHaveCount(0)
     await gotoReady(page, '/')
     await expect(page.getByRole('link', { name: /Miinyu ist gerade live/ })).toHaveCount(0)
+    await expect(page.locator('.hero__live')).toContainText('Miinyu auf Twitch')
   })
 })

@@ -21,10 +21,9 @@ const since = computed(() => {
   if (!status.value?.startedAt) return null
   const minutes = Math.max(0, Math.floor((now.value - new Date(status.value.startedAt).getTime()) / 60_000))
   const hours = Math.floor(minutes / 60)
-  return hours ? `seit ${hours} Std. ${minutes % 60} Min.` : `seit ${minutes} Min.`
+  if (!hours) return `seit ${minutes} Min.`
+  return minutes % 60 ? `seit ${hours} Std. ${minutes % 60} Min.` : `seit ${hours} Std.`
 })
-
-const viewers = computed(() => (status.value?.viewerCount != null ? `${status.value.viewerCount.toLocaleString('de-DE')} Zuschauer` : null))
 </script>
 
 <template>
@@ -56,10 +55,6 @@ const viewers = computed(() => (status.value?.viewerCount != null ? `${status.va
         />
         Live
       </span>
-      <span
-        v-if="viewers"
-        class="live-preview__viewers"
-      >{{ viewers }}</span>
       <span
         class="live-preview__play"
         aria-hidden="true"
@@ -144,8 +139,7 @@ const viewers = computed(() => (status.value?.viewerCount != null ? `${status.va
       linear-gradient(135deg, #121b3a, #070b1a);
   }
 
-  &__badge,
-  &__viewers {
+  &__badge {
     position: absolute;
     top: var(--space-3);
     display: inline-flex;
@@ -163,12 +157,6 @@ const viewers = computed(() => (status.value?.viewerCount != null ? `${status.va
     text-transform: uppercase;
     letter-spacing: 0.06em;
     background: #c8102e;
-  }
-
-  &__viewers {
-    right: var(--space-3);
-    color: var(--color-text);
-    background: rgb(4 6 15 / 75%);
   }
 
   &__dot {

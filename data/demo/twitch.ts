@@ -36,7 +36,6 @@ export function createDemoStreamStatus(now: Date, channel: string, simulateLive:
     isLive: simulateLive,
     title: simulateLive ? 'Demo-Stream: Gemeinsam durch Azeroth' : null,
     gameName: simulateLive ? 'World of Warcraft' : null,
-    viewerCount: simulateLive ? 321 : null,
     // volle Stunde, damit derselbe Demo-Stream über mehrere Anfragen gleich bleibt (Live-Hinweis wegklicken)
     startedAt: simulateLive ? new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000 - 3_600_000).toISOString() : null,
     checkedAt: now.toISOString(),

@@ -92,13 +92,13 @@ test.describe('Startseite', () => {
     const indicator = page.locator('.hero__live')
     await expect(indicator).toContainText('Miinyu auf Twitch')
     await page.getByLabel('Live simulieren').check()
-    // Ohne Neuladen: alle Daten werden nach dem Umschalten aktualisiert
-    await expect(indicator).toContainText('Miinyu ist live')
+    // Ohne Neuladen: alle Daten werden nach dem Umschalten aktualisiert – live ersetzt die große Vorschau den kleinen Hinweis
+    const preview = page.getByRole('link', { name: /Miinyu ist gerade live/ })
+    await expect(preview).toBeVisible()
+    await expect(indicator).toHaveCount(0)
     // …und der Zustand bleibt nach einem Reload erhalten (Cookie)
     await page.reload()
-    await expect(page.locator('.hero__live')).toContainText('Miinyu ist live')
-    // große Vorschau erscheint zusätzlich
-    await expect(page.getByRole('link', { name: /Miinyu ist gerade live/ })).toBeVisible()
+    await expect(preview).toBeVisible()
   })
 })
 

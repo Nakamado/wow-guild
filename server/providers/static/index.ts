@@ -34,7 +34,7 @@ export function createOffProviders(channel: string) {
   const discordEvents: DiscordEventProvider = { listScheduledEvents: async () => [] }
   const groups: GroupRepository = { list: async () => [], get: async () => null }
   const twitch: TwitchProvider = {
-    getStreamStatus: async () => ({ channel, isLive: false, title: null, gameName: null, viewerCount: null, startedAt: null, checkedAt: new Date().toISOString() }),
+    getStreamStatus: async () => ({ channel, isLive: false, title: null, gameName: null, startedAt: null, checkedAt: new Date().toISOString() }),
     listClips: async () => [],
     listStreamers: async () => [],
   }

@@ -139,7 +139,9 @@ describe('Twitch', () => {
     expect(calls[0]!.url).toBe('https://id.twitch.tv/oauth2/token')
     expect(calls[1]!.url).toBe('https://api.twitch.tv/helix/streams?user_id=114422810')
     expect(calls[1]!.init?.headers).toMatchObject({ 'Client-Id': 'cid', 'Authorization': 'Bearer app-token' })
-    expect(status).toMatchObject({ isLive: false, viewerCount: null })
+    expect(status).toMatchObject({ isLive: false })
+    // Zuschauerzahl wird bewusst nicht übernommen (Miinyu hat sie auf Twitch ausgeblendet)
+    expect(status).not.toHaveProperty('viewerCount')
     expect(() => StreamStatusSchema.parse(status)).not.toThrow()
   })
 
@@ -155,7 +157,8 @@ describe('Twitch', () => {
       user_id: '1', user_login: 'miinyu', user_name: 'Miinyu', game_name: 'World of Warcraft',
       type: 'live', title: 'Raid!', viewer_count: 120, started_at: '2026-11-04T18:00:00Z',
     }, new Date('2026-11-04T19:00:00Z'))
-    expect(status).toMatchObject({ isLive: true, title: 'Raid!', viewerCount: 120, thumbnailUrl: null })
+    expect(status).toMatchObject({ isLive: true, title: 'Raid!', thumbnailUrl: null })
+    expect(status).not.toHaveProperty('viewerCount')
   })
 
   it('Live-Vorschaubild nur vom Twitch-CDN, mit Cache-Schlüssel je 5 Minuten', () => {
