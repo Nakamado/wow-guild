@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
   const run = await loadRunForWrite(event)
   assertPermission(viewer, 'runs:cancel', { organizerId: run.organizerId })
   await persist(() => writers.groups.remove(run.id))
+  await notifyRunChange(run, null, viewer.memberId)
   setResponseStatus(event, 204)
   return null
 })

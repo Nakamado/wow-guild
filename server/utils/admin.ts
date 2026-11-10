@@ -72,11 +72,15 @@ export async function purgeExpiredRecords(now = new Date()) {
   const activity = useActivityStore()
   const grants = useGrantStore()
   const revokedDays = Number(retention.revokedGrantDays) || 365
-  const [activityDeleted, grantsDeleted] = await Promise.all([
+  const notifications = useNotificationStore()
+  const [activityDeleted, grantsDeleted, notificationsDeleted] = await Promise.all([
     activity ? activity.purgeExpired(now) : 0,
     grants ? grants.purgeRevoked(new Date(now.getTime() - revokedDays * 86_400_000)) : 0,
+    notifications
+      ? notifications.purgeOlderThan(new Date(now.getTime() - NOTIFICATION_RETENTION_DAYS * 86_400_000)).catch(() => 0)
+      : 0,
   ])
-  return { activityDeleted, grantsDeleted }
+  return { activityDeleted, grantsDeleted, notificationsDeleted }
 }
 
 /** Der Adminbereich braucht die Datenbank – im Demo-Modus oder ohne Supabase verständlich ablehnen */

@@ -74,6 +74,7 @@ onBeforeUnmount(() => {
           Discord
         </BaseButton>
 
+        <NotificationBell class="app-header__bell" />
         <UserMenu class="app-header__user" />
 
         <button

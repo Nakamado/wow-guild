@@ -9,5 +9,7 @@ export default defineEventHandler(async (event) => {
   const { reason } = await readValidatedBody(event, body => CancelInputSchema.parse(body ?? {}))
   const check = cancelRun(run, new Date(), reason)
   if (!check.ok) rejectWith(check.error, 409)
-  return persist(() => writers.groups.cancel(run.id, reason))
+  const cancelled = await persist(() => writers.groups.cancel(run.id, reason))
+  await notifyRunChange(run, cancelled, viewer.memberId)
+  return cancelled
 })

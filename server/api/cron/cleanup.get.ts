@@ -13,6 +13,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
   const result = await purgeExpiredRecords()
-  console.info(`[cleanup] Protokoll: ${result.activityDeleted} gelöscht, zurückgezogene Freigaben: ${result.grantsDeleted} gelöscht`)
+  console.info(`[cleanup] Protokoll: ${result.activityDeleted} gelöscht, zurückgezogene Freigaben: ${result.grantsDeleted} gelöscht, Benachrichtigungen: ${result.notificationsDeleted} gelöscht`)
   return result
 })

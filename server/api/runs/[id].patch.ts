@@ -15,5 +15,7 @@ export default defineEventHandler(async (event) => {
   const draft = validateRunDraft(input, dungeon, new Date(), run)
   if (!draft.ok) rejectWith(draft.error)
 
-  return persist(() => writers.groups.update(run.id, input))
+  const updated = await persist(() => writers.groups.update(run.id, input))
+  await notifyRunChange(run, updated, viewer.memberId)
+  return updated
 })
