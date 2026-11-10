@@ -68,6 +68,45 @@ test.describe('Eventkalender', () => {
     await expect(page.getByRole('link', { name: 'Kalender-Test Gnomeregan' })).toBeVisible()
   })
 
+  test('Gilden-Event eintragen, bearbeiten und absagen', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: PERSONA_COOKIE, value: 'member', url: baseURL! }])
+    await page.goto('/kalender?ansicht=liste')
+    // Beispiel-Event aus der Demo
+    await expect(page.getByRole('button', { name: 'Angelwettbewerb am Loch Modan' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Event eintragen' }).click()
+    const form = page.getByRole('dialog', { name: 'Event eintragen' })
+    await form.getByLabel('Titel').fill('E2E-Gildenabend')
+    await form.getByLabel('Ende').fill('23:00')
+    await form.getByLabel('Treffpunkt').fill('Goldhain, Gasthaus')
+    await form.getByRole('button', { name: 'Event eintragen' }).click()
+    await expect(page.getByText('„E2E-Gildenabend“ steht im Kalender.')).toBeVisible()
+
+    await page.getByRole('button', { name: 'E2E-Gildenabend' }).click()
+    const details = page.getByRole('dialog', { name: 'E2E-Gildenabend' })
+    await expect(details.getByText('Goldhain, Gasthaus')).toBeVisible()
+    await expect(details.getByText('auf dieser Seite eingetragen')).toBeVisible()
+    await details.getByRole('button', { name: 'Bearbeiten' }).click()
+    const edit = page.getByRole('dialog', { name: 'Event bearbeiten' })
+    await edit.getByLabel('Titel').fill('E2E-Gildenabend (verschoben)')
+    await edit.getByRole('button', { name: 'Änderungen speichern' }).click()
+
+    await page.getByRole('button', { name: 'E2E-Gildenabend (verschoben)' }).click()
+    const again = page.getByRole('dialog', { name: 'E2E-Gildenabend (verschoben)' })
+    await again.getByRole('button', { name: 'Absagen' }).click()
+    await again.getByRole('button', { name: 'Ja, absagen' }).click()
+    await expect(again.getByText('Abgesagt')).toBeVisible()
+  })
+
+  test('fremde Gilden-Events kann man nicht bearbeiten', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: PERSONA_COOKIE, value: 'member', url: baseURL! }])
+    await page.goto('/kalender?ansicht=liste')
+    await page.getByRole('button', { name: 'Angelwettbewerb am Loch Modan' }).click()
+    const details = page.getByRole('dialog', { name: 'Angelwettbewerb am Loch Modan' })
+    await expect(details.getByText('Loch Modan, Thelsamar-Steg')).toBeVisible()
+    await expect(details.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0)
+  })
+
   test('Besucher sehen keine Veranstalter-Namen', async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: PERSONA_COOKIE, value: 'visitor', url: baseURL! }])
     await page.goto('/kalender?ansicht=liste')

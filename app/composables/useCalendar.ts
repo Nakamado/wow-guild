@@ -5,11 +5,12 @@ import type { CalendarEvent, DiscordEvent } from '#shared/types'
 export type CalendarTypeFilter = 'all' | CalendarEvent['type']
 
 /**
- * Kalender aus Discord-Events und Webseiten-Runs – inklusive lokaler Demo-Änderungen,
+ * Kalender aus Discord-Events, Webseiten-Runs und Gilden-Events – inklusive lokaler Demo-Änderungen,
  * zusammengeführt mit derselben Logik wie auf dem Server (stabile IDs, keine Duplikate).
  */
 export function useCalendar() {
   const { runs, memberById, status: runsStatus, refresh: refreshRuns } = useRuns()
+  const { events: guildEvents, refresh: refreshGuildEvents } = useGuildEvents()
   const { data: discordEvents, status: discordStatus, refresh: refreshDiscord } = useFetch<DiscordEvent[]>('/api/events/discord', {
     key: 'discord-events',
     default: () => [],
@@ -21,6 +22,7 @@ export function useCalendar() {
       discordEvents: discordEvents.value ?? [],
       runs: runs.value,
       dungeons: instances,
+      guildEvents: guildEvents.value,
       organizerNames,
     })
   })
@@ -41,7 +43,7 @@ export function useCalendar() {
   }
 
   async function refresh() {
-    await Promise.all([refreshRuns(), refreshDiscord()])
+    await Promise.all([refreshRuns(), refreshDiscord(), refreshGuildEvents()])
   }
 
   return { events, status, refresh, filterEvents }

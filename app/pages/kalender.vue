@@ -17,6 +17,23 @@ const { getRun } = useRuns()
 const canCreate = computed(() => can('runs:create'))
 const formOpen = ref(false)
 
+// Gilden-Events eintragen/bearbeiten
+const { canCreate: canCreateEvent, getEvent: getGuildEvent } = useGuildEvents()
+const eventFormOpen = ref(false)
+const editingGuildEventId = ref<string | null>(null)
+const editingGuildEvent = computed(() => (editingGuildEventId.value ? getGuildEvent(editingGuildEventId.value) : null))
+function newGuildEvent() {
+  editingGuildEventId.value = null
+  eventFormOpen.value = true
+}
+function editGuildEvent(id: string) {
+  editingGuildEventId.value = id
+  eventFormOpen.value = true
+}
+function onGuildEventSaved(saved: { title: string }) {
+  notice.value = `„${saved.title}“ steht im Kalender.`
+}
+
 // --- Zustand in der URL (teilbar, Zurück-Taste funktioniert) -------------------------------
 const today = dayKeyOf(new Date())
 const view = computed<'monat' | 'liste'>(() => (route.query.ansicht === 'liste' ? 'liste' : 'monat'))
@@ -106,8 +123,16 @@ function onSaved(run: { id: string }) {
   <div class="calendar-page">
     <PageHeader
       title="Eventkalender"
-      lead="Discord-Events der Community und die hier geplanten Dungeon- und Raidgruppen an einem Ort. Alle Zeiten in deutscher Zeit."
+      lead="Discord-Events, Gilden-Events und die hier geplanten Dungeon- und Raidgruppen an einem Ort. Alle Zeiten in deutscher Zeit."
     >
+      <BaseButton
+        v-if="canCreateEvent"
+        variant="secondary"
+        icon-left="calendar"
+        @click="newGuildEvent"
+      >
+        Event eintragen
+      </BaseButton>
       <BaseButton
         v-if="canCreate"
         icon-left="heal"
@@ -304,7 +329,7 @@ function onSaved(run: { id: string }) {
           Raid
         </li>
         <li class="calendar-page__legend-item calendar-page__legend-item--community">
-          Community (Discord)
+          Community (Discord und Gilden-Events)
         </li>
       </ul>
     </div>
@@ -313,6 +338,12 @@ function onSaved(run: { id: string }) {
       v-model:open="detailsOpen"
       :event="activeEvent"
       @join="startSignup"
+      @edit="editGuildEvent"
+    />
+    <GuildEventFormDialog
+      v-model:open="eventFormOpen"
+      :event="editingGuildEvent"
+      @saved="onGuildEventSaved"
     />
     <GroupSignupDialog
       v-if="signupRun && signupDungeon"
