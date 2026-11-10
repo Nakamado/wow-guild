@@ -5,5 +5,7 @@ export default defineEventHandler(async (event) => {
   const { viewer, store } = await beginGuildEventWrite(event)
   const existing = await loadEditableGuildEvent(event, store, viewer)
   const { reason } = await readValidatedBody(event, body => CancelInputSchema.parse(body ?? {}))
-  return persist(() => store.cancel(existing.id, reason))
+  const cancelled = await persist(() => store.cancel(existing.id, reason))
+  await syncGuildEventAnnouncement(cancelled)
+  return cancelled
 })

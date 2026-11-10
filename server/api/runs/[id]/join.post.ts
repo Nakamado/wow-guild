@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   const placement = await persist(() => writers.groups.join(run.id, viewer.memberId, character.id, role, support, altRole))
   const updated = await useProviders().groups.get(run.id)
-  if (updated) await notifyRunChange(run, updated, viewer.memberId)
+  if (updated) await Promise.all([notifyRunChange(run, updated, viewer.memberId), syncRunAnnouncement(run, updated)])
   // Rolle, in der die Anmeldung gelandet ist, steht im aktualisierten Run
   return { placement, warnings: check.value.warnings, run: updated && redactRun(updated, viewer) }
 })

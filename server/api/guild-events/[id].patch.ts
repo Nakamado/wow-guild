@@ -3,5 +3,7 @@ export default defineEventHandler(async (event) => {
   const { viewer, store } = await beginGuildEventWrite(event)
   const existing = await loadEditableGuildEvent(event, store, viewer)
   const input = await readGuildEventInput(event, existing)
-  return persist(() => store.update(existing.id, input))
+  const updated = await persist(() => store.update(existing.id, input))
+  await syncGuildEventAnnouncement(updated)
+  return updated
 })

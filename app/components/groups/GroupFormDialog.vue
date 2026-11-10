@@ -21,7 +21,7 @@ const { isDemo } = useSiteConfig()
 const { createRun, updateRun, dungeons, raids } = useRuns()
 const selectableDungeons = computed(() => [...dungeons].sort((a, b) => a.levelRange.min - b.levelRange.min || a.name.localeCompare(b.name, 'de')))
 
-const ids = { dungeon: useId(), title: useId(), date: useId(), time: useId(), description: useId(), waitlist: useId(), error: useId() }
+const ids = { dungeon: useId(), title: useId(), date: useId(), time: useId(), description: useId(), waitlist: useId(), announce: useId(), error: useId() }
 
 interface FormState {
   dungeonSlug: string
@@ -32,6 +32,8 @@ interface FormState {
   capacity: RoleCapacity
   waitlistEnabled: boolean
   questIds: number[]
+  /** nur beim Erstellen: im Discord-Channel ankündigen */
+  announce: boolean
 }
 
 function tomorrow() {
@@ -50,6 +52,7 @@ function initialState(): FormState {
       capacity: { ...props.run.capacity },
       waitlistEnabled: props.run.waitlistEnabled,
       questIds: [...(props.run.questIds ?? [])],
+      announce: false,
     }
   }
   const slug = props.dungeonSlug ?? ''
@@ -62,6 +65,7 @@ function initialState(): FormState {
     capacity: defaultCapacity(findDungeon(slug)?.groupSize ?? 5),
     waitlistEnabled: true,
     questIds: [],
+    announce: true,
   }
 }
 
@@ -120,6 +124,7 @@ async function submit() {
     waitlistEnabled: form.waitlistEnabled,
     // Reihenfolge wie im Journal
     questIds: questOptions.value.map(option => option.id).filter(id => form.questIds.includes(id)),
+    ...(props.run ? {} : { announce: form.announce }),
   }
   saving.value = true
   const result = props.run ? await updateRun(props.run.id, input) : await createRun(input)
@@ -336,6 +341,20 @@ async function submit() {
           class="group-form__checkbox"
         >
         Warteliste erlauben, wenn eine Rolle voll ist
+      </label>
+
+      <label
+        v-if="!isEdit"
+        :for="ids.announce"
+        class="group-form__toggle"
+      >
+        <input
+          :id="ids.announce"
+          v-model="form.announce"
+          type="checkbox"
+          class="group-form__checkbox"
+        >
+        Im Discord ankündigen (ohne Ping; An- und Abmeldungen landen im Thread darunter)
       </label>
 
       <p

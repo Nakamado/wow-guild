@@ -16,6 +16,6 @@ export default defineEventHandler(async (event) => {
   if (!draft.ok) rejectWith(draft.error)
 
   const updated = await persist(() => writers.groups.update(run.id, input))
-  await notifyRunChange(run, updated, viewer.memberId)
+  await Promise.all([notifyRunChange(run, updated, viewer.memberId), syncRunAnnouncement(run, updated)])
   return updated
 })
