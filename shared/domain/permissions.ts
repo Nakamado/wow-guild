@@ -24,6 +24,9 @@ export type Action
     | 'runs:edit'
     | 'runs:cancel'
     | 'runs:moderate'
+    /** Gilden-Events im Kalender eintragen bzw. eigene bearbeiten/absagen */
+    | 'events:create'
+    | 'events:edit'
     /** Admin-Werkzeuge (z. B. Blizzard-API-Probe) – nur Gildenleitung */
     | 'admin:tools'
     /** Schwarzes Brett lesen (Mitglieder) bzw. Aushänge verwalten (nur Admins) */
@@ -37,7 +40,7 @@ export type Action
     | 'leaderboard:grant'
 
 export interface PermissionResource {
-  /** Organisator eines Runs */
+  /** Organisator eines Runs bzw. wer ein Gilden-Event eingetragen hat */
   organizerId?: string
   /** Besitzer eines Charakters */
   ownerId?: string
@@ -64,11 +67,13 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
     case 'board:view':
     case 'runs:create':
     case 'runs:join':
+    case 'events:create':
       return hasLevel(viewer, 'member')
     case 'characters:manage':
       return hasLevel(viewer, 'member') && isSelf(viewer, resource.ownerId)
     case 'runs:edit':
     case 'runs:cancel':
+    case 'events:edit':
       return hasLevel(viewer, 'member') && isSelf(viewer, resource.organizerId)
     case 'runs:moderate':
     case 'admin:tools':

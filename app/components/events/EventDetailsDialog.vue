@@ -5,10 +5,37 @@ import type { CalendarEvent } from '#shared/types'
 
 const open = defineModel<boolean>('open', { default: false })
 const props = defineProps<{ event: CalendarEvent | null }>()
-const emit = defineEmits<{ join: [runId: string] }>()
+const emit = defineEmits<{ join: [runId: string], edit: [guildEventId: string] }>()
 
 const { can } = useViewer()
 const { getRun, myEntry } = useRuns()
+const { getEvent: getGuildEvent, canEdit: canEditGuildEvent, cancel: cancelGuildEvent } = useGuildEvents()
+
+// Gilden-Event: bearbeiten/absagen für die Person, die es eingetragen hat, und Admins
+const guildEvent = computed(() => (props.event?.guildEventId ? getGuildEvent(props.event.guildEventId) : null))
+const canManageGuildEvent = computed(() => Boolean(guildEvent.value && isUpcoming.value && canEditGuildEvent(guildEvent.value)))
+const confirmCancel = ref(false)
+const cancelError = ref<string | null>(null)
+watch(open, () => {
+  confirmCancel.value = false
+  cancelError.value = null
+})
+
+async function cancelEvent() {
+  if (!guildEvent.value) return
+  const result = await cancelGuildEvent(guildEvent.value.id)
+  if (!result.ok) {
+    cancelError.value = result.error.message
+    return
+  }
+  confirmCancel.value = false
+}
+
+function edit() {
+  if (!guildEvent.value) return
+  open.value = false
+  emit('edit', guildEvent.value.id)
+}
 
 const run = computed(() => (props.event?.runId ? getRun(props.event.runId) : null))
 const dungeon = computed(() => (run.value ? findDungeon(run.value.dungeonSlug) : undefined))
@@ -43,7 +70,7 @@ function join() {
     >
       <p class="event-details__kind">
         <span class="event-details__type">{{ typeLabel[event.type] }}</span>
-        <span>{{ event.source === 'discord' ? 'aus Discord' : 'auf dieser Seite geplant' }}</span>
+        <span>{{ event.source === 'discord' ? 'aus Discord' : event.source === 'guild' ? 'auf dieser Seite eingetragen' : 'auf dieser Seite geplant' }}</span>
       </p>
 
       <dl class="event-details__facts">
@@ -65,10 +92,17 @@ function join() {
           </dd>
         </div>
         <div
+          v-if="event.location"
+          class="event-details__fact"
+        >
+          <dt>Treffpunkt</dt>
+          <dd>{{ event.location }}</dd>
+        </div>
+        <div
           v-if="event.organizerName"
           class="event-details__fact"
         >
-          <dt>Veranstaltet von</dt>
+          <dt>{{ event.source === 'guild' ? 'Eingetragen von' : 'Veranstaltet von' }}</dt>
           <dd>{{ event.organizerName }}</dd>
         </div>
         <div
@@ -111,6 +145,37 @@ function join() {
       >
         {{ event.description }}
       </p>
+
+      <div
+        v-if="confirmCancel"
+        class="event-details__confirm"
+        role="alert"
+      >
+        <p>Event wirklich absagen? Es bleibt als „abgesagt“ im Kalender sichtbar.</p>
+        <div class="event-details__confirm-actions">
+          <BaseButton
+            size="sm"
+            variant="ghost"
+            @click="confirmCancel = false"
+          >
+            Nein
+          </BaseButton>
+          <BaseButton
+            size="sm"
+            variant="secondary"
+            @click="cancelEvent"
+          >
+            Ja, absagen
+          </BaseButton>
+        </div>
+      </div>
+      <p
+        v-if="cancelError"
+        class="event-details__cancelled"
+        role="alert"
+      >
+        {{ cancelError }}
+      </p>
     </div>
 
     <template #actions="{ close }">
@@ -136,6 +201,20 @@ function join() {
         Zur Gruppe
       </BaseButton>
       <BaseButton
+        v-if="canManageGuildEvent && !confirmCancel"
+        variant="ghost"
+        @click="confirmCancel = true"
+      >
+        Absagen
+      </BaseButton>
+      <BaseButton
+        v-if="canManageGuildEvent"
+        variant="secondary"
+        @click="edit"
+      >
+        Bearbeiten
+      </BaseButton>
+      <BaseButton
         v-if="canJoin"
         @click="join"
       >
@@ -148,6 +227,22 @@ function join() {
 <style scoped lang="scss">
 .event-details {
   --event-color: var(--color-accent);
+
+  &__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    border: 1px solid rgb(255 138 138 / 30%);
+    border-radius: var(--radius-md);
+  }
+
+  &__confirm-actions {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
+  }
 
   display: flex;
   flex-direction: column;

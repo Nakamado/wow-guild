@@ -1,5 +1,6 @@
-import type { CalendarEvent, DiscordEvent, Dungeon, EventStatus, GroupRun } from '../types'
+import type { CalendarEvent, DiscordEvent, Dungeon, EventStatus, GroupRun, GuildEvent } from '../types'
 import { computeComposition } from './composition'
+import { guildEventToCalendar } from './guild-events'
 
 const runStatusToEvent: Record<GroupRun['status'], EventStatus> = {
   open: 'scheduled',
@@ -21,6 +22,8 @@ export function discordEventToCalendar(event: DiscordEvent): CalendarEvent {
     url: event.url,
     runId: null,
     openSlots: null,
+    guildEventId: null,
+    location: null,
   }
 }
 
@@ -42,6 +45,8 @@ export function runToCalendar(
     url: null,
     runId: run.id,
     openSlots: computeComposition(run).open,
+    guildEventId: null,
+    location: null,
   }
 }
 
@@ -49,23 +54,26 @@ export interface MergeInput {
   discordEvents: readonly DiscordEvent[]
   runs: readonly GroupRun[]
   dungeons: readonly Pick<Dungeon, 'slug' | 'name' | 'kind'>[]
+  /** auf der Webseite eingetragene Gilden-Events */
+  guildEvents?: readonly GuildEvent[]
   organizerNames?: ReadonlyMap<string, string>
 }
 
 /**
- * Führt Discord-Events und Webseiten-Runs zu einem Kalender zusammen.
+ * Führt Discord-Events, Webseiten-Runs und Gilden-Events zu einem Kalender zusammen.
  * - Discord ist führend für Discord-Events, die Webseite für Runs.
  * - Wurde ein Run per Bot als Discord-Event angekündigt (`discordEventId`),
  *   erscheint nur der Run – das Discord-Duplikat wird ausgeblendet.
  * - Sortiert nach Startzeit; doppelte IDs werden entfernt.
  */
-export function mergeEvents({ discordEvents, runs, dungeons, organizerNames }: MergeInput): CalendarEvent[] {
+export function mergeEvents({ discordEvents, runs, dungeons, guildEvents = [], organizerNames }: MergeInput): CalendarEvent[] {
   const announcedIds = new Set(runs.map(run => run.discordEventId).filter((id): id is string => id !== null))
   const dungeonBySlug = new Map(dungeons.map(dungeon => [dungeon.slug, dungeon]))
 
   const events = [
     ...discordEvents.filter(event => !announcedIds.has(event.id)).map(discordEventToCalendar),
     ...runs.map(run => runToCalendar(run, dungeonBySlug.get(run.dungeonSlug), organizerNames?.get(run.organizerId) ?? null)),
+    ...guildEvents.map(event => guildEventToCalendar(event, organizerNames?.get(event.createdBy) ?? null)),
   ]
 
   const unique = new Map<string, CalendarEvent>()

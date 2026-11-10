@@ -6,6 +6,7 @@ import { createSupabaseAccountStore, type AccountStore } from '../repositories/s
 import { createSupabaseActivityStore, type ActivityStore } from '../repositories/supabase/activity'
 import { createSupabaseBoardStore, type BoardStore } from '../repositories/supabase/board'
 import { createSupabaseGrantStore, type GrantStore } from '../repositories/supabase/grants'
+import { createSupabaseGuildEventStore, type GuildEventStore } from '../repositories/supabase/guild-events'
 import { createSupabaseMemberSettingsStore, type MemberSettingsStore } from '../repositories/supabase/member-settings'
 import { createSupabaseMilestoneStore, type MilestoneStore } from '../repositories/supabase/milestones'
 import { createSupabaseQuestCatalog, type QuestCatalogStore } from '../repositories/supabase/quest-catalog'
@@ -104,6 +105,11 @@ function useStore<T>(name: string, create: (db: SupabaseClient) => T): T | null 
  */
 export function useBoardStore(): BoardStore | null {
   return useStore('board', createSupabaseBoardStore)
+}
+
+/** Gilden-Events (auf der Webseite eingetragene Termine) – null im Demo-Modus oder ohne Datenbank */
+export function useGuildEventStore(): GuildEventStore | null {
+  return useStore('guild-events', createSupabaseGuildEventStore)
 }
 
 /** Einstellungen der Mitglieder (Ranglisten-Zustimmung, Twitch-Kanal) – null ohne Datenbank */
