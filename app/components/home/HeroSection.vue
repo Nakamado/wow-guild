@@ -37,47 +37,53 @@ onBeforeUnmount(() => {
     <HeroLandscape class="hero__landscape" />
 
     <div class="hero__content container">
-      <TwitchLiveIndicator class="hero__live" />
+      <div class="hero__main">
+        <TwitchLiveIndicator class="hero__live" />
 
-      <h1
-        id="hero-title"
-        class="hero__title"
-      >
-        {{ guild.name }}
-      </h1>
-
-      <p class="hero__subtitle">
-        Miinyus Gilde für World of Warcraft: Forever
-      </p>
-
-      <dl class="hero__facts">
-        <div class="hero__fact">
-          <dt>Fraktion</dt>
-          <dd>{{ guild.factionLabel }}</dd>
-        </div>
-        <div class="hero__fact">
-          <dt>Regelsatz</dt>
-          <dd>{{ guild.realm }}</dd>
-        </div>
-      </dl>
-
-      <div class="hero__actions">
-        <BaseButton
-          :href="guild.discordInvite"
-          external
-          size="lg"
-          icon-left="chat"
+        <h1
+          id="hero-title"
+          class="hero__title"
         >
-          Discord beitreten
-        </BaseButton>
-        <BaseButton
-          to="/dungeons"
-          size="lg"
-          variant="secondary"
-        >
-          Gruppe finden
-        </BaseButton>
+          {{ guild.name }}
+        </h1>
+
+        <p class="hero__subtitle">
+          Miinyus Gilde für World of Warcraft: Forever
+        </p>
+
+        <dl class="hero__facts">
+          <div class="hero__fact">
+            <dt>Fraktion</dt>
+            <dd>{{ guild.factionLabel }}</dd>
+          </div>
+          <div class="hero__fact">
+            <dt>Regelsatz</dt>
+            <dd>{{ guild.realm }}</dd>
+          </div>
+        </dl>
+
+        <div class="hero__actions">
+          <BaseButton
+            :href="guild.discordInvite"
+            external
+            size="lg"
+            icon-left="chat"
+          >
+            Discord beitreten
+          </BaseButton>
+          <BaseButton
+            to="/dungeons"
+            size="lg"
+            variant="secondary"
+          >
+            Gruppe finden
+          </BaseButton>
+        </div>
       </div>
+
+      <ClientOnly>
+        <LiveStreamPreview class="hero__stream" />
+      </ClientOnly>
     </div>
 
     <p class="hero__credit">
@@ -128,18 +134,41 @@ onBeforeUnmount(() => {
     }
   }
 
+  // Mobil untereinander, ab „lg“ Text links und (wenn live) Stream-Vorschau rechts
   &__content {
     position: relative;
     z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    align-items: flex-start;
+    gap: var(--space-8);
     padding-block: var(--space-24) var(--space-16);
     transform: translate3d(0, calc(var(--hero-scroll, 0) * 0.35px), 0);
 
     @include mq('md') {
       padding-block-end: var(--space-20);
+    }
+
+    @include mq('lg') {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  &__stream {
+    max-width: 30rem;
+
+    @include mq('lg') {
+      flex-shrink: 0;
+      width: clamp(22rem, 32vw, 28rem);
     }
   }
 

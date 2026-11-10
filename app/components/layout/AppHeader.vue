@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
           icon-left="chat"
           class="app-header__cta"
         >
-          Discord
+          <span class="app-header__cta-label">Discord</span>
         </BaseButton>
 
         <NotificationBell class="app-header__bell" />
@@ -181,6 +181,23 @@ onBeforeUnmount(() => {
 
     @include mq('sm') {
       display: inline-flex;
+    }
+
+    // nur Symbol: quadratischer
+    @include mq('lg') {
+      @include mq('xl', 'max') {
+        gap: 0;
+        padding-inline: var(--space-3);
+      }
+    }
+  }
+
+  // Zwischen „lg“ und „xl“ wird es mit Navigation, Glocke und Profil eng – dann nur das Symbol
+  &__cta-label {
+    @include mq('lg') {
+      @include mq('xl', 'max') {
+        @include visually-hidden;
+      }
     }
   }
 

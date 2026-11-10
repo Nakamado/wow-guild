@@ -18,6 +18,8 @@ export const HelixStreamSchema = z.object({
   title: z.string().nullish(),
   viewer_count: z.number().int().nonnegative(),
   started_at: z.string(),
+  /** Vorschaubild mit Platzhaltern {width}x{height} */
+  thumbnail_url: z.string().nullish(),
 })
 
 export const HelixClipSchema = z.object({

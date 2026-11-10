@@ -89,14 +89,16 @@ test.describe('Startseite', () => {
 
   test('Livestatus ist ehrlich und lässt sich in der Demo simulieren', async ({ page }) => {
     await page.goto('/')
-    const indicator = page.locator('.hero').getByRole('link', { name: /Miinyu/ })
+    const indicator = page.locator('.hero__live')
     await expect(indicator).toContainText('Miinyu auf Twitch')
     await page.getByLabel('Live simulieren').check()
     // Ohne Neuladen: alle Daten werden nach dem Umschalten aktualisiert
     await expect(indicator).toContainText('Miinyu ist live')
     // …und der Zustand bleibt nach einem Reload erhalten (Cookie)
     await page.reload()
-    await expect(page.locator('.hero').getByRole('link', { name: /Miinyu/ })).toContainText('Miinyu ist live')
+    await expect(page.locator('.hero__live')).toContainText('Miinyu ist live')
+    // große Vorschau erscheint zusätzlich
+    await expect(page.getByRole('link', { name: /Miinyu ist gerade live/ })).toBeVisible()
   })
 })
 

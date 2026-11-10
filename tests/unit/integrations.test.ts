@@ -6,7 +6,7 @@ import { resilientTwitch } from '../../server/providers/live'
 import { accessLevelFromRoles } from '../../shared/domain/permissions'
 import { createDiscordBotClient, createDiscordEventProvider, createDiscordMemberProvider, fetchOwnGuildMember } from '../../server/providers/discord'
 import { discordAvatarUrl, scheduledEventToDiscordEvent } from '../../server/providers/discord/normalize'
-import { createTwitchClient, createTwitchProvider, streamToStatus } from '../../server/providers/twitch'
+import { createTwitchClient, createTwitchProvider, streamPreviewUrl, streamToStatus } from '../../server/providers/twitch'
 import { rowToRun, type RunRow } from '../../server/repositories/supabase/mappers'
 import { rowToMember } from '../../server/repositories/supabase/members'
 import { fromPostgresError } from '../../server/repositories/errors'
@@ -155,7 +155,16 @@ describe('Twitch', () => {
       user_id: '1', user_login: 'miinyu', user_name: 'Miinyu', game_name: 'World of Warcraft',
       type: 'live', title: 'Raid!', viewer_count: 120, started_at: '2026-11-04T18:00:00Z',
     }, new Date('2026-11-04T19:00:00Z'))
-    expect(status).toMatchObject({ isLive: true, title: 'Raid!', viewerCount: 120 })
+    expect(status).toMatchObject({ isLive: true, title: 'Raid!', viewerCount: 120, thumbnailUrl: null })
+  })
+
+  it('Live-Vorschaubild nur vom Twitch-CDN, mit Cache-Schlüssel je 5 Minuten', () => {
+    const template = 'https://static-cdn.jtvnw.net/previews-ttv/live_user_miinyu-{width}x{height}.jpg'
+    const at = new Date('2026-11-04T19:02:00Z')
+    expect(streamPreviewUrl(template, at)).toBe(`https://static-cdn.jtvnw.net/previews-ttv/live_user_miinyu-640x360.jpg?t=${Math.floor(at.getTime() / 300_000)}`)
+    expect(streamPreviewUrl(template, new Date('2026-11-04T19:04:59Z'))).toBe(streamPreviewUrl(template, at))
+    expect(streamPreviewUrl('https://evil.example/x-{width}x{height}.jpg', at)).toBeNull()
+    expect(streamPreviewUrl(undefined, at)).toBeNull()
   })
 
   it('filtert Clips nach Zeitraum und sortiert nach Datum oder Aufrufen', async () => {

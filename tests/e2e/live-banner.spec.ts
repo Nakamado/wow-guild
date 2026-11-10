@@ -23,9 +23,20 @@ test.describe('Live-Hinweis im Header (Demo)', () => {
     await expect(page.getByRole('link', { name: /Miinyu ist live.*Zuschauen/ })).toHaveCount(0)
   })
 
+  test('Startseite zeigt eine große Stream-Vorschau, die zu Twitch führt', async ({ page }) => {
+    await gotoReady(page, '/')
+    const preview = page.getByRole('link', { name: /Miinyu ist gerade live/ })
+    await expect(preview).toBeVisible()
+    await expect(preview).toHaveAttribute('href', /twitch\.tv/)
+    await expect(preview).toHaveAttribute('target', '_blank')
+    await expect(preview.getByText('321 Zuschauer')).toBeVisible()
+  })
+
   test('ohne Livestream kein Hinweis', async ({ page, context }) => {
     await context.clearCookies()
     await gotoReady(page, '/kalender')
     await expect(page.getByRole('button', { name: 'Live-Hinweis ausblenden' })).toHaveCount(0)
+    await gotoReady(page, '/')
+    await expect(page.getByRole('link', { name: /Miinyu ist gerade live/ })).toHaveCount(0)
   })
 })

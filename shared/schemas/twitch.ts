@@ -8,6 +8,11 @@ export const StreamStatusSchema = z.object({
   gameName: z.string().nullable(),
   viewerCount: z.number().int().min(0).nullable(),
   startedAt: IsoDateTimeSchema.nullable(),
+  /**
+   * Vorschaubild des laufenden Streams (Twitch-CDN, 640×360). Wird über den eigenen Server
+   * ausgeliefert (NuxtImg), der Browser lädt nichts direkt von Twitch. null = keins (z. B. Demo).
+   */
+  thumbnailUrl: z.url().nullable().optional(),
   /** Zeitpunkt der letzten Prüfung – UI zeigt nie einen veralteten Livestatus als sicher an */
   checkedAt: IsoDateTimeSchema,
 })
