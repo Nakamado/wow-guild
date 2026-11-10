@@ -8,19 +8,25 @@ const p = (memberId: string, role: Participant['role'], extra: Partial<Participa
   memberId, characterId: `c-${memberId}`, role, joinedAt: NOW.toISOString(), ...extra,
 })
 const SITE = 'https://www.mukimuki-forever.de'
-const embedOf = (body: { embeds?: unknown[] }) => body.embeds![0] as { title: string, url: string, color: number, fields: { name: string, value: string }[], description?: string }
+const embedOf = (body: { embeds?: unknown[] }) => body.embeds![0] as { title: string, url: string, color: number, fields?: { name: string, value: string }[], description?: string }
 
 describe('runAnnouncement', () => {
-  it('zeigt Titel, Termin als Discord-Zeitstempel, Besetzung und offene Rollen – ohne Pings', () => {
-    const body = runAnnouncement(run({ id: 'r1', title: 'Abendrunde', organizerId: '591736149647687697', participants: [p('1', 'tank'), p('2', 'dps', { support: true })] }), dungeon, SITE)
+  it('kompakt: Dungeon, Questanzahl, Termin, Besetzung, offene Rollen – ohne Pings', () => {
+    const body = runAnnouncement(run({
+      id: 'r1', title: 'Abendrunde', organizerId: '591736149647687697', questIds: [1, 2, 3, 4, 5],
+      participants: [p('1', 'tank'), p('2', 'dps', { support: true })],
+    }), dungeon, SITE)
     const embed = embedOf(body)
     expect(embed.title).toBe('Abendrunde')
     expect(embed.url).toBe(`${SITE}/gruppen/r1`)
-    expect(embed.description).toContain('Testgewölbe** · Stufe 20–26')
-    const fields = Object.fromEntries(embed.fields.map(field => [field.name, field.value]))
-    expect(fields.Termin).toMatch(/^<t:\d+:F> \(<t:\d+:R>\)$/)
-    expect(fields.Organisation).toBe('<@591736149647687697>')
-    expect(fields['Besetzung 2/5']).toBe('Tank 1/1 · Heiler 0/1 · Schaden 1/3\nSucht noch: Heiler, Schaden\ndavon 1 als Supporter')
+    expect(embed.fields).toBeUndefined()
+    const lines = embed.description!.split('\n')
+    expect(lines[0]).toBe('**Testgewölbe** · Stufe 20–26 · 5 Quests geplant')
+    expect(lines[1]).toMatch(/^🗓️ <t:\d+:d>, <t:\d+:t> \(<t:\d+:R>\)$/)
+    expect(lines.slice(2)).toEqual([
+      '👥 2/5 · Tank 1/1 · Heiler 0/1 · Schaden 1/3 · 1 Supporter',
+      'Organisation: <@591736149647687697>',
+    ])
     expect(body.allowed_mentions).toEqual({ parse: [] })
     expect(JSON.stringify(body.components)).toContain('Zur Anmeldung')
   })
@@ -29,8 +35,14 @@ describe('runAnnouncement', () => {
     const body = runAnnouncement(run({ status: 'cancelled', cancelReason: 'Krank' }), dungeon, SITE)
     const embed = embedOf(body)
     expect(embed.title).toBe('Abgesagt: Testgewölbe')
-    expect(embed.fields.find(field => field.name === 'Abgesagt')?.value).toBe('Krank')
+    expect(embed.description).toContain('❌ Abgesagt: Krank')
+    expect(embed.description).not.toContain('👥')
     expect(body.components).toEqual([])
+  })
+
+  it('volle Gruppe mit Warteliste: Hinweis in der Besetzungszeile', () => {
+    const full = run({ capacity: { tank: 1, healer: 0, dps: 0 }, waitlistEnabled: true, participants: [p('1', 'tank')], waitlist: [p('2', 'tank')] })
+    expect(embedOf(runAnnouncement(full, dungeon, SITE)).description).toContain('👥 1/1 · Tank 1/1 · Warteliste (1)')
   })
 
   it('entschärft Markdown und Erwähnungen in Nutzertexten', () => {
@@ -63,7 +75,7 @@ describe('runThreadLines', () => {
   it('Absage und neuer Termin', () => {
     expect(runThreadLines(run(), run({ status: 'cancelled', cancelReason: 'Zu wenig Anmeldungen' }), name))
       .toEqual(['❌ Die Gruppe wurde abgesagt: Zu wenig Anmeldungen'])
-    expect(runThreadLines(run(), run({ startsAt: '2026-11-06T18:00:00.000Z' }), name)[0]).toMatch(/^🕒 Neuer Termin: <t:\d+:F>$/)
+    expect(runThreadLines(run(), run({ startsAt: '2026-11-06T18:00:00.000Z' }), name)[0]).toMatch(/^🕒 Neuer Termin: <t:\d+:d>, <t:\d+:t> \(<t:\d+:R>\)$/)
   })
 })
 
@@ -76,8 +88,10 @@ describe('guildEventAnnouncement', () => {
     const embed = embedOf(guildEventAnnouncement(event, SITE))
     expect(embed.title).toBe('Angelwettbewerb')
     expect(embed.url).toBe(`${SITE}/kalender?ansicht=liste`)
-    expect(embed.fields.map(field => field.name)).toEqual(['Termin', 'Treffpunkt', 'Eingetragen von'])
-    expect(embed.fields[0]!.value).toMatch(/^<t:\d+:F> – <t:\d+:t> \(<t:\d+:R>\)$/)
+    const lines = embed.description!.split('\n')
+    expect(lines[0]).toBe('Größter Fisch gewinnt')
+    expect(lines[1]).toMatch(/^🗓️ <t:\d+:d>, <t:\d+:t>–<t:\d+:t> \(<t:\d+:R>\)$/)
+    expect(lines.slice(2)).toEqual(['📍 Loch Modan', 'Eingetragen von <@591736149647687697>'])
   })
 })
 
