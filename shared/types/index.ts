@@ -26,6 +26,7 @@ export type Participant = z.infer<typeof S.ParticipantSchema>
 export type RunStatus = z.infer<typeof S.RunStatusSchema>
 export type GroupRun = z.infer<typeof S.GroupRunSchema>
 export type RunInput = z.infer<typeof S.RunInputSchema>
+export type CancelInput = z.infer<typeof S.CancelInputSchema>
 
 export type EventStatus = z.infer<typeof S.EventStatusSchema>
 export type DiscordEvent = z.infer<typeof S.DiscordEventSchema>

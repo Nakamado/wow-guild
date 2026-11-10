@@ -127,10 +127,16 @@ export function createSupabaseGroupRepository(db: SupabaseClient): GroupReposito
       if (result.error) throw fromPostgresError(result.error)
       return getOrFail(id)
     },
-    async cancel(id) {
-      const result = await table().update({ status: 'cancelled' }).eq('id', id).eq('status', 'open')
+    async cancel(id, reason = null) {
+      // Grund nur mitschicken, wenn angegeben – Absagen ohne Grund klappt auch vor der Migration
+      const result = await table().update({ status: 'cancelled', ...(reason ? { cancel_reason: reason } : {}) }).eq('id', id).eq('status', 'open')
       if (result.error) throw fromPostgresError(result.error)
       return getOrFail(id)
+    },
+    async remove(id) {
+      // run_participants werden per „on delete cascade“ mitgelöscht
+      const result = await table().delete().eq('id', id)
+      if (result.error) throw fromPostgresError(result.error)
     },
     async join(runId, memberId, characterId, role, support = false, altRole = null) {
       // Zusatzparameter nur mitschicken, wenn gesetzt – so funktionieren einfache Anmeldungen auch vor den Migrationen

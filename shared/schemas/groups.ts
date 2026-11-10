@@ -37,6 +37,8 @@ export const GroupRunSchema = z.object({
   participants: z.array(ParticipantSchema),
   waitlistEnabled: z.boolean(),
   waitlist: z.array(ParticipantSchema),
+  /** Grund der Absage (optional, nur bei status = cancelled) */
+  cancelReason: z.string().max(200).nullable().optional(),
   /** Optional: Dungeon-Quests, die die Gruppe erledigen will (Quest-IDs aus dem Dungeon Journal) */
   questIds: z.array(z.number().int().positive()).max(30).optional(),
   /** Gesetzt, wenn der Run per Bot als Discord-Event angekündigt wurde (Duplikatvermeidung) */
@@ -64,4 +66,9 @@ export const JoinInputSchema = z.object({
   support: z.boolean().default(false),
   /** optionale Ausweichrolle (Flex) */
   altRole: RoleIdSchema.nullable().default(null),
+})
+
+/** Absagen mit optionalem Grund (Gruppen und Gilden-Events) */
+export const CancelInputSchema = z.object({
+  reason: z.string().trim().max(200, 'Der Grund darf höchstens 200 Zeichen lang sein.').transform(value => value || null).nullable().default(null),
 })

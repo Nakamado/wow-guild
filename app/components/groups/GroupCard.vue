@@ -59,7 +59,8 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
       <span
         v-if="run.status === 'cancelled'"
         class="group-card__status group-card__status--cancelled"
-      >Abgesagt</span>
+        :title="run.cancelReason ?? undefined"
+      >Abgesagt<template v-if="run.cancelReason">: {{ run.cancelReason }}</template></span>
       <span
         v-else-if="openForFixed === 0"
         class="group-card__status group-card__status--full"

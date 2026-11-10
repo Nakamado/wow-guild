@@ -10,7 +10,7 @@ const id = computed(() => String(route.params.id))
 
 const { isDemo } = useSiteConfig()
 const { can } = useViewer()
-const { status, getRun, memberById, characterById, myEntry, leaveRun, cancelRun } = useRuns()
+const { status, getRun, memberById, characterById, myEntry, leaveRun, cancelRun, deleteRun } = useRuns()
 
 const run = computed(() => getRun(id.value))
 const dungeon = computed(() => (run.value ? findDungeon(run.value.dungeonSlug) : undefined))
@@ -32,6 +32,11 @@ const hasSupporters = computed(() => run.value?.participants.some(entry => entry
 const signupOpen = ref(false)
 const editOpen = ref(false)
 const confirmCancelOpen = ref(false)
+const cancelReason = ref('')
+const confirmDeleteOpen = ref(false)
+watch(confirmCancelOpen, (isOpen) => {
+  if (isOpen) cancelReason.value = ''
+})
 const notice = ref<{ tone: 'success' | 'error', text: string } | null>(null)
 
 // Demo-Runs existieren nur im Browser – erst nach der Hydration ist klar, ob es die ID gibt
@@ -76,8 +81,18 @@ async function onLeave() {
   }
 }
 
+async function onDelete() {
+  const result = await deleteRun(id.value)
+  confirmDeleteOpen.value = false
+  if (!result.ok) {
+    notice.value = { tone: 'error', text: result.error.message }
+    return
+  }
+  await navigateTo('/gruppen')
+}
+
 async function onCancel() {
-  const result = await cancelRun(id.value)
+  const result = await cancelRun(id.value, cancelReason.value)
   confirmCancelOpen.value = false
   notice.value = result.ok
     ? { tone: 'success', text: 'Die Gruppe wurde abgesagt. Alle Angemeldeten sehen das jetzt hier.' }
@@ -143,7 +158,9 @@ function onSaved() {
           v-if="run.status === 'cancelled'"
           class="group-page__status group-page__status--cancelled"
         >
-          Abgesagt
+          Abgesagt<template v-if="run.cancelReason">
+            – {{ run.cancelReason }}
+          </template>
         </p>
         <p
           v-else-if="run.status === 'completed'"
@@ -406,6 +423,14 @@ function onSaved() {
                   Gruppe absagen
                 </BaseButton>
               </template>
+              <BaseButton
+                v-if="canEdit"
+                variant="ghost"
+                block
+                @click="confirmDeleteOpen = true"
+              >
+                Gruppe löschen
+              </BaseButton>
             </div>
 
             <template #footer>
@@ -447,6 +472,20 @@ function onSaved() {
         description="Die Gruppe bleibt sichtbar, ist aber als abgesagt markiert. Das lässt sich nicht rückgängig machen."
         size="sm"
       >
+        <label
+          class="group-page__reason"
+          for="cancel-reason"
+        >
+          Grund <span class="group-page__optional">(optional)</span>
+        </label>
+        <input
+          id="cancel-reason"
+          v-model="cancelReason"
+          type="text"
+          maxlength="200"
+          class="group-page__reason-input"
+          placeholder="z. B. krank, zu wenig Anmeldungen"
+        >
         <template #actions="{ close }">
           <BaseButton
             variant="ghost"
@@ -459,6 +498,27 @@ function onSaved() {
             @click="onCancel"
           >
             Gruppe absagen
+          </BaseButton>
+        </template>
+      </BaseDialog>
+      <BaseDialog
+        v-model:open="confirmDeleteOpen"
+        title="Gruppe löschen?"
+        description="Die Gruppe verschwindet komplett, mit allen Anmeldungen – zum Beispiel bei einem Fehleintrag. Wer nur nicht kann, sagt besser ab. Das lässt sich nicht rückgängig machen."
+        size="sm"
+      >
+        <template #actions="{ close }">
+          <BaseButton
+            variant="ghost"
+            @click="close"
+          >
+            Nicht löschen
+          </BaseButton>
+          <BaseButton
+            variant="lantern"
+            @click="onDelete"
+          >
+            Endgültig löschen
           </BaseButton>
         </template>
       </BaseDialog>
@@ -475,6 +535,30 @@ function onSaved() {
 
   &__back {
     align-self: flex-start;
+  }
+
+  &__reason {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  &__optional {
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-subtle);
+  }
+
+  &__reason-input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+
+    @include focus-ring(2px);
   }
 
   &__header {

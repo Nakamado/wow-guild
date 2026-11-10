@@ -80,7 +80,10 @@ export type RunWrite = Pick<GroupRun, 'dungeonSlug' | 'title' | 'description' | 
 export interface GroupWriter {
   create(organizerId: string, input: RunWrite): Promise<GroupRun>
   update(id: string, input: RunWrite): Promise<GroupRun>
-  cancel(id: string): Promise<GroupRun>
+  /** absagen, optional mit Grund */
+  cancel(id: string, reason?: string | null): Promise<GroupRun>
+  /** endgültig löschen (Anmeldungen werden mitgelöscht) */
+  remove(id: string): Promise<void>
   /** Atomar (Postgres `join_run()`): Platz oder Warteliste */
   /** `support`: als Supporter (macht Platz für feste Anmeldungen); `altRole`: Ausweichrolle (Flex) */
   join(runId: string, memberId: string, characterId: string, role: RoleId, support?: boolean, altRole?: RoleId | null): Promise<'participant' | 'waitlist'>

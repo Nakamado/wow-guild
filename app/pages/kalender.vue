@@ -42,7 +42,8 @@ const type = computed<CalendarTypeFilter>(() => {
   const value = route.query.typ
   return value === 'dungeon' || value === 'raid' || value === 'community' ? value : 'all'
 })
-const includeCancelled = computed(() => route.query.abgesagt === '1')
+// Abgesagte sind standardmäßig sichtbar (als abgesagt markiert); ?abgesagt=0 blendet sie aus
+const includeCancelled = computed(() => route.query.abgesagt !== '0')
 const selectedDay = computed(() => (typeof route.query.tag === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.tag) ? route.query.tag : null))
 
 function setQuery(patch: Record<string, string | null | undefined>) {
@@ -189,10 +190,10 @@ function onSaved(run: { id: string }) {
           <input
             type="checkbox"
             class="calendar-page__checkbox"
-            :checked="includeCancelled"
-            @change="setQuery({ abgesagt: ($event.target as HTMLInputElement).checked ? '1' : null })"
+            :checked="!includeCancelled"
+            @change="setQuery({ abgesagt: ($event.target as HTMLInputElement).checked ? '0' : null })"
           >
-          Abgesagte zeigen
+          Abgesagte ausblenden
         </label>
       </div>
 

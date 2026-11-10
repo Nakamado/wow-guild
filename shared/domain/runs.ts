@@ -289,9 +289,9 @@ export function validateRunDraft(
 }
 
 /** Sagt einen Run ab (Berechtigung wird separat über `can()` geprüft). */
-export function cancelRun(run: GroupRun, now: Date): DomainResult<GroupRun, 'run-not-open'> {
+export function cancelRun(run: GroupRun, now: Date, reason: string | null = null): DomainResult<GroupRun, 'run-not-open'> {
   if (run.status !== 'open') return fail('run-not-open', 'Dieser Run ist nicht mehr offen.')
-  return ok({ ...run, status: 'cancelled', updatedAt: now.toISOString() })
+  return ok({ ...run, status: 'cancelled', cancelReason: reason, updatedAt: now.toISOString() })
 }
 
 /** Liegt der Run in der Zukunft und ist noch offen? */

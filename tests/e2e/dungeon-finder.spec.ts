@@ -131,13 +131,22 @@ test.describe('Gruppenplaner (Demo)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'E2E-Verlies (verschoben)' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Gruppe absagen' }).click()
+    await page.getByRole('dialog').getByLabel(/Grund/).fill('Krank')
     await page.getByRole('dialog').getByRole('button', { name: 'Gruppe absagen' }).click()
-    await expect(page.locator('.group-page__status')).toHaveText('Abgesagt')
+    await expect(page.locator('.group-page__status')).toContainText('Abgesagt')
+    await expect(page.locator('.group-page__status')).toContainText('Krank')
     await expect(page.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0)
 
-    // Die neue Gruppe erscheint in der Liste (abgesagte nur auf Wunsch)
-    await page.goto('/gruppen?abgesagt=1')
+    // Abgesagte Gruppen bleiben in der Liste sichtbar
+    await page.goto('/gruppen')
     await expect(page.getByRole('link', { name: 'E2E-Verlies (verschoben)' })).toBeVisible()
+    await page.getByRole('link', { name: 'E2E-Verlies (verschoben)' }).click()
+
+    // Löschen entfernt die Gruppe komplett
+    await page.getByRole('button', { name: 'Gruppe löschen' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Endgültig löschen' }).click()
+    await expect(page).toHaveURL(/\/gruppen$/)
+    await expect(page.getByRole('link', { name: 'E2E-Verlies (verschoben)' })).toHaveCount(0)
   })
 
   test('Organisator plant Quests für die Gruppe', async ({ page, context, baseURL }) => {
