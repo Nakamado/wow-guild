@@ -20,6 +20,8 @@ export interface GuildEventDraft {
 
 /** Demo-Änderungen: Event-Snapshots nach ID */
 const useDemoOverrides = () => useState<Record<string, GuildEvent>>('demo-guild-event-overrides', () => ({}))
+/** Demo: gelöschte Events (nur bis zum Neuladen) */
+const useDemoDeleted = () => useState<string[]>('demo-guild-event-deleted', () => [])
 
 /**
  * Gilden-Events lesen und eintragen/bearbeiten/absagen.
@@ -30,6 +32,7 @@ export function useGuildEvents() {
   const { isDemo } = useSiteConfig()
   const { viewer, can } = useViewer()
   const overrides = useDemoOverrides()
+  const deleted = useDemoDeleted()
   const canCreate = computed(() => can('events:create'))
 
   const { data, status, refresh } = useFetch<GuildEvent[]>('/api/guild-events', { key: 'guild-events', default: () => [] })
@@ -48,12 +51,13 @@ export function useGuildEvents() {
   const events = computed(() => {
     const byId = new Map((data.value ?? []).map(entry => [entry.id, entry]))
     for (const [id, entry] of Object.entries(overrides.value)) byId.set(id, entry)
+    for (const id of deleted.value) byId.delete(id)
     return [...byId.values()].sort((a, b) => a.startsAt.localeCompare(b.startsAt))
   })
 
   const getEvent = (id: string) => events.value.find(entry => entry.id === id) ?? null
-  const canEdit = (entry: Pick<GuildEvent, 'createdBy' | 'status'>) =>
-    entry.status === 'scheduled' && can('events:edit', { organizerId: entry.createdBy })
+  const canDelete = (entry: Pick<GuildEvent, 'createdBy'>) => can('events:edit', { organizerId: entry.createdBy })
+  const canEdit = (entry: Pick<GuildEvent, 'createdBy' | 'status'>) => entry.status === 'scheduled' && canDelete(entry)
 
   function saveDemo(entry: GuildEvent) {
     overrides.value = { ...overrides.value, [entry.id]: entry }
@@ -114,18 +118,33 @@ export function useGuildEvents() {
     return result
   }
 
-  async function cancel(id: string): Promise<DomainResult<GuildEvent>> {
+  async function cancel(id: string, reason: string | null = null): Promise<DomainResult<GuildEvent>> {
     const existing = getEvent(id)
     if (!existing || !canEdit(existing)) return fail('not-allowed', 'Dieses Event kannst du nicht absagen.')
+    const trimmed = reason?.trim().slice(0, 200) || null
     if (isDemo) {
-      const entry: GuildEvent = { ...existing, status: 'cancelled', updatedAt: new Date().toISOString() }
+      const entry: GuildEvent = { ...existing, status: 'cancelled', cancelReason: trimmed, updatedAt: new Date().toISOString() }
       saveDemo(entry)
       return ok(entry)
     }
-    const result = await apiResult(() => $fetch<GuildEvent>(`/api/guild-events/${id}/cancel` as string, { method: 'POST' }))
+    const result = await apiResult(() => $fetch<GuildEvent>(`/api/guild-events/${id}/cancel` as string, { method: 'POST', body: { reason: trimmed } }))
     if (result.ok) await refresh()
     return result
   }
 
-  return { events, status, refresh, getEvent, canCreate, canEdit, save, cancel }
+  /** endgültig löschen (auch abgesagte) */
+  async function remove(id: string): Promise<DomainResult<null>> {
+    const existing = getEvent(id)
+    if (!existing || !canDelete(existing)) return fail('not-allowed', 'Dieses Event kannst du nicht löschen.')
+    if (isDemo) {
+      deleted.value = [...deleted.value, id]
+      return ok(null)
+    }
+    const result = await apiResult(() => $fetch<null>(`/api/guild-events/${id}` as string, { method: 'DELETE' }))
+    if (!result.ok) return result
+    await refresh()
+    return ok(null)
+  }
+
+  return { events, status, refresh, getEvent, canCreate, canEdit, canDelete, save, cancel, remove }
 }

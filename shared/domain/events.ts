@@ -24,6 +24,7 @@ export function discordEventToCalendar(event: DiscordEvent): CalendarEvent {
     openSlots: null,
     guildEventId: null,
     location: null,
+    cancelReason: null,
   }
 }
 
@@ -47,6 +48,7 @@ export function runToCalendar(
     openSlots: computeComposition(run).open,
     guildEventId: null,
     location: null,
+    cancelReason: run.status === 'cancelled' ? run.cancelReason ?? null : null,
   }
 }
 

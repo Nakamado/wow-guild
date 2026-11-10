@@ -35,4 +35,6 @@ export const CalendarEventSchema = z.object({
   /** nur Gilden-Events: ID und Treffpunkt */
   guildEventId: IdSchema.nullable().default(null),
   location: z.string().nullable().default(null),
+  /** Grund der Absage (Gruppen und Gilden-Events) */
+  cancelReason: z.string().nullable().default(null),
 })

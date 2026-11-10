@@ -21,9 +21,11 @@ test.describe('Eventkalender', () => {
     await expect(page.getByRole('button', { name: 'Gildentreffen in Eisenschmiede' })).toHaveCount(0)
 
     await page.getByRole('group', { name: 'Art des Termins' }).getByRole('button', { name: 'Alle' }).click()
-    await expect(page.getByText('Rätselabend')).toHaveCount(0)
-    await page.getByLabel('Abgesagte zeigen').check()
+    // Abgesagte bleiben standardmäßig sichtbar
     await expect(page.getByText('Rätselabend')).toBeVisible()
+    await page.getByLabel('Abgesagte ausblenden').check()
+    await expect(page).toHaveURL(/abgesagt=0/)
+    await expect(page.getByText('Rätselabend')).toHaveCount(0)
   })
 
   test('Monatsnavigation und Tagesauswahl', async ({ page }) => {
@@ -94,8 +96,17 @@ test.describe('Eventkalender', () => {
     await page.getByRole('button', { name: 'E2E-Gildenabend (verschoben)' }).click()
     const again = page.getByRole('dialog', { name: 'E2E-Gildenabend (verschoben)' })
     await again.getByRole('button', { name: 'Absagen' }).click()
+    await again.getByLabel(/Grund/).fill('Zu wenig Anmeldungen')
     await again.getByRole('button', { name: 'Ja, absagen' }).click()
-    await expect(again.getByText('Abgesagt')).toBeVisible()
+    await expect(again.getByText('Abgesagt – Zu wenig Anmeldungen')).toBeVisible()
+    await again.getByRole('button', { name: 'Schließen', exact: true }).last().click()
+
+    // Abgesagt bleibt im Kalender, Löschen entfernt es
+    await page.getByRole('button', { name: 'E2E-Gildenabend (verschoben)' }).click()
+    const cancelled = page.getByRole('dialog', { name: 'E2E-Gildenabend (verschoben)' })
+    await cancelled.getByRole('button', { name: 'Löschen' }).click()
+    await cancelled.getByRole('button', { name: 'Endgültig löschen' }).click()
+    await expect(page.getByRole('button', { name: 'E2E-Gildenabend (verschoben)' })).toHaveCount(0)
   })
 
   test('fremde Gilden-Events kann man nicht bearbeiten', async ({ page, context, baseURL }) => {

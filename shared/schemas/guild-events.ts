@@ -17,6 +17,8 @@ export const GuildEventSchema = z.object({
   /** Treffpunkt im Spiel, z. B. „Eisenschmiede, Bank“ */
   location: z.string().trim().max(80).nullable(),
   status: GuildEventStatusSchema,
+  /** Grund der Absage (optional) */
+  cancelReason: z.string().max(200).nullable().optional(),
   createdBy: IdSchema,
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,

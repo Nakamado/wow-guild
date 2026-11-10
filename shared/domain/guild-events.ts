@@ -46,5 +46,6 @@ export function guildEventToCalendar(event: GuildEvent, organizerName: string | 
     openSlots: null,
     guildEventId: event.id,
     location: event.location,
+    cancelReason: event.status === 'cancelled' ? event.cancelReason ?? null : null,
   }
 }

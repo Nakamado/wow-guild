@@ -20,13 +20,21 @@ export async function beginGuildEventWrite(event: H3Event) {
   return { viewer, store }
 }
 
-/** Event laden, das bearbeitet/abgesagt werden soll – nur eigenes oder als Admin */
-export async function loadEditableGuildEvent(event: H3Event, store: NonNullable<ReturnType<typeof useGuildEventStore>>, viewer: Awaited<ReturnType<typeof getViewer>>): Promise<GuildEvent> {
+/**
+ * Event laden, das bearbeitet/abgesagt/gelöscht werden soll – nur eigenes oder als Admin.
+ * Abgesagte Events lassen sich nur noch löschen (`allowCancelled`).
+ */
+export async function loadEditableGuildEvent(
+  event: H3Event,
+  store: NonNullable<ReturnType<typeof useGuildEventStore>>,
+  viewer: Awaited<ReturnType<typeof getViewer>>,
+  options: { allowCancelled?: boolean } = {},
+): Promise<GuildEvent> {
   const id = getRouterParam(event, 'id') ?? ''
   const existing = /^[0-9a-f-]{36}$/i.test(id) ? await persist(() => store.get(id)) : null
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Not Found', message: 'Dieses Event gibt es nicht (mehr).' })
   assertPermission(viewer, 'events:edit', { organizerId: existing.createdBy })
-  if (existing.status === 'cancelled') rejectWith({ code: 'event-cancelled', message: 'Dieses Event wurde bereits abgesagt.' }, 409)
+  if (existing.status === 'cancelled' && !options.allowCancelled) rejectWith({ code: 'event-cancelled', message: 'Dieses Event wurde bereits abgesagt.' }, 409)
   return existing
 }
 

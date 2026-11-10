@@ -14,6 +14,8 @@ export const DEMO_RUNS_STORAGE_KEY = 'wow-guild:demo-runs'
 
 /** Lokale Demo-Änderungen: vollständige Run-Snapshots, die Server-Runs gleicher ID ersetzen. */
 export const useDemoRunOverrides = () => useState<Record<string, GroupRun>>('demo-run-overrides', () => ({}))
+/** Demo: gelöschte Gruppen (nur bis zum Neuladen) */
+const useDemoDeletedRuns = () => useState<string[]>('demo-run-deleted', () => [])
 
 export interface JoinOutcome {
   run: GroupRun
@@ -37,6 +39,7 @@ export function useRuns() {
   const { isDemo } = useSiteConfig()
   const { viewer, can } = useViewer()
   const overrides = useDemoRunOverrides()
+  const deleted = useDemoDeletedRuns()
 
   const { data: serverRuns, status, error, refresh } = useFetch<GroupRun[]>('/api/runs', { key: 'runs', default: () => [] })
 
@@ -48,6 +51,7 @@ export function useRuns() {
   const runs = computed<GroupRun[]>(() => {
     const byId = new Map((serverRuns.value ?? []).map(run => [run.id, run]))
     for (const [id, run] of Object.entries(overrides.value)) byId.set(id, run)
+    for (const id of deleted.value) byId.delete(id)
     return [...byId.values()].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
   })
 
@@ -143,14 +147,30 @@ export function useRuns() {
     return ok(updated)
   }
 
-  async function cancelRun(id: string): Promise<DomainResult<GroupRun>> {
+  async function cancelRun(id: string, reason: string | null = null): Promise<DomainResult<GroupRun>> {
     const run = getRun(id)
     if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
     if (!can('runs:cancel', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder ein Admin kann diese Gruppe absagen.')
-    if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}/cancel`, { method: 'POST' }))
-    const result = cancelRunRule(run, new Date())
+    const trimmed = reason?.trim().slice(0, 200) || null
+    if (!isDemo) return live(() => $fetch<GroupRun>(`/api/runs/${id}/cancel`, { method: 'POST', body: { reason: trimmed } }))
+    const result = cancelRunRule(run, new Date(), trimmed)
     if (result.ok) persist(result.value)
     return result
+  }
+
+  /** Gruppe endgültig löschen (Organisation oder Admin) */
+  async function deleteRun(id: string): Promise<DomainResult<null>> {
+    const run = getRun(id)
+    if (!run) return fail('not-found', 'Diese Gruppe gibt es nicht (mehr).')
+    if (!can('runs:cancel', { organizerId: run.organizerId })) return fail('not-allowed', 'Nur die Organisation oder ein Admin kann diese Gruppe löschen.')
+    if (isDemo) {
+      deleted.value = [...deleted.value, id]
+      return ok(null)
+    }
+    const result = await apiResult(() => $fetch<null>(`/api/runs/${id}` as string, { method: 'DELETE' }))
+    if (!result.ok) return result
+    serverRuns.value = (serverRuns.value ?? []).filter(entry => entry.id !== id)
+    return ok(null)
   }
 
   async function joinRun(id: string, characterId: string, role: RoleId, support = false, altRole: RoleId | null = null): Promise<DomainResult<JoinOutcome>> {
@@ -235,6 +255,7 @@ export function useRuns() {
     createRun,
     updateRun,
     cancelRun,
+    deleteRun,
     joinRun,
     leaveRun,
     resetDemoChanges,

@@ -28,7 +28,8 @@ const asString = (value: unknown) => (typeof value === 'string' ? value : '')
 const dungeonSlug = computed(() => asString(route.query.dungeon) || null)
 const period = computed(() => asString(route.query.zeitraum))
 const onlyOpen = computed(() => route.query.frei === '1')
-const includeCancelled = computed(() => route.query.abgesagt === '1')
+// Abgesagte sind standardmäßig sichtbar (als abgesagt markiert); ?abgesagt=0 blendet sie aus
+const includeCancelled = computed(() => route.query.abgesagt !== '0')
 
 function setQuery(key: string, value: string | null) {
   router.replace({ query: { ...route.query, [key]: value || undefined } })
@@ -154,10 +155,10 @@ function onSaved(run: { id: string }) {
             :id="ids.cancelled"
             type="checkbox"
             class="groups-page__checkbox"
-            :checked="includeCancelled"
-            @change="setQuery('abgesagt', ($event.target as HTMLInputElement).checked ? '1' : null)"
+            :checked="!includeCancelled"
+            @change="setQuery('abgesagt', ($event.target as HTMLInputElement).checked ? '0' : null)"
           >
-          Abgesagte zeigen
+          Abgesagte ausblenden
         </label>
       </form>
 

@@ -42,6 +42,8 @@ export interface RunRow {
   waitlist_enabled: boolean
   /** fehlt, solange die Migration 20261111 nicht eingespielt ist */
   quest_ids?: number[] | null
+  /** fehlt, solange die Migration 20261115 nicht eingespielt ist */
+  cancel_reason?: string | null
   discord_event_id: string | null
   created_at: string
   updated_at: string
@@ -97,6 +99,7 @@ export function rowToRun(row: RunRow): GroupRun {
     waitlistEnabled: row.waitlist_enabled,
     waitlist: entries.filter(entry => entry.placement === 'waitlist').map(rowToParticipant),
     questIds: row.quest_ids ?? [],
+    cancelReason: row.cancel_reason ?? null,
     discordEventId: row.discord_event_id,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),

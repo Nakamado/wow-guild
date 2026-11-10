@@ -9,26 +9,40 @@ const emit = defineEmits<{ join: [runId: string], edit: [guildEventId: string] }
 
 const { can } = useViewer()
 const { getRun, myEntry } = useRuns()
-const { getEvent: getGuildEvent, canEdit: canEditGuildEvent, cancel: cancelGuildEvent } = useGuildEvents()
+const { getEvent: getGuildEvent, canEdit: canEditGuildEvent, canDelete: canDeleteGuildEvent, cancel: cancelGuildEvent, remove: removeGuildEvent } = useGuildEvents()
 
 // Gilden-Event: bearbeiten/absagen für die Person, die es eingetragen hat, und Admins
 const guildEvent = computed(() => (props.event?.guildEventId ? getGuildEvent(props.event.guildEventId) : null))
 const canManageGuildEvent = computed(() => Boolean(guildEvent.value && isUpcoming.value && canEditGuildEvent(guildEvent.value)))
-const confirmCancel = ref(false)
-const cancelError = ref<string | null>(null)
+const canDeleteEvent = computed(() => Boolean(guildEvent.value && canDeleteGuildEvent(guildEvent.value)))
+/** Bestätigung: absagen (mit optionalem Grund) oder endgültig löschen */
+const confirm = ref<'cancel' | 'delete' | null>(null)
+const cancelReason = ref('')
+const actionError = ref<string | null>(null)
 watch(open, () => {
-  confirmCancel.value = false
-  cancelError.value = null
+  confirm.value = null
+  cancelReason.value = ''
+  actionError.value = null
 })
 
 async function cancelEvent() {
   if (!guildEvent.value) return
-  const result = await cancelGuildEvent(guildEvent.value.id)
+  const result = await cancelGuildEvent(guildEvent.value.id, cancelReason.value)
   if (!result.ok) {
-    cancelError.value = result.error.message
+    actionError.value = result.error.message
     return
   }
-  confirmCancel.value = false
+  confirm.value = null
+}
+
+async function deleteEvent() {
+  if (!guildEvent.value) return
+  const result = await removeGuildEvent(guildEvent.value.id)
+  if (!result.ok) {
+    actionError.value = result.error.message
+    return
+  }
+  open.value = false
 }
 
 function edit() {
@@ -88,7 +102,9 @@ function join() {
         <div class="event-details__fact">
           <dt>Status</dt>
           <dd :class="{ 'event-details__cancelled': event.status === 'cancelled' }">
-            {{ statusLabel[event.status] }}
+            {{ statusLabel[event.status] }}<template v-if="event.cancelReason">
+              – {{ event.cancelReason }}
+            </template>
           </dd>
         </div>
         <div
@@ -147,34 +163,68 @@ function join() {
       </p>
 
       <div
-        v-if="confirmCancel"
+        v-if="confirm === 'cancel'"
         class="event-details__confirm"
-        role="alert"
       >
-        <p>Event wirklich absagen? Es bleibt als „abgesagt“ im Kalender sichtbar.</p>
+        <p>Event absagen? Es bleibt als „abgesagt“ im Kalender sichtbar.</p>
+        <label
+          class="event-details__reason-label"
+          for="event-cancel-reason"
+        >Grund <span class="event-details__optional">(optional)</span></label>
+        <input
+          id="event-cancel-reason"
+          v-model="cancelReason"
+          type="text"
+          maxlength="200"
+          class="event-details__reason"
+          placeholder="z. B. krank, zu wenig Interesse"
+        >
         <div class="event-details__confirm-actions">
           <BaseButton
             size="sm"
             variant="ghost"
-            @click="confirmCancel = false"
+            @click="confirm = null"
           >
             Nein
           </BaseButton>
           <BaseButton
             size="sm"
-            variant="secondary"
+            variant="lantern"
             @click="cancelEvent"
           >
             Ja, absagen
           </BaseButton>
         </div>
       </div>
+      <div
+        v-else-if="confirm === 'delete'"
+        class="event-details__confirm"
+        role="alert"
+      >
+        <p>Event endgültig löschen? Es verschwindet komplett aus dem Kalender – zum Beispiel bei einem Fehleintrag.</p>
+        <div class="event-details__confirm-actions">
+          <BaseButton
+            size="sm"
+            variant="ghost"
+            @click="confirm = null"
+          >
+            Nein
+          </BaseButton>
+          <BaseButton
+            size="sm"
+            variant="lantern"
+            @click="deleteEvent"
+          >
+            Endgültig löschen
+          </BaseButton>
+        </div>
+      </div>
       <p
-        v-if="cancelError"
+        v-if="actionError"
         class="event-details__cancelled"
         role="alert"
       >
-        {{ cancelError }}
+        {{ actionError }}
       </p>
     </div>
 
@@ -201,9 +251,16 @@ function join() {
         Zur Gruppe
       </BaseButton>
       <BaseButton
-        v-if="canManageGuildEvent && !confirmCancel"
+        v-if="canDeleteEvent && !confirm"
         variant="ghost"
-        @click="confirmCancel = true"
+        @click="confirm = 'delete'"
+      >
+        Löschen
+      </BaseButton>
+      <BaseButton
+        v-if="canManageGuildEvent && !confirm"
+        variant="ghost"
+        @click="confirm = 'cancel'"
       >
         Absagen
       </BaseButton>
@@ -234,8 +291,29 @@ function join() {
     gap: var(--space-2);
     padding: var(--space-3) var(--space-4);
     font-size: var(--text-sm);
-    border: 1px solid rgb(255 138 138 / 30%);
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-md);
+  }
+
+  &__reason-label {
+    font-weight: var(--font-weight-medium);
+  }
+
+  &__optional {
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-subtle);
+  }
+
+  &__reason {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+
+    @include focus-ring(2px);
   }
 
   &__confirm-actions {
