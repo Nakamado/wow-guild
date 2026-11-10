@@ -13,6 +13,8 @@ export const ParticipantSchema = z.object({
   characterId: IdSchema,
   role: RoleIdSchema,
   joinedAt: IsoDateTimeSchema,
+  /** Supporter: hilft aus, macht aber Platz, wenn sich jemand fest anmeldet */
+  support: z.boolean().optional(),
 })
 
 /** „voll“ wird nicht gespeichert, sondern aus der Besetzung abgeleitet */
@@ -54,4 +56,6 @@ export const RunInputSchema = z.object({
 export const JoinInputSchema = z.object({
   characterId: IdSchema,
   role: RoleIdSchema,
+  /** als Supporter anmelden (macht Platz für feste Anmeldungen) */
+  support: z.boolean().default(false),
 })

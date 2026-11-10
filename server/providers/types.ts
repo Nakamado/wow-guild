@@ -82,7 +82,8 @@ export interface GroupWriter {
   update(id: string, input: RunWrite): Promise<GroupRun>
   cancel(id: string): Promise<GroupRun>
   /** Atomar (Postgres `join_run()`): Platz oder Warteliste */
-  join(runId: string, memberId: string, characterId: string, role: RoleId): Promise<'participant' | 'waitlist'>
+  /** `support`: als Supporter (macht Platz für feste Anmeldungen) */
+  join(runId: string, memberId: string, characterId: string, role: RoleId, support?: boolean): Promise<'participant' | 'waitlist'>
   /** Atomar (`leave_run()`): gibt die Mitglieds-ID der nachgerückten Person zurück */
   leave(runId: string, memberId: string): Promise<string | null>
 }

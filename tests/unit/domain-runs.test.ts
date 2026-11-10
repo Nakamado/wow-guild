@@ -214,3 +214,43 @@ describe('filterRuns', () => {
     expect(ids({ onlyOpenSlots: true })).toEqual(['soon', 'later'])
   })
 })
+
+describe('Supporter', () => {
+  const supporter = (memberId: string, role: 'tank' | 'healer' | 'dps', joinedAt: string) =>
+    ({ ...participant(memberId, role), joinedAt, support: true })
+
+  it('Supporter belegen freie Plätze', () => {
+    const result = joinRun({ run: run(), dungeon, member: member('m-1'), character: character('c-1', 'm-1'), role: 'tank', now: NOW, support: true })
+    expect(result.ok && result.value.run.participants[0]).toMatchObject({ memberId: 'm-1', support: true })
+  })
+
+  it('feste Anmeldung verdrängt den zuletzt angemeldeten Supporter derselben Rolle auf die Warteliste', () => {
+    const current = run({
+      capacity: { tank: 0, healer: 0, dps: 2 },
+      participants: [supporter('m-8', 'dps', '2026-11-01T10:00:00.000Z'), supporter('m-9', 'dps', '2026-11-02T10:00:00.000Z')],
+    })
+    const result = joinRun({ run: current, dungeon, member: member('m-1'), character: character('c-1', 'm-1', { roles: ['dps'] }), role: 'dps', now: NOW })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.check).toMatchObject({ placement: 'participant', bumped: { memberId: 'm-9' } })
+    expect(result.value.run.participants.map(entry => entry.memberId)).toEqual(['m-8', 'm-1'])
+    // auch ohne aktive Warteliste: der Supporter bleibt angemeldet
+    expect(result.value.run.waitlist).toMatchObject([{ memberId: 'm-9', support: true }])
+  })
+
+  it('Supporter verdrängen niemanden', () => {
+    const current = run({ participants: [supporter('m-9', 'tank', '2026-11-01T10:00:00.000Z')] })
+    const result = joinRun({ run: current, dungeon, member: member('m-1'), character: character('c-1', 'm-1'), role: 'tank', now: NOW, support: true })
+    expect(result).toMatchObject({ ok: false, error: { code: 'role-full' } })
+  })
+
+  it('beim Nachrücken haben feste Anmeldungen Vorrang vor Supportern', () => {
+    const current = run({
+      waitlistEnabled: true,
+      participants: [participant('m-1', 'tank')],
+      waitlist: [supporter('m-2', 'tank', '2026-11-01T10:00:00.000Z'), { ...participant('m-3', 'tank'), joinedAt: '2026-11-02T10:00:00.000Z' }],
+    })
+    const result = leaveRun(current, 'm-1', NOW)
+    expect(result.ok && result.value.promoted?.memberId).toBe('m-3')
+  })
+})

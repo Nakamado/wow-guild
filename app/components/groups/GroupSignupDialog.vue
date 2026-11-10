@@ -3,7 +3,7 @@ import { findRace } from '#shared/data/races'
 import { getRole } from '#shared/data/roles'
 import { computeComposition } from '#shared/domain/composition'
 import { checkLevelFit, type LevelFitStatus } from '#shared/domain/level'
-import { canJoinRun } from '#shared/domain/runs'
+import { canJoinRun, supporterToBump } from '#shared/domain/runs'
 import type { Dungeon, GroupRun, RoleId } from '#shared/types'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -16,8 +16,10 @@ const { myCharacters, joinRun } = useRuns()
 
 const characterId = ref<string | null>(null)
 const role = ref<RoleId | null>(null)
+/** false = fest dabei, true = Supporter (hilft aus, macht Platz) */
+const support = ref(false)
 const submitError = ref<string | null>(null)
-const ids = { characters: useId(), roles: useId() }
+const ids = { characters: useId(), roles: useId(), mode: useId() }
 
 const character = computed(() => myCharacters.value.find(entry => entry.id === characterId.value) ?? null)
 const slots = computed(() => computeComposition(props.run).slots)
@@ -27,6 +29,7 @@ const slots = computed(() => computeComposition(props.run).slots)
 watch(open, (isOpen) => {
   if (!isOpen) return
   submitError.value = null
+  support.value = false
   const preferred = myCharacters.value.find(entry => entry.isMain) ?? myCharacters.value[0] ?? null
   characterId.value = preferred?.id ?? null
 }, { immediate: true })
@@ -49,6 +52,7 @@ const check = computed(() => {
     member: { id: viewer.value.memberId, isGuildMember: true },
     character: character.value,
     role: role.value,
+    support: support.value,
     now: new Date(),
   })
 })
@@ -68,6 +72,7 @@ function slotLabel(roleId: RoleId) {
   const slot = slots.value.find(entry => entry.role === roleId)
   if (!slot || slot.capacity === 0) return 'nicht gesucht'
   if (slot.open > 0) return `${slot.open} frei`
+  if (!support.value && supporterToBump(props.run, roleId)) return 'Supporter macht Platz'
   return props.run.waitlistEnabled ? 'voll, Warteliste' : 'voll'
 }
 
@@ -76,7 +81,7 @@ const submitting = ref(false)
 async function submit() {
   if (!characterId.value || !role.value || submitting.value) return
   submitting.value = true
-  const result = await joinRun(props.run.id, characterId.value, role.value)
+  const result = await joinRun(props.run.id, characterId.value, role.value, support.value)
   submitting.value = false
   if (!result.ok) {
     submitError.value = result.error.message
@@ -84,8 +89,9 @@ async function submit() {
   }
   const { placement } = result.value.check
   const name = character.value?.name ?? 'Dein Charakter'
+  const as = support.value ? `Supporter (${getRole(role.value).name})` : getRole(role.value).name
   const message = placement === 'participant'
-    ? `Du bist dabei: ${name} als ${getRole(role.value).name}.`
+    ? `Du bist dabei: ${name} als ${as}.`
     : `${name} steht auf der Warteliste für ${getRole(role.value).name}.`
   open.value = false
   emit('joined', placement, message)
@@ -180,6 +186,50 @@ async function submit() {
         <p class="signup__hint">
           Es stehen nur Rollen zur Wahl, die {{ character.name }} als Spielrolle hinterlegt hat.
         </p>
+      </fieldset>
+
+      <fieldset
+        v-if="character"
+        class="signup__group"
+      >
+        <legend
+          :id="ids.mode"
+          class="signup__legend"
+        >
+          Wie bist du dabei?
+        </legend>
+        <label
+          class="signup__mode"
+          :class="{ 'signup__mode--selected': !support }"
+        >
+          <input
+            v-model="support"
+            type="radio"
+            name="mode"
+            :value="false"
+            class="signup__radio"
+          >
+          <span>
+            <span class="signup__mode-title">Fest dabei</span>
+            <span class="signup__mode-text">Ich brauche den Dungeon, z. B. für Quests oder Ausrüstung.</span>
+          </span>
+        </label>
+        <label
+          class="signup__mode"
+          :class="{ 'signup__mode--selected': support }"
+        >
+          <input
+            v-model="support"
+            type="radio"
+            name="mode"
+            :value="true"
+            class="signup__radio"
+          >
+          <span>
+            <span class="signup__mode-title">Als Supporter</span>
+            <span class="signup__mode-text">Ich helfe aus. Meldet sich jemand fest an, der den Dungeon braucht, mache ich Platz und rücke auf die Warteliste.</span>
+          </span>
+        </label>
       </fieldset>
 
       <div
@@ -318,6 +368,41 @@ async function submit() {
     &--below-recommended,
     &--above-recommended { color: var(--color-warning); }
     &--below-minimum { color: var(--color-danger); }
+  }
+
+  &__mode {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    &:hover {
+      background: rgb(150 190 255 / 5%);
+    }
+
+    &--selected {
+      background: rgb(143 211 255 / 8%);
+      border-color: var(--color-accent);
+    }
+
+    .signup__radio {
+      margin-top: 0.2rem;
+    }
+  }
+
+  &__mode-title {
+    display: block;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &__mode-text {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
   }
 
   &__roles {

@@ -13,7 +13,8 @@ export function createSupabase(url: string, serviceRoleKey: string): SupabaseCli
   })
 }
 
-const RUN_SELECT = '*, run_participants(member_id, character_id, role, placement, joined_at)'
+// `run_participants(*)`: liest auch neue Spalten (z. B. support), ohne vor der Migration zu scheitern
+const RUN_SELECT = '*, run_participants(*)'
 
 /** Ergebnis prüfen und bei Fehlern fachlich übersetzen */
 function unwrap<T>(result: { data: T | null, error: { code?: string, message?: string } | null }): T {
@@ -131,8 +132,9 @@ export function createSupabaseGroupRepository(db: SupabaseClient): GroupReposito
       if (result.error) throw fromPostgresError(result.error)
       return getOrFail(id)
     },
-    async join(runId, memberId, characterId, role) {
-      const result = await db.rpc('join_run', { p_run_id: runId, p_member_id: memberId, p_character_id: characterId, p_role: role })
+    async join(runId, memberId, characterId, role, support = false) {
+      // p_support nur mitschicken, wenn gesetzt – so funktionieren feste Anmeldungen auch vor der Migration
+      const result = await db.rpc('join_run', { p_run_id: runId, p_member_id: memberId, p_character_id: characterId, p_role: role, ...(support ? { p_support: true } : {}) })
       if (result.error) throw fromPostgresError(result.error)
       return result.data as 'participant' | 'waitlist'
     },
