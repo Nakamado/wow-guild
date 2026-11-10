@@ -91,6 +91,8 @@ test.describe('Gruppenplaner (Demo)', () => {
     await page.goto('/gruppen/demo-run-02')
     const participants = page.getByRole('region', { name: 'Teilnehmer' })
     await expect(participants.getByText('Supporter', { exact: true })).toHaveCount(1)
+    // Flex-Heiler zeigt seine Ausweichrolle
+    await expect(participants.getByText('kann auch Schadensverursacher')).toBeVisible()
 
     await page.getByRole('button', { name: 'Gruppe beitreten' }).click()
     const dialog = page.getByRole('dialog')

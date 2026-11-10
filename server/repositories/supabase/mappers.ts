@@ -23,6 +23,9 @@ export interface ParticipantRow {
   joined_at: string
   /** fehlt, solange die Migration 20261112 nicht eingespielt ist */
   support?: boolean | null
+  /** fehlen, solange die Migration 20261113 nicht eingespielt ist */
+  alt_role?: RoleId | null
+  moved?: boolean | null
 }
 
 export interface RunRow {
@@ -74,6 +77,8 @@ function rowToParticipant(row: ParticipantRow): Participant {
     role: row.role,
     joinedAt: iso(row.joined_at),
     ...(row.support ? { support: true } : {}),
+    ...(row.alt_role ? { altRole: row.alt_role } : {}),
+    ...(row.moved ? { moved: true } : {}),
   }
 }
 

@@ -9,12 +9,13 @@ const RAIDS_OPEN = Date.parse('2026-12-10T18:00:00.000Z')
  * Deckt typische Zustände ab: offen, voll, mit Warteliste, abgesagt, abgeschlossen.
  */
 export function createDemoRuns(now: Date): GroupRun[] {
-  const p = (memberId: string, characterId: string, role: RoleId, hoursBefore = 20, support = false): Participant => ({
+  const p = (memberId: string, characterId: string, role: RoleId, hoursBefore = 20, support = false, altRole?: RoleId): Participant => ({
     memberId,
     characterId,
     role,
     joinedAt: new Date(now.getTime() - hoursBefore * 3_600_000).toISOString(),
     ...(support ? { support: true } : {}),
+    ...(altRole ? { altRole } : {}),
   })
   const created = new Date(now.getTime() - 2 * 86_400_000).toISOString()
   const base = { waitlist: [], discordEventId: null, createdAt: created, updatedAt: created, title: null }
@@ -48,7 +49,8 @@ export function createDemoRuns(now: Date): GroupRun[] {
       capacity: { tank: 1, healer: 1, dps: 3 },
       participants: [
         p('demo-member-07', 'demo-char-10', 'tank'),
-        p('demo-member-03', 'demo-char-05', 'healer'),
+        // Flex: Heiler, kann auch DD
+        p('demo-member-03', 'demo-char-05', 'healer', 20, false, 'dps'),
         p('demo-member-01', 'demo-char-02', 'dps'),
         p('demo-member-06', 'demo-char-09', 'dps'),
         // Supporter: macht Platz, wenn sich jemand fest als DD anmeldet

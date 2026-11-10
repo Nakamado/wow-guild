@@ -153,7 +153,7 @@ export function useRuns() {
     return result
   }
 
-  async function joinRun(id: string, characterId: string, role: RoleId, support = false): Promise<DomainResult<JoinOutcome>> {
+  async function joinRun(id: string, characterId: string, role: RoleId, support = false, altRole: RoleId | null = null): Promise<DomainResult<JoinOutcome>> {
     const run = getRun(id)
     const dungeon = run ? findDungeon(run.dungeonSlug) : undefined
     const character = myCharacters.value.find(entry => entry.id === characterId)
@@ -163,7 +163,7 @@ export function useRuns() {
 
     if (!isDemo) {
       type Response = { placement: JoinCheck['placement'], warnings: string[], run: GroupRun | null }
-      const result = await live(() => $fetch<Response>(`/api/runs/${id}/join`, { method: 'POST', body: { characterId, role, support } }))
+      const result = await live(() => $fetch<Response>(`/api/runs/${id}/join`, { method: 'POST', body: { characterId, role, support, altRole } }))
       if (!result.ok) return result
       const { placement, warnings } = result.value
       return ok({ run: result.value.run ?? run, check: { placement, warnings } })
@@ -176,6 +176,7 @@ export function useRuns() {
       character,
       role,
       support,
+      altRole,
       now: new Date(),
     })
     if (result.ok) persist(result.value.run)
