@@ -1,6 +1,5 @@
 import type { Dungeon, GroupRun, GuildEvent, Participant, RoleId } from '#shared/types'
 import { computeComposition } from '#shared/domain/composition'
-import { dungeonQuestOptions } from '#shared/domain/quests'
 import { formatDate, formatTime } from '#shared/utils/datetime'
 import type { DiscordMessageBody } from './client'
 
@@ -25,7 +24,7 @@ export function escapeDiscord(text: string): string {
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
 const unix = (iso: string) => Math.floor(new Date(iso).getTime() / 1000)
 /** Discord zeigt Zeitstempel in der Zeitzone der jeweiligen Person an */
-export const discordTime = (iso: string, style: 'F' | 'R' | 't' = 'F') => `<t:${unix(iso)}:${style}>`
+export const discordTime = (iso: string, style: 'F' | 'R' | 't' | 'd' = 'F') => `<t:${unix(iso)}:${style}>`
 const mention = (memberId: string) => (/^\d{5,25}$/.test(memberId) ? `<@${memberId}>` : 'jemandem aus der Gilde')
 
 function linkButton(label: string, url: string) {
@@ -41,81 +40,67 @@ export function runThreadName(run: GroupRun, dungeon: Dungeon | undefined): stri
   return clip(`${runDisplayTitle(run, dungeon)} · ${formatDate(run.startsAt).slice(0, 6)} ${formatTime(run.startsAt)}`, 100)
 }
 
-/** Hauptnachricht einer Gruppe – wird bei jeder Änderung neu gerendert und bearbeitet */
+/** Termin kompakt, z. B. „10.11.2026, 22:00 (in 7 Stunden)“ – in der Zeitzone der jeweiligen Person */
+export const discordDate = (iso: string) => `${discordTime(iso, 'd')}, ${discordTime(iso, 't')} (${discordTime(iso, 'R')})`
+
+/** Hauptnachricht einer Gruppe – kompakt, wird bei jeder Änderung neu gerendert und bearbeitet */
 export function runAnnouncement(run: GroupRun, dungeon: Dungeon | undefined, siteUrl: string): DiscordMessageBody {
   const title = runDisplayTitle(run, dungeon)
   const url = `${siteUrl}/gruppen/${run.id}`
   const cancelled = run.status === 'cancelled'
   const composition = computeComposition(run)
   const supporters = run.participants.filter(entry => entry.support).length
+  const questCount = run.questIds?.length ?? 0
 
-  const lines: string[] = []
-  if (run.title && dungeon) lines.push(`**${escapeDiscord(dungeon.name)}** · Stufe ${dungeon.levelRange.min}–${dungeon.levelRange.max}`)
-  if (run.description) lines.push(escapeDiscord(clip(run.description, 500)))
+  const head = [
+    dungeon ? `**${escapeDiscord(dungeon.name)}** · Stufe ${dungeon.levelRange.min}–${dungeon.levelRange.max}` : null,
+    questCount ? `${questCount} ${questCount === 1 ? 'Quest' : 'Quests'} geplant` : null,
+  ].filter(Boolean).join(' · ')
 
-  const fields: { name: string, value: string, inline?: boolean }[] = [
-    { name: 'Termin', value: `${discordTime(run.startsAt)} (${discordTime(run.startsAt, 'R')})`, inline: false },
-    { name: 'Organisation', value: mention(run.organizerId), inline: true },
-  ]
+  const lines = [head, `🗓️ ${discordDate(run.startsAt)}`]
   if (cancelled) {
-    fields.push({ name: 'Abgesagt', value: run.cancelReason ? escapeDiscord(run.cancelReason) : 'ohne Angabe von Gründen', inline: false })
+    lines.push(`❌ Abgesagt${run.cancelReason ? `: ${escapeDiscord(run.cancelReason)}` : ''}`)
   }
   else {
+    // offene Rollen ergeben sich aus der Besetzung – nur bei voller Gruppe der Hinweis auf die Warteliste
     const slots = composition.slots.filter(slot => slot.capacity > 0).map(slot => `${ROLE_NAMES[slot.role]} ${slot.filled}/${slot.capacity}`)
-    const open = composition.slots.filter(slot => slot.open > 0).map(slot => ROLE_NAMES[slot.role])
-    const status = composition.isFull
-      ? `Voll${run.waitlistEnabled ? ` – Warteliste offen${run.waitlist.length ? ` (${run.waitlist.length})` : ''}` : ''}`
-      : `Sucht noch: ${open.join(', ')}`
-    fields.push({
-      name: `Besetzung ${composition.filled}/${composition.capacity}`,
-      value: [slots.join(' · '), status, supporters ? `davon ${supporters} als Supporter` : ''].filter(Boolean).join('\n'),
-      inline: true,
-    })
+    const waitlist = composition.isFull && run.waitlistEnabled ? ` · Warteliste${run.waitlist.length ? ` (${run.waitlist.length})` : ' offen'}` : ''
+    lines.push(`👥 ${composition.filled}/${composition.capacity} · ${slots.join(' · ')}${supporters ? ` · ${supporters} Supporter` : ''}${waitlist}`)
   }
-  const quests = questTitles(run)
-  if (quests.length) fields.push({ name: 'Geplante Quests', value: clip(quests.map(entry => `• ${escapeDiscord(entry)}`).join('\n'), 1024), inline: false })
+  lines.push(`Organisation: ${mention(run.organizerId)}`)
 
   return {
     embeds: [{
       title: clip(cancelled ? `Abgesagt: ${title}` : title, 256),
       url,
-      description: lines.length ? clip(lines.join('\n\n'), 4096) : undefined,
+      description: clip(lines.filter(Boolean).join('\n'), 4096),
       color: cancelled ? COLOR_CANCELLED : composition.isFull ? COLOR_FULL : COLOR_OPEN,
-      fields,
-      footer: { text: cancelled ? 'Diese Gruppe wurde abgesagt.' : 'Anmelden auf der Gildenseite · Neuigkeiten im Thread' },
     }],
     components: cancelled ? [] : linkButton('Zur Anmeldung', url),
     allowed_mentions: NO_PINGS,
   }
 }
 
-function questTitles(run: GroupRun): string[] {
-  const ids = run.questIds ?? []
-  if (!ids.length) return []
-  const titles = new Map(dungeonQuestOptions(run.dungeonSlug).map(option => [option.id, option.title]))
-  const list = ids.map(id => titles.get(id) ?? `Quest ${id}`)
-  return list.length > 8 ? [...list.slice(0, 8), `… und ${list.length - 8} weitere`] : list
-}
-
-/** Hauptnachricht eines Gilden-Events (ohne Thread) */
+/** Hauptnachricht eines Gilden-Events (ohne Thread), im selben kompakten Stil */
 export function guildEventAnnouncement(event: GuildEvent, siteUrl: string): DiscordMessageBody {
   const cancelled = event.status === 'cancelled'
   const url = `${siteUrl}/kalender?ansicht=liste`
-  const time = event.endsAt ? `${discordTime(event.startsAt)} – ${discordTime(event.endsAt, 't')}` : discordTime(event.startsAt)
-  const fields = [
-    { name: 'Termin', value: `${time} (${discordTime(event.startsAt, 'R')})`, inline: false },
-    ...(event.location ? [{ name: 'Treffpunkt', value: escapeDiscord(event.location), inline: true }] : []),
-    { name: 'Eingetragen von', value: mention(event.createdBy), inline: true },
-    ...(cancelled ? [{ name: 'Abgesagt', value: event.cancelReason ? escapeDiscord(event.cancelReason) : 'ohne Angabe von Gründen', inline: false }] : []),
+  const time = event.endsAt
+    ? `${discordTime(event.startsAt, 'd')}, ${discordTime(event.startsAt, 't')}–${discordTime(event.endsAt, 't')} (${discordTime(event.startsAt, 'R')})`
+    : discordDate(event.startsAt)
+  const lines = [
+    event.description ? escapeDiscord(clip(event.description, 200)) : null,
+    `🗓️ ${time}`,
+    event.location ? `📍 ${escapeDiscord(event.location)}` : null,
+    cancelled ? `❌ Abgesagt${event.cancelReason ? `: ${escapeDiscord(event.cancelReason)}` : ''}` : null,
+    `Eingetragen von ${mention(event.createdBy)}`,
   ]
   return {
     embeds: [{
       title: clip(cancelled ? `Abgesagt: ${event.title}` : event.title, 256),
       url,
-      description: event.description ? clip(escapeDiscord(event.description), 1000) : undefined,
+      description: lines.filter(Boolean).join('\n'),
       color: cancelled ? COLOR_CANCELLED : 0xF5B768,
-      fields,
-      footer: { text: cancelled ? 'Dieses Event wurde abgesagt.' : 'Gilden-Event · alle Termine im Kalender der Gildenseite' },
     }],
     components: cancelled ? [] : linkButton('Zum Kalender', url),
     allowed_mentions: NO_PINGS,
@@ -136,7 +121,7 @@ export function runThreadLines(before: GroupRun, after: GroupRun, name: (charact
   if (before.status !== 'cancelled' && after.status === 'cancelled') {
     return [`❌ Die Gruppe wurde abgesagt${after.cancelReason ? `: ${escapeDiscord(after.cancelReason)}` : '.'}`]
   }
-  if (before.startsAt !== after.startsAt) lines.push(`🕒 Neuer Termin: ${discordTime(after.startsAt)}`)
+  if (before.startsAt !== after.startsAt) lines.push(`🕒 Neuer Termin: ${discordDate(after.startsAt)}`)
 
   const beforeIn = byMember(before.participants)
   const beforeWait = byMember(before.waitlist)
