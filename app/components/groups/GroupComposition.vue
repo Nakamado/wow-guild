@@ -30,17 +30,19 @@ const slots = computed(() => composition.value.slots
       v-for="slot in slots"
       :key="slot.role"
       class="group-composition__role"
-      :class="[`group-composition__role--${slot.role}`, { 'group-composition__role--full': slot.open === 0 }]"
+      :class="[`group-composition__role--${slot.role}`, { 'group-composition__role--full': slot.open === 0 && !slot.supporters }]"
     >
       <BaseIcon
         :name="icons[slot.role]"
         :size="variant === 'full' ? 18 : 14"
       />
       <span class="group-composition__label">{{ getRole(slot.role).short }}</span>
-      <span class="group-composition__count">{{ slot.filled }}/{{ slot.capacity }}<span
+      <!-- Feste Zusagen / Plätze, Supporter in Klammern: deren Plätze werden für feste Zusagen frei -->
+      <span class="group-composition__count">{{ slot.filled - slot.supporters }}/{{ slot.capacity }}<span
         v-if="slot.supporters"
-        class="visually-hidden"
-      >, davon {{ slot.supporters }} Supporter</span></span>
+        class="group-composition__support"
+        :title="`${slot.supporters} Supporter – macht Platz für feste Zusagen`"
+      ><span aria-hidden="true"> (+{{ slot.supporters }})</span><span class="visually-hidden">, dazu {{ slot.supporters }} Supporter, der für feste Zusagen Platz macht</span></span></span>
       <span
         v-if="variant === 'full'"
         class="group-composition__pips"
@@ -90,6 +92,11 @@ const slots = computed(() => composition.value.slots
     font-variant-numeric: tabular-nums;
   }
 
+  &__support {
+    font-weight: var(--font-weight-regular);
+    color: var(--color-frost);
+  }
+
   &__role--full &__count {
     color: var(--color-text-subtle);
   }
@@ -101,7 +108,7 @@ const slots = computed(() => composition.value.slots
 
   &--full &__role {
     display: grid;
-    grid-template-columns: auto 4rem 3rem 1fr;
+    grid-template-columns: auto 4rem 4.5rem 1fr;
     gap: var(--space-3);
     font-size: var(--text-base);
   }

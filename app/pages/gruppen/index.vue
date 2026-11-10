@@ -190,6 +190,7 @@ function onSaved(run: { id: string }) {
             :run="run"
             :dungeon="findDungeon(run.dungeonSlug)"
             :joined="myEntry(run)?.placement ?? null"
+            :joined-as-support="myEntry(run)?.support ?? false"
           />
         </li>
       </ul>
