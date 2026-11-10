@@ -46,3 +46,8 @@ export type BoardNoteInput = z.infer<typeof S.BoardNoteInputSchema>
 
 export type GuildEvent = z.infer<typeof S.GuildEventSchema>
 export type GuildEventInput = z.infer<typeof S.GuildEventInputSchema>
+
+export type NotificationKind = z.infer<typeof S.NotificationKindSchema>
+export type NotificationData = z.infer<typeof S.NotificationDataSchema>
+export type AppNotification = z.infer<typeof S.NotificationSchema>
+export type NotificationList = z.infer<typeof S.NotificationListSchema>

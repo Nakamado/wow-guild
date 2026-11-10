@@ -29,6 +29,8 @@ export default defineEventHandler(async (event) => {
 
   await persist(async () => useGrantStore()?.deleteEvidenceForMember(memberId))
   await persist(() => accounts.deleteAccount(memberId))
+  // eigene Benachrichtigungen mitlöschen (best effort, die Tabelle hängt nicht am Profil)
+  await useNotificationStore()?.deleteForMember(memberId).catch(error => console.warn(`[notifications] Löschen für ${memberId} fehlgeschlagen: ${error instanceof Error ? error.message : 'unbekannt'}`))
   forgetSiteAccount(memberId)
   await logActivity({ action: 'account.deleted', actorId: memberId, subjectType: 'member', subjectId: memberId, summary: 'Konto vom Mitglied selbst gelöscht' })
   await clearUserSession(event)

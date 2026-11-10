@@ -4,5 +4,6 @@ export default defineEventHandler(async (event) => {
   const run = await loadRunForWrite(event)
   const promoted = await persist(() => writers.groups.leave(run.id, viewer.memberId))
   const updated = await useProviders().groups.get(run.id)
+  if (updated) await notifyRunChange(run, updated, viewer.memberId)
   return { promoted, run: updated && redactRun(updated, viewer) }
 })
