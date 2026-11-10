@@ -6,9 +6,7 @@
 withDefaults(defineProps<{ variant?: 'hero' | 'compact' }>(), { variant: 'hero' })
 
 const { twitch } = useSiteConfig()
-const { data: status } = useFetch('/api/twitch/status', { key: 'twitch-status', server: false, lazy: true })
-
-const isLive = computed(() => status.value?.isLive === true)
+const { status, isLive } = useStreamStatus()
 </script>
 
 <template>

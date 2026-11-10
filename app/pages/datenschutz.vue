@@ -33,7 +33,7 @@ const { contactEmail } = useRuntimeConfig().public
       Google Fonts oder anderen externen Schriftanbietern statt.
     </p>
     <p>
-      Profilbilder aus Discord und Vorschaubilder von Twitch-Clips lädt unser Server bzw. Hoster und
+      Profilbilder aus Discord sowie Vorschaubilder von Twitch-Clips und des laufenden Livestreams lädt unser Server bzw. Hoster und
       liefert sie selbst aus. Dein Browser verbindet sich dafür nicht direkt mit Discord oder Twitch.
     </p>
 

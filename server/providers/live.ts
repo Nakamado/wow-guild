@@ -70,7 +70,7 @@ export function resilientTwitch(provider: TwitchProvider, channel: string): Twit
   return {
     getStreamStatus: withFallback(provider.getStreamStatus, {
       label: 'twitch.status',
-      fallback: () => ({ channel, isLive: false, title: null, gameName: null, viewerCount: null, startedAt: null, checkedAt: new Date().toISOString() }),
+      fallback: () => ({ channel, isLive: false, title: null, gameName: null, startedAt: null, checkedAt: new Date().toISOString() }),
     }),
     listClips: withFallback(provider.listClips, {
       label: 'twitch.clips',

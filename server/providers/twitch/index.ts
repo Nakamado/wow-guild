@@ -28,6 +28,16 @@ export interface TwitchProviderConfig {
   clipGames?: string[]
 }
 
+/** Twitch aktualisiert Live-Vorschaubilder etwa alle 5 Minuten – so oft auch einen neuen Cache-Schlüssel */
+const PREVIEW_BUCKET_MS = 5 * 60_000
+
+/** Live-Vorschaubild in 640×360; nur vom Twitch-CDN (das ist auch für die Bildauslieferung freigegeben) */
+export function streamPreviewUrl(template: string | null | undefined, checkedAt: Date): string | null {
+  if (!template?.startsWith('https://static-cdn.jtvnw.net/')) return null
+  const url = template.replace('{width}', '640').replace('{height}', '360')
+  return `${url}?t=${Math.floor(checkedAt.getTime() / PREVIEW_BUCKET_MS)}`
+}
+
 export function streamToStatus(channel: string, stream: HelixStream | undefined, checkedAt: Date): StreamStatus {
   const live = stream?.type === 'live'
   return {
@@ -35,8 +45,8 @@ export function streamToStatus(channel: string, stream: HelixStream | undefined,
     isLive: live,
     title: live ? stream.title || null : null,
     gameName: live ? stream.game_name || null : null,
-    viewerCount: live ? stream.viewer_count : null,
     startedAt: live ? new Date(stream.started_at).toISOString() : null,
+    thumbnailUrl: live ? streamPreviewUrl(stream.thumbnail_url, checkedAt) : null,
     checkedAt: checkedAt.toISOString(),
   }
 }
