@@ -114,6 +114,8 @@ test.describe('Gruppenplaner (Demo)', () => {
 
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByLabel('Dungeon oder Raid')).toHaveValue('the-stockade')
+    // Discord-Ankündigung ist beim Erstellen vorausgewählt
+    await expect(dialog.getByLabel(/Im Discord ankündigen/)).toBeChecked()
     await dialog.getByLabel('Titel').fill('E2E-Verlies')
     // Zu viele Plätze werden mit Begründung abgelehnt
     await dialog.getByLabel('Schadensverursacher').fill('5')
@@ -126,6 +128,7 @@ test.describe('Gruppenplaner (Demo)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'E2E-Verlies' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Bearbeiten' }).click()
+    await expect(page.getByRole('dialog').getByLabel(/Im Discord ankündigen/)).toHaveCount(0)
     await page.getByRole('dialog').getByLabel('Titel').fill('E2E-Verlies (verschoben)')
     await page.getByRole('dialog').getByRole('button', { name: 'Änderungen speichern' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'E2E-Verlies (verschoben)' })).toBeVisible()

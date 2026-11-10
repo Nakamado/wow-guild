@@ -59,6 +59,8 @@ export async function requestJson<T>(url: string, init: RequestInit, options: Re
     const path = url.split('?')[0]
     throw new IntegrationError(options.service, response.status, `${options.service} ${response.status} bei ${path}`)
   }
+  // z. B. DELETE ohne Antwortinhalt
+  if (response.status === 204) return undefined as T
   return await response.json() as T
 }
 

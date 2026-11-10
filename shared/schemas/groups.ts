@@ -57,6 +57,8 @@ export const RunInputSchema = z.object({
   waitlistEnabled: z.boolean(),
   /** geplante Dungeon-Quests (optional, leer = keine Angabe) */
   questIds: z.array(z.number().int().positive()).max(30).default([]),
+  /** Nur beim Erstellen: im Discord-Channel ankündigen (fehlt = ja) */
+  announce: z.boolean().optional(),
 })
 
 export const JoinInputSchema = z.object({

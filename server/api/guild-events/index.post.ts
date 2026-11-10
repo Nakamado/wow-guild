@@ -4,6 +4,7 @@ export default defineEventHandler(async (event) => {
   assertPermission(viewer, 'events:create')
   const input = await readGuildEventInput(event)
   const created = await persist(() => store.create(viewer.memberId!, input))
+  await announceGuildEventCreated(created)
   setResponseStatus(event, 201)
   return created
 })

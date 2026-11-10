@@ -59,8 +59,16 @@ const { contactEmail } = useRuntimeConfig().public
     </p>
     <p>
       Für die Nachprüfung der Gildenrolle und für die Termine im Kalender nutzt die Webseite zusätzlich
-      einen eigenen Discord-Bot ohne Berechtigungen auf dem Community-Server. Er liest nur die Rollen
-      angemeldeter Personen und die geplanten Server-Events, keine Nachrichten.
+      einen eigenen Discord-Bot auf dem Community-Server. Er liest nur die Rollen angemeldeter Personen
+      und die geplanten Server-Events, keine Nachrichten.
+    </p>
+    <p>
+      Außerdem kündigt der Bot neue Gruppen und Gilden-Events in einem Channel des Community-Servers an
+      (Titel, Termin, Besetzung und wer sie eingetragen hat, als Discord-Erwähnung ohne Benachrichtigung).
+      Bei Gruppen schreibt er An- und Abmeldungen mit Charaktername und Rolle in einen Thread darunter.
+      Beim Erstellen einer Gruppe lässt sich die Ankündigung abwählen. Wird eine Gruppe oder ein Event
+      gelöscht, löscht der Bot auch seine Ankündigung. Diese Beiträge sehen nur Personen auf dem Server,
+      die den Channel lesen dürfen.
     </p>
 
     <h2>7. Gespeicherte Daten (Datenbank)</h2>

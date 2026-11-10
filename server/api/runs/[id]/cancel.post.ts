@@ -10,6 +10,6 @@ export default defineEventHandler(async (event) => {
   const check = cancelRun(run, new Date(), reason)
   if (!check.ok) rejectWith(check.error, 409)
   const cancelled = await persist(() => writers.groups.cancel(run.id, reason))
-  await notifyRunChange(run, cancelled, viewer.memberId)
+  await Promise.all([notifyRunChange(run, cancelled, viewer.memberId), syncRunAnnouncement(run, cancelled)])
   return cancelled
 })

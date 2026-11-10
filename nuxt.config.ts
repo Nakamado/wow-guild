@@ -61,6 +61,12 @@ export default defineNuxtConfig({
       adminRoleId: '',
       /** Discord-Rolle „Streamer“: Mitglieder mit dieser Rolle und eigenem Twitch-Kanal erscheinen unter Streamer und Clips */
       streamerRoleId: '',
+      /**
+       * Channel für Ankündigungen neuer Gruppen und Gilden-Events (NUXT_DISCORD_ANNOUNCE_CHANNEL_ID).
+       * Leer = es wird nichts gepostet. Der Bot braucht dort: Kanal ansehen, Nachrichten senden,
+       * Links einbetten, Öffentliche Threads erstellen, Nachrichten in Threads senden.
+       */
+      announceChannelId: '',
     },
     // Blizzard Battle.net (WoW: Forever) – vorerst nur für die API-Probe der Gildenleitung
     blizzard: {

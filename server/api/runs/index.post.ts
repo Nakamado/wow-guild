@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
   const draft = validateRunDraft(input, dungeon, new Date())
   if (!draft.ok) rejectWith(draft.error)
 
+  const created = await persist(() => writers.groups.create(viewer.memberId, input))
+  if (input.announce !== false) await announceRunCreated(created)
   setResponseStatus(event, 201)
-  return persist(() => writers.groups.create(viewer.memberId, input))
+  return created
 })

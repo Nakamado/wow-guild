@@ -21,6 +21,8 @@ export default defineEventHandler(async (event) => {
   const now = new Date()
   const runs = await useProviders().groups.list()
   for (const run of runs) {
+    // eigene Gruppen verschwinden mit dem Konto – ihre Discord-Ankündigungen auch
+    if (run.organizerId === memberId) await removeRunAnnouncement(run)
     if (run.organizerId === memberId || !isUpcoming(run, now)) continue
     if ([...run.participants, ...run.waitlist].some(entry => entry.memberId === memberId)) {
       await persist(() => writers.groups.leave(run.id, memberId))
