@@ -36,6 +36,8 @@ export interface JoinInput {
   now: Date
   /** als Supporter: hilft aus, macht aber Platz für feste Anmeldungen */
   support?: boolean
+  /** Ausweichrolle (Flex): wird genutzt, wenn die Hauptrolle voll ist */
+  altRole?: RoleId | null
   catalog?: GameCatalog
 }
 
@@ -44,6 +46,12 @@ export interface JoinCheck {
   placement: 'participant' | 'waitlist'
   /** Nicht-blockierende Hinweise, z. B. zum Levelbereich */
   warnings: string[]
+  /** Rolle, in der die Anmeldung landet (Hauptrolle oder Ausweichrolle) */
+  role?: RoleId
+  /** in der Ausweichrolle statt der Hauptrolle */
+  movedToAlt?: boolean
+  /** Flex-Teilnehmer, der für diese Anmeldung in seine Ausweichrolle wechselt */
+  relocated?: { participant: Participant, toRole: RoleId } | null
   /** Supporter, der für diese feste Anmeldung auf die Warteliste rückt */
   bumped?: Participant | null
 }
@@ -55,6 +63,52 @@ export interface JoinCheck {
 export function supporterToBump(run: Pick<GroupRun, 'participants'>, role: RoleId): Participant | null {
   const supporters = run.participants.filter(entry => entry.role === role && entry.support)
   return supporters.sort((a, b) => Date.parse(b.joinedAt) - Date.parse(a.joinedAt))[0] ?? null
+}
+
+/** Flex-Teilnehmer in `role`, der in seine Ausweichrolle wechseln kann (dort ist ein Platz frei) */
+export function flexToRelocate(run: Pick<GroupRun, 'participants' | 'capacity'>, role: RoleId): Participant | null {
+  const open = (target: RoleId) => run.capacity[target] - run.participants.filter(entry => entry.role === target).length > 0
+  const candidates = run.participants.filter(entry => entry.role === role && entry.altRole && entry.altRole !== role && open(entry.altRole))
+  return candidates.sort((a, b) => Date.parse(b.joinedAt) - Date.parse(a.joinedAt))[0] ?? null
+}
+
+/** Wechsel in die jeweils andere Rolle (Haupt- ↔ Ausweichrolle) */
+export function swapRole(participant: Participant): Participant {
+  const { altRole } = participant
+  if (!altRole) return participant
+  const moved = !participant.moved
+  return { ...participant, role: altRole, altRole: participant.role, ...(moved ? { moved: true } : { moved: undefined }) }
+}
+
+export type JoinPlan = Pick<JoinCheck, 'placement' | 'role' | 'movedToAlt' | 'relocated' | 'bumped'>
+
+/**
+ * Wo landet eine Anmeldung? Reihenfolge, damit möglichst alle dabei bleiben:
+ * 1. freier Platz in der Hauptrolle, sonst in der Ausweichrolle
+ * 2. ein Flex-Teilnehmer wechselt in seine Ausweichrolle und macht Platz (Haupt-, dann Ausweichrolle)
+ * 3. nur bei fester Anmeldung: ein Supporter rückt auf die Warteliste (Haupt-, dann Ausweichrolle)
+ * 4. Warteliste (falls aktiv) – sonst null (voll)
+ * Dieselbe Reihenfolge setzt `join_run()` in Postgres um.
+ */
+export function planJoin(run: Pick<GroupRun, 'participants' | 'capacity' | 'waitlistEnabled'>, role: RoleId, altRole: RoleId | null | undefined, support: boolean): JoinPlan | null {
+  const roles = altRole && altRole !== role ? [role, altRole] : [role]
+  const open = (target: RoleId) => run.capacity[target] - run.participants.filter(entry => entry.role === target).length > 0
+  const at = (target: RoleId) => ({ role: target, movedToAlt: target !== role })
+
+  for (const target of roles) {
+    if (open(target)) return { placement: 'participant', ...at(target) }
+  }
+  for (const target of roles) {
+    const flex = flexToRelocate(run, target)
+    if (flex) return { placement: 'participant', ...at(target), relocated: { participant: flex, toRole: flex.altRole! } }
+  }
+  if (!support) {
+    for (const target of roles) {
+      const bumped = supporterToBump(run, target)
+      if (bumped) return { placement: 'participant', ...at(target), bumped }
+    }
+  }
+  return run.waitlistEnabled ? { placement: 'waitlist', role, movedToAlt: false } : null
 }
 
 /** Prüft, ob ein Mitglied mit Charakter und Rolle einem Run beitreten darf. */
@@ -85,25 +139,28 @@ export function canJoinRun(input: JoinInput): DomainResult<JoinCheck, JoinErrorC
 
   const roleCheck = canPlayRole(character, role, catalog)
   if (!roleCheck.ok) return roleCheck
+  const altRole = input.altRole && input.altRole !== role ? input.altRole : null
+  if (altRole) {
+    const altCheck = canPlayRole(character, altRole, catalog)
+    if (!altCheck.ok) return altCheck
+  }
 
   const levelFit = checkLevelFit(character.level, dungeon)
   if (levelFit.blocking) return fail('below-minimum-level', levelFit.message)
   const warnings = levelFit.status === 'fit' ? [] : [levelFit.message]
 
-  const slot = computeComposition(run).slots.find(entry => entry.role === role)
-  if (!slot || slot.open === 0) {
-    // Feste Anmeldung verdrängt einen Supporter derselben Rolle auf die Warteliste
-    const bumped = input.support ? null : supporterToBump(run, role)
-    if (bumped) {
-      return ok({ placement: 'participant', warnings, bumped })
-    }
-    if (run.waitlistEnabled) {
-      return ok({ placement: 'waitlist', warnings: [...warnings, `Alle ${getRole(role).name}-Plätze sind belegt – du kommst auf die Warteliste.`] })
-    }
-    return fail('role-full', `Alle Plätze für ${getRole(role).name} sind bereits belegt.`)
+  const plan = planJoin(run, role, altRole, Boolean(input.support))
+  if (!plan) {
+    const names = [role, altRole].filter(Boolean).map(entry => getRole(entry!).name).join(' und ')
+    return fail('role-full', `Alle Plätze für ${names} sind bereits belegt.`)
   }
-
-  return ok({ placement: 'participant', warnings })
+  if (plan.placement === 'waitlist') {
+    return ok({ ...plan, warnings: [...warnings, `Alle ${getRole(role).name}-Plätze sind belegt – du kommst auf die Warteliste.`] })
+  }
+  if (plan.movedToAlt) {
+    return ok({ ...plan, warnings: [...warnings, `${getRole(role).name} ist voll – du bist als ${getRole(plan.role!).name} dabei.`] })
+  }
+  return ok({ ...plan, warnings })
 }
 
 /** Führt die Anmeldung aus (nach erfolgreicher Prüfung). */
@@ -111,20 +168,31 @@ export function joinRun(input: JoinInput): DomainResult<{ run: GroupRun, check: 
   const check = canJoinRun(input)
   if (!check.ok) return check
 
-  const participant: Participant = {
+  const plan = check.value
+  const altRole = input.altRole && input.altRole !== input.role ? input.altRole : null
+  const base: Participant = {
     memberId: input.member.id,
     characterId: input.character.id,
     role: input.role,
     joinedAt: input.now.toISOString(),
     ...(input.support ? { support: true } : {}),
+    ...(altRole ? { altRole } : {}),
   }
-  const { bumped } = check.value
-  const participants = bumped ? input.run.participants.filter(entry => entry !== bumped) : input.run.participants
-  // verdrängter Supporter rückt an seiner Anmeldezeit in die Warteliste ein
-  const waitlist = bumped
-    ? [...input.run.waitlist, bumped].sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt))
-    : input.run.waitlist
-  const run: GroupRun = check.value.placement === 'participant'
+  // in der Ausweichrolle gelandet: Rollen tauschen (altRole = eigentliche Hauptrolle)
+  const participant = plan.movedToAlt ? swapRole(base) : base
+
+  let participants = input.run.participants
+  let waitlist = input.run.waitlist
+  if (plan.relocated) {
+    const flex = plan.relocated.participant
+    participants = participants.map(entry => (entry === flex ? swapRole(entry) : entry))
+  }
+  if (plan.bumped) {
+    participants = participants.filter(entry => entry !== plan.bumped)
+    // verdrängter Supporter rückt an seiner Anmeldezeit in die Warteliste ein
+    waitlist = [...waitlist, plan.bumped].sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt))
+  }
+  const run: GroupRun = plan.placement === 'participant'
     ? { ...input.run, participants: [...participants, participant], waitlist, updatedAt: participant.joinedAt }
     : { ...input.run, waitlist: [...waitlist, participant], updatedAt: participant.joinedAt }
 
@@ -135,7 +203,8 @@ export type LeaveErrorCode = 'not-joined' | 'run-not-open'
 
 /**
  * Meldet ein Mitglied ab. Wird ein Platz frei, rückt von der Warteliste nach: zuerst feste
- * Anmeldungen derselben Rolle, dann Supporter – jeweils in Anmeldereihenfolge.
+ * Anmeldungen, dann Supporter – jeweils in Anmeldereihenfolge, mit der Rolle als Haupt- oder
+ * Ausweichrolle.
  */
 export function leaveRun(
   run: GroupRun,
@@ -154,14 +223,17 @@ export function leaveRun(
   }
 
   const participants = run.participants.filter(entry => entry.memberId !== memberId)
-  const promoted = run.waitlist.find(entry => entry.role === participant.role && !entry.support)
-    ?? run.waitlist.find(entry => entry.role === participant.role)
+  // Nachrücken: wer die Rolle als Haupt- oder Ausweichrolle angegeben hat; feste Anmeldungen zuerst
+  const fits = (entry: Participant) => entry.role === participant.role || entry.altRole === participant.role
+  const promoted = run.waitlist.find(entry => fits(entry) && !entry.support)
+    ?? run.waitlist.find(fits)
     ?? null
   const waitlist = promoted ? run.waitlist.filter(entry => entry !== promoted) : run.waitlist
+  const placed = promoted && promoted.role !== participant.role ? swapRole(promoted) : promoted
 
   return ok({
-    run: { ...run, participants: promoted ? [...participants, promoted] : participants, waitlist, updatedAt },
-    promoted,
+    run: { ...run, participants: placed ? [...participants, placed] : participants, waitlist, updatedAt },
+    promoted: placed,
   })
 }
 

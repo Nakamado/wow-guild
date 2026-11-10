@@ -15,6 +15,10 @@ export const ParticipantSchema = z.object({
   joinedAt: IsoDateTimeSchema,
   /** Supporter: hilft aus, macht aber Platz, wenn sich jemand fest anmeldet */
   support: z.boolean().optional(),
+  /** Flex: die jeweils andere Rolle, in die die Person wechseln kann */
+  altRole: RoleIdSchema.optional(),
+  /** true = sitzt in der Ausweichrolle (altRole ist dann die eigentliche Hauptrolle) */
+  moved: z.boolean().optional(),
 })
 
 /** „voll“ wird nicht gespeichert, sondern aus der Besetzung abgeleitet */
@@ -58,4 +62,6 @@ export const JoinInputSchema = z.object({
   role: RoleIdSchema,
   /** als Supporter anmelden (macht Platz für feste Anmeldungen) */
   support: z.boolean().default(false),
+  /** optionale Ausweichrolle (Flex) */
+  altRole: RoleIdSchema.nullable().default(null),
 })

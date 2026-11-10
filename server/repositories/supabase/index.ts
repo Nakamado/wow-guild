@@ -132,9 +132,16 @@ export function createSupabaseGroupRepository(db: SupabaseClient): GroupReposito
       if (result.error) throw fromPostgresError(result.error)
       return getOrFail(id)
     },
-    async join(runId, memberId, characterId, role, support = false) {
-      // p_support nur mitschicken, wenn gesetzt – so funktionieren feste Anmeldungen auch vor der Migration
-      const result = await db.rpc('join_run', { p_run_id: runId, p_member_id: memberId, p_character_id: characterId, p_role: role, ...(support ? { p_support: true } : {}) })
+    async join(runId, memberId, characterId, role, support = false, altRole = null) {
+      // Zusatzparameter nur mitschicken, wenn gesetzt – so funktionieren einfache Anmeldungen auch vor den Migrationen
+      const result = await db.rpc('join_run', {
+        p_run_id: runId,
+        p_member_id: memberId,
+        p_character_id: characterId,
+        p_role: role,
+        ...(support ? { p_support: true } : {}),
+        ...(altRole && altRole !== role ? { p_alt_role: altRole } : {}),
+      })
       if (result.error) throw fromPostgresError(result.error)
       return result.data as 'participant' | 'waitlist'
     },

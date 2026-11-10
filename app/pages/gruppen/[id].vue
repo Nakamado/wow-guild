@@ -246,6 +246,15 @@ function onSaved() {
                     class="group-page__support-tag"
                     title="Hilft aus und macht Platz, wenn sich jemand fest anmeldet"
                   >Supporter</span>
+                  <span
+                    v-if="entry.altRole && entry.moved"
+                    class="group-page__flex"
+                  >umgesetzt, eigentlich {{ getRole(entry.altRole).name }}</span>
+                  <span
+                    v-else-if="entry.altRole"
+                    class="group-page__flex"
+                    :title="`Kann auch als ${getRole(entry.altRole).name} spielen`"
+                  ><span aria-hidden="true">↔ </span><span class="visually-hidden">kann auch </span>{{ getRole(entry.altRole).name }}</span>
                 </li>
               </ul>
               <p
@@ -285,7 +294,7 @@ function onSaved() {
                     {{ describe(entry).character?.name }}
                     <span class="group-page__participant-member">{{ describe(entry).member?.displayName }}</span>
                   </span>
-                  <span class="group-page__participant-level">{{ getRole(entry.role).name }}</span>
+                  <span class="group-page__participant-level">{{ getRole(entry.role).name }}<template v-if="entry.altRole"> / {{ getRole(entry.altRole).name }}</template></span>
                   <span
                     v-if="entry.support"
                     class="group-page__support-tag"
@@ -350,7 +359,9 @@ function onSaved() {
                 <template v-if="mine">
                   <p class="group-page__mine">
                     {{ mine.placement === 'participant' ? (mine.support ? 'Du hilfst aus als' : 'Du bist dabei als') : 'Du stehst auf der Warteliste als' }}
-                    <strong>{{ mine.support ? `Supporter (${getRole(mine.role).name})` : getRole(mine.role).name }}</strong>.
+                    <strong>{{ mine.support ? `Supporter (${getRole(mine.role).name})` : getRole(mine.role).name }}</strong><template v-if="mine.moved && mine.altRole">
+                      (umgesetzt, eigentlich {{ getRole(mine.altRole).name }})
+                    </template>.
                   </p>
                   <BaseButton
                     variant="secondary"
@@ -577,6 +588,11 @@ function onSaved() {
       border: 1px dashed rgb(143 211 255 / 35%);
       border-radius: var(--radius-md);
     }
+  }
+
+  &__flex {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
   }
 
   &__support-tag {

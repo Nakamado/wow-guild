@@ -66,7 +66,7 @@ describe('computeComposition', () => {
 
 describe('canJoinRun', () => {
   it('erlaubt einen passenden Charakter', () => {
-    expect(join()).toEqual({ ok: true, value: { placement: 'participant', warnings: [] } })
+    expect(join()).toEqual({ ok: true, value: { placement: 'participant', role: 'tank', movedToAlt: false, warnings: [] } })
   })
 
   it('verweigert Nicht-Gildenmitgliedern die Teilnahme', () => {
@@ -252,5 +252,63 @@ describe('Supporter', () => {
     })
     const result = leaveRun(current, 'm-1', NOW)
     expect(result.ok && result.value.promoted?.memberId).toBe('m-3')
+  })
+})
+
+describe('Flex-Anmeldung (Ausweichrolle)', () => {
+  const druid = (id: string) => character(`c-${id}`, id, { classId: 'druid', raceId: 'night-elf', roles: ['healer', 'dps'] })
+  const flex = (memberId: string, role: 'healer' | 'dps', altRole: 'healer' | 'dps', joinedAt = '2026-11-01T10:00:00.000Z') =>
+    ({ ...participant(memberId, role), joinedAt, altRole })
+
+  it('landet in der Ausweichrolle, wenn die Hauptrolle voll ist', () => {
+    const current = run({ capacity: { tank: 1, healer: 1, dps: 3 }, participants: [participant('m-9', 'healer')] })
+    const result = joinRun({ run: current, dungeon, member: member('m-1'), character: druid('m-1'), role: 'healer', altRole: 'dps', now: NOW })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.check).toMatchObject({ placement: 'participant', role: 'dps', movedToAlt: true })
+    // Rollen getauscht: sitzt als DD, eigentliche Hauptrolle Heiler steht in altRole
+    expect(result.value.run.participants.at(-1)).toMatchObject({ memberId: 'm-1', role: 'dps', altRole: 'healer', moved: true })
+    expect(result.value.check.warnings).toContain('Heiler ist voll – du bist als Schadensverursacher dabei.')
+  })
+
+  it('ein Flex-Teilnehmer wechselt in seine Ausweichrolle und macht Platz', () => {
+    // Heiler-Platz belegt ein Flex-Druide (Heiler, sonst DD); DD hat noch Platz
+    const current = run({ capacity: { tank: 1, healer: 1, dps: 3 }, participants: [flex('m-9', 'healer', 'dps')] })
+    const priest = character('c-1', 'm-1', { classId: 'priest', raceId: 'dwarf', roles: ['healer'] })
+    const result = joinRun({ run: current, dungeon, member: member('m-1'), character: priest, role: 'healer', now: NOW })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.check.relocated).toMatchObject({ participant: { memberId: 'm-9' }, toRole: 'dps' })
+    const byMember = Object.fromEntries(result.value.run.participants.map(entry => [entry.memberId, entry]))
+    expect(byMember['m-9']).toMatchObject({ role: 'dps', altRole: 'healer', moved: true })
+    expect(byMember['m-1']).toMatchObject({ role: 'healer' })
+  })
+
+  it('erst umsetzen, dann Supporter verdrängen', () => {
+    const current = run({
+      capacity: { tank: 1, healer: 1, dps: 3 },
+      participants: [{ ...flex('m-9', 'healer', 'dps'), support: true }],
+    })
+    const priest = character('c-1', 'm-1', { classId: 'priest', raceId: 'dwarf', roles: ['healer'] })
+    const result = joinRun({ run: current, dungeon, member: member('m-1'), character: priest, role: 'healer', now: NOW })
+    expect(result.ok && result.value.check.bumped).toBeFalsy()
+    // der Supporter bleibt Supporter, nur in der anderen Rolle
+    expect(result.ok && result.value.run.participants.find(entry => entry.memberId === 'm-9')).toMatchObject({ role: 'dps', support: true })
+  })
+
+  it('beim Nachrücken zählt auch die Ausweichrolle', () => {
+    const current = run({
+      waitlistEnabled: true,
+      capacity: { tank: 1, healer: 1, dps: 3 },
+      participants: [participant('m-1', 'healer')],
+      waitlist: [flex('m-2', 'dps', 'healer')],
+    })
+    const result = leaveRun(current, 'm-1', NOW)
+    expect(result.ok && result.value.promoted).toMatchObject({ memberId: 'm-2', role: 'healer', altRole: 'dps', moved: true })
+  })
+
+  it('prüft, ob der Charakter die Ausweichrolle spielen kann', () => {
+    const mage = character('c-1', 'm-1', { classId: 'mage', raceId: 'gnome', roles: ['dps'] })
+    expect(join({ character: mage, role: 'dps', altRole: 'healer' })).toMatchObject({ ok: false })
   })
 })

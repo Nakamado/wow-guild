@@ -3,7 +3,7 @@ import { findRace } from '#shared/data/races'
 import { getRole } from '#shared/data/roles'
 import { computeComposition } from '#shared/domain/composition'
 import { checkLevelFit, type LevelFitStatus } from '#shared/domain/level'
-import { canJoinRun, supporterToBump } from '#shared/domain/runs'
+import { canJoinRun, planJoin } from '#shared/domain/runs'
 import type { Dungeon, GroupRun, RoleId } from '#shared/types'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -16,10 +16,12 @@ const { myCharacters, joinRun } = useRuns()
 
 const characterId = ref<string | null>(null)
 const role = ref<RoleId | null>(null)
+/** Ausweichrolle (Flex), null = keine */
+const altRole = ref<RoleId | null>(null)
 /** false = fest dabei, true = Supporter (hilft aus, macht Platz) */
 const support = ref(false)
 const submitError = ref<string | null>(null)
-const ids = { characters: useId(), roles: useId(), mode: useId() }
+const ids = { characters: useId(), roles: useId(), mode: useId(), alt: useId() }
 
 const character = computed(() => myCharacters.value.find(entry => entry.id === characterId.value) ?? null)
 const slots = computed(() => computeComposition(props.run).slots)
@@ -38,11 +40,19 @@ watch(open, (isOpen) => {
 watch(character, (current) => {
   if (!current) {
     role.value = null
+    altRole.value = null
     return
   }
+  if (altRole.value && !current.roles.includes(altRole.value)) altRole.value = null
   if (role.value && current.roles.includes(role.value)) return
   role.value = current.roles.find(entry => (slots.value.find(slot => slot.role === entry)?.open ?? 0) > 0) ?? current.roles[0] ?? null
 }, { immediate: true })
+
+// Ausweichrolle: die anderen Rollen des Charakters; die Hauptrolle selbst nie
+const altOptions = computed(() => (character.value?.roles ?? []).filter(entry => entry !== role.value))
+watch(role, (current) => {
+  if (altRole.value === current) altRole.value = null
+})
 
 const check = computed(() => {
   if (!character.value || !role.value || !viewer.value.memberId) return null
@@ -53,6 +63,7 @@ const check = computed(() => {
     character: character.value,
     role: role.value,
     support: support.value,
+    altRole: altRole.value,
     now: new Date(),
   })
 })
@@ -72,7 +83,9 @@ function slotLabel(roleId: RoleId) {
   const slot = slots.value.find(entry => entry.role === roleId)
   if (!slot || slot.capacity === 0) return 'nicht gesucht'
   if (slot.open > 0) return `${slot.open} frei`
-  if (!support.value && supporterToBump(props.run, roleId)) return 'Supporter macht Platz'
+  const plan = planJoin(props.run, roleId, null, support.value)
+  if (plan?.relocated) return 'Flex-Spieler wechselt'
+  if (plan?.bumped) return 'Supporter macht Platz'
   return props.run.waitlistEnabled ? 'voll, Warteliste' : 'voll'
 }
 
@@ -81,7 +94,7 @@ const submitting = ref(false)
 async function submit() {
   if (!characterId.value || !role.value || submitting.value) return
   submitting.value = true
-  const result = await joinRun(props.run.id, characterId.value, role.value, support.value)
+  const result = await joinRun(props.run.id, characterId.value, role.value, support.value, altRole.value)
   submitting.value = false
   if (!result.ok) {
     submitError.value = result.error.message
@@ -89,7 +102,10 @@ async function submit() {
   }
   const { placement } = result.value.check
   const name = character.value?.name ?? 'Dein Charakter'
-  const as = support.value ? `Supporter (${getRole(role.value).name})` : getRole(role.value).name
+  // tatsächliche Rolle (bei Flex evtl. die Ausweichrolle)
+  const entry = result.value.run.participants.find(item => item.memberId === viewer.value.memberId)
+  const assigned = getRole(entry?.role ?? role.value).name
+  const as = support.value ? `Supporter (${assigned})` : assigned
   const message = placement === 'participant'
     ? `Du bist dabei: ${name} als ${as}.`
     : `${name} steht auf der Warteliste für ${getRole(role.value).name}.`
@@ -185,6 +201,51 @@ async function submit() {
         </div>
         <p class="signup__hint">
           Es stehen nur Rollen zur Wahl, die {{ character.name }} als Spielrolle hinterlegt hat.
+        </p>
+      </fieldset>
+
+      <fieldset
+        v-if="character && altOptions.length"
+        class="signup__group"
+      >
+        <legend
+          :id="ids.alt"
+          class="signup__legend"
+        >
+          Ausweichrolle <span class="signup__optional">(optional)</span>
+        </legend>
+        <div class="signup__roles">
+          <label
+            class="signup__role"
+            :class="{ 'signup__role--selected': altRole === null }"
+          >
+            <input
+              v-model="altRole"
+              type="radio"
+              name="alt-role"
+              :value="null"
+              class="signup__radio"
+            >
+            <span class="signup__none">Keine</span>
+          </label>
+          <label
+            v-for="entry in altOptions"
+            :key="entry"
+            class="signup__role"
+            :class="{ 'signup__role--selected': entry === altRole }"
+          >
+            <input
+              v-model="altRole"
+              type="radio"
+              name="alt-role"
+              :value="entry"
+              class="signup__radio"
+            >
+            <RoleBadge :role="entry" />
+          </label>
+        </div>
+        <p class="signup__hint">
+          Ist deine Rolle voll oder braucht die Gruppe dich woanders, setzen wir dich automatisch in die Ausweichrolle.
         </p>
       </fieldset>
 
@@ -403,6 +464,15 @@ async function submit() {
     display: block;
     font-size: var(--text-xs);
     color: var(--color-text-muted);
+  }
+
+  &__none {
+    font-size: var(--text-sm);
+  }
+
+  &__optional {
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-subtle);
   }
 
   &__roles {
