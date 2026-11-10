@@ -7,9 +7,14 @@ const props = defineProps<{
   dungeon: Dungeon | undefined
   /** Eigene Anmeldung des Betrachters */
   joined?: 'participant' | 'waitlist' | null
+  /** eigene Anmeldung ist eine Supporter-Anmeldung */
+  joinedAsSupport?: boolean
 }>()
 
 const composition = computed(() => computeComposition(props.run))
+// Plätze mit Supportern werden für feste Zusagen frei
+const supporters = computed(() => props.run.participants.filter(entry => entry.support).length)
+const openForFixed = computed(() => composition.value.open + supporters.value)
 const title = computed(() => props.run.title ?? props.dungeon?.name ?? 'Gruppe')
 const showDungeon = computed(() => Boolean(props.run.title && props.dungeon))
 const date = computed(() => new Date(props.run.startsAt))
@@ -41,7 +46,10 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
       <p class="group-card__meta">
         <span>{{ weekday }}, {{ formatTime(run.startsAt) }} Uhr</span>
         <span v-if="showDungeon">{{ dungeon?.name }}</span>
-        <span v-if="run.participants.some(entry => entry.support)">{{ run.participants.filter(entry => entry.support).length }} Supporter</span>
+        <span
+          v-if="supporters"
+          class="group-card__support"
+        >(+{{ supporters }}) = Supporter, macht Platz für feste Zusagen</span>
         <span v-if="run.questIds?.length">{{ run.questIds.length === 1 ? '1 Quest geplant' : `${run.questIds.length} Quests geplant` }}</span>
       </p>
       <GroupComposition :run="run" />
@@ -53,21 +61,21 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
         class="group-card__status group-card__status--cancelled"
       >Abgesagt</span>
       <span
-        v-else-if="composition.isFull"
+        v-else-if="openForFixed === 0"
         class="group-card__status group-card__status--full"
       >
-        Voll<template v-if="run.participants.some(entry => entry.support)">, Supporter machen Platz</template><template v-else-if="run.waitlistEnabled">, Warteliste offen</template>
+        Voll<template v-if="run.waitlistEnabled">, Warteliste offen</template>
       </span>
       <span
         v-else
         class="group-card__status"
       >
-        {{ composition.open }} {{ composition.open === 1 ? 'Platz' : 'Plätze' }} frei
+        {{ openForFixed }} {{ openForFixed === 1 ? 'Platz' : 'Plätze' }} frei<template v-if="supporters"> für feste Zusagen</template>
       </span>
       <span
         v-if="joined === 'participant'"
         class="group-card__joined"
-      >Du bist dabei</span>
+      >{{ joinedAsSupport ? 'Du hilfst aus' : 'Du bist dabei' }}</span>
       <span
         v-else-if="joined === 'waitlist'"
         class="group-card__joined"
@@ -161,6 +169,10 @@ const weekday = computed(() => new Intl.DateTimeFormat('de-DE', { timeZone: DISP
     gap: var(--space-1) var(--space-3);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__support {
+    color: var(--color-frost);
   }
 
   &__aside {
