@@ -93,6 +93,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <LiveBanner v-if="!menuOpen" />
+
     <div
       v-show="menuOpen"
       :id="menuId"
