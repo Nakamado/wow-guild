@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
 
   const guildEventStore = useGuildEventStore()
   const [discordEvents, runs, dungeons, members, guildEvents] = await Promise.all([
-    providers.discordEvents.listScheduledEvents(),
+    listCalendarDiscordEvents(),
     providers.groups.list(),
     providers.dungeons.list(),
     providers.members.listGuildMembers(),
@@ -31,8 +31,13 @@ export default defineEventHandler(async (event) => {
   const organizerNames = showNames ? new Map(members.map(member => [member.id, member.displayName])) : undefined
 
   const now = Date.now()
-  return mergeEvents({ discordEvents, runs, dungeons, guildEvents, organizerNames })
+  const merged = mergeEvents({ discordEvents, runs, dungeons, guildEvents, organizerNames })
     .map(entry => (showNames ? entry : { ...entry, organizerName: null }))
-    .filter(entry => query.upcoming === '0' || (Date.parse(entry.startsAt) >= now && entry.status !== 'completed'))
-    .slice(0, query.limit)
+  const upcoming = merged.filter(entry => Date.parse(entry.startsAt) >= now && entry.status !== 'completed').slice(0, query.limit)
+  if (query.upcoming === '1') return upcoming
+  // Alle: kommende haben Vorrang, der Rest wird mit den jüngsten vergangenen aufgefüllt
+  // (das Archiv vergangener Discord-Events wächst, kommende dürfen dadurch nie herausfallen)
+  const upcomingIds = new Set(upcoming.map(entry => entry.id))
+  const past = merged.filter(entry => !upcomingIds.has(entry.id))
+  return [...past.slice(Math.max(0, past.length - (query.limit - upcoming.length))), ...upcoming]
 })

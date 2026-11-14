@@ -37,6 +37,7 @@ export function createOffProviders(channel: string) {
     getStreamStatus: async () => ({ channel, isLive: false, title: null, gameName: null, startedAt: null, checkedAt: new Date().toISOString() }),
     listClips: async () => [],
     listStreamers: async () => [],
+    listVods: async () => [],
   }
   return { members, characters, discordEvents, groups, twitch }
 }

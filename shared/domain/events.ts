@@ -1,4 +1,4 @@
-import type { CalendarEvent, DiscordEvent, Dungeon, EventStatus, GroupRun, GuildEvent } from '../types'
+import type { CalendarEvent, DiscordEvent, Dungeon, EventStatus, GroupRun, GuildEvent, Vod } from '../types'
 import { computeComposition } from './composition'
 import { guildEventToCalendar } from './guild-events'
 
@@ -24,8 +24,52 @@ export function discordEventToCalendar(event: DiscordEvent): CalendarEvent {
     openSlots: null,
     guildEventId: null,
     location: null,
-    cancelReason: null,
+    cancelReason: event.status === 'cancelled' ? event.cancelReason ?? null : null,
+    vodUrl: event.vodUrl ?? null,
+    siteCancelled: event.siteCancelled ?? false,
   }
+}
+
+/**
+ * Aktuelle Discord-Events plus vergangene aus dem Archiv, die Discord nicht mehr liefert.
+ * Ein Event, das vor seinem Beginn verschwunden ist, wurde gelöscht – das bleibt weg.
+ * Archivierte gelten als abgeschlossen (außer abgesagte); den Discord-Link gibt es dann nicht mehr.
+ */
+export function withArchivedEvents(live: DiscordEvent[], archived: DiscordEvent[], now = new Date()): DiscordEvent[] {
+  const liveIds = new Set(live.map(event => event.id))
+  const past = archived
+    .filter(event => !liveIds.has(event.id) && Date.parse(event.startsAt) <= now.getTime())
+    .map(event => ({ ...event, url: null, status: event.status === 'cancelled' ? event.status : 'completed' as const }))
+  // Auf der Webseite abgesagt: gilt auch für Events, die Discord noch als geplant führt
+  const siteCancelled = new Map(archived.filter(event => event.siteCancelled).map(event => [event.id, event.cancelReason ?? null]))
+  return [...live, ...past].map(event => (siteCancelled.has(event.id)
+    ? { ...event, status: 'cancelled' as const, siteCancelled: true, cancelReason: siteCancelled.get(event.id) ?? null }
+    : event))
+}
+
+/** Längste Annahme für Events ohne Ende (Stunden) */
+const DEFAULT_EVENT_HOURS = 3
+/** Ein Stream darf so viel früher starten als das Event und trotzdem dazugehören */
+const VOD_EARLY_START_MS = 60 * 60_000
+
+/**
+ * Ordnet vergangenen Discord-Events das passende VOD zu: das mit der größten zeitlichen
+ * Überschneidung (Stream darf bis zu 1 Std. vor dem Event starten). Abgesagte bekommen keins.
+ */
+export function attachVods<T extends DiscordEvent>(events: T[], vods: Vod[], now = new Date()): T[] {
+  if (!vods.length) return events
+  const spans = vods.map(vod => ({ vod, start: Date.parse(vod.startedAt), end: Date.parse(vod.startedAt) + vod.durationSeconds * 1000 }))
+  return events.map((event) => {
+    const start = Date.parse(event.startsAt)
+    if (event.status === 'cancelled' || start > now.getTime()) return event
+    const end = event.endsAt ? Date.parse(event.endsAt) : start + DEFAULT_EVENT_HOURS * 3_600_000
+    let best: { url: string, overlap: number } | null = null
+    for (const span of spans) {
+      const overlap = Math.min(end, span.end) - Math.max(start - VOD_EARLY_START_MS, span.start)
+      if (overlap > 0 && (!best || overlap > best.overlap)) best = { url: span.vod.url, overlap }
+    }
+    return best ? { ...event, vodUrl: best.url } : event
+  })
 }
 
 export function runToCalendar(
@@ -49,6 +93,8 @@ export function runToCalendar(
     guildEventId: null,
     location: null,
     cancelReason: run.status === 'cancelled' ? run.cancelReason ?? null : null,
+    vodUrl: null,
+    siteCancelled: false,
   }
 }
 

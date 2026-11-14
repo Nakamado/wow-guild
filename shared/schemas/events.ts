@@ -13,6 +13,11 @@ export const DiscordEventSchema = z.object({
   status: EventStatusSchema,
   organizerName: z.string().nullable(),
   url: z.url().nullable(),
+  /** Aufzeichnung auf Twitch (nur vergangene Events, solange Twitch das VOD noch hat) */
+  vodUrl: z.url().nullable().optional(),
+  /** Auf der Webseite als abgesagt markiert (Discord selbst weiß davon nichts) */
+  siteCancelled: z.boolean().optional(),
+  cancelReason: z.string().nullable().optional(),
 })
 
 /** Einheitliches Kalender-Event aus beiden Quellen, mit stabiler ID */
@@ -37,4 +42,8 @@ export const CalendarEventSchema = z.object({
   location: z.string().nullable().default(null),
   /** Grund der Absage (Gruppen und Gilden-Events) */
   cancelReason: z.string().nullable().default(null),
+  /** nur Discord-Events: Aufzeichnung auf Twitch */
+  vodUrl: z.url().nullable().default(null),
+  /** nur Discord-Events: auf der Webseite abgesagt (kann zurückgenommen werden) */
+  siteCancelled: z.boolean().default(false),
 })

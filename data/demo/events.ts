@@ -48,6 +48,15 @@ export function createDemoDiscordEvents(now: Date): DiscordEvent[] {
       organizerName: null,
     }),
     event({
+      id: 'demo-event-06',
+      title: 'Stream: Erster Dungeon-Abend',
+      description: 'Miinyu streamt den ersten gemeinsamen Dungeon-Abend der Gilde.',
+      startsAt: at(now, -2, 18),
+      endsAt: at(now, -2, 21),
+      status: 'completed',
+      organizerName: 'Frostblüte',
+    }),
+    event({
       id: 'demo-event-05',
       title: 'Rätselabend',
       description: 'Abgesagt – wird nachgeholt.',

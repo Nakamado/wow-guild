@@ -47,5 +47,7 @@ export function guildEventToCalendar(event: GuildEvent, organizerName: string | 
     guildEventId: event.id,
     location: event.location,
     cancelReason: event.status === 'cancelled' ? event.cancelReason ?? null : null,
+    vodUrl: null,
+    siteCancelled: false,
   }
 }

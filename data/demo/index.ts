@@ -6,12 +6,13 @@ import type {
   GroupRun,
   Streamer,
   StreamStatus,
+  Vod,
 } from '../../shared/types'
 import { createDemoCharacters } from './characters'
 import { createDemoDiscordEvents } from './events'
 import { demoMembers } from './members'
 import { createDemoRuns } from './runs'
-import { createDemoClips, createDemoStreamStatus, demoStreamers } from './twitch'
+import { createDemoClips, createDemoStreamStatus, createDemoVods, demoStreamers } from './twitch'
 
 export interface DemoDataset {
   generatedAt: string
@@ -22,6 +23,7 @@ export interface DemoDataset {
   clips: Clip[]
   streamers: Streamer[]
   streamStatus: StreamStatus
+  vods: Vod[]
 }
 
 export interface DemoOptions {
@@ -46,5 +48,6 @@ export function createDemoDataset(now: Date = new Date(), options: DemoOptions =
     clips: createDemoClips(now, channel),
     streamers: demoStreamers.map(streamer => ({ ...streamer })),
     streamStatus: createDemoStreamStatus(now, channel, options.simulateLive ?? false),
+    vods: createDemoVods(now, channel),
   }
 }

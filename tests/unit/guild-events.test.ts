@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mergeEvents } from '../../shared/domain/events'
 import { checkGuildEventInput, guildEventToCalendar } from '../../shared/domain/guild-events'
 import { can } from '../../shared/domain/permissions'
@@ -35,6 +35,9 @@ describe('Gilden-Events', () => {
   })
 
   it('erscheint im Kalender als Community-Termin mit Treffpunkt', () => {
+    // „abgeschlossen“ hängt von der aktuellen Zeit ab – auf den Testzeitpunkt festsetzen
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
     const merged = mergeEvents({
       discordEvents: [],
       runs: [],
@@ -46,6 +49,7 @@ describe('Gilden-Events', () => {
       id: 'guild:e-1', source: 'guild', type: 'community', guildEventId: 'e-1', location: 'Eisenschmiede', organizerName: 'Nakamado', status: 'scheduled',
     })])
     expect(guildEventToCalendar(event({ status: 'cancelled' })).status).toBe('cancelled')
+    vi.useRealTimers()
   })
 
   it('eintragen dürfen Mitglieder, bearbeiten nur Ersteller und Admins', () => {

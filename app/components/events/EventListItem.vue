@@ -63,6 +63,13 @@ const isCancelled = computed(() => props.event.status === 'cancelled')
           v-if="event.source === 'discord'"
           class="event-item__source"
         >Discord-Event</span>
+        <a
+          v-if="event.vodUrl"
+          :href="event.vodUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="event-item__vod"
+        >▶ Aufzeichnung<span class="visually-hidden"> von „{{ event.title }}“ auf Twitch (öffnet in neuem Tab)</span></a>
       </p>
     </div>
     <p
@@ -162,6 +169,13 @@ const isCancelled = computed(() => props.event.status === 'cancelled')
     gap: var(--space-1) var(--space-3);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  &__vod {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+
+    @include focus-ring(2px);
   }
 
   &__type {

@@ -1,6 +1,6 @@
 import { instances } from '#shared/data/dungeons'
 import { mergeEvents } from '#shared/domain/events'
-import type { CalendarEvent, DiscordEvent } from '#shared/types'
+import type { CalendarEvent } from '#shared/types'
 
 export type CalendarTypeFilter = 'all' | CalendarEvent['type']
 
@@ -11,15 +11,12 @@ export type CalendarTypeFilter = 'all' | CalendarEvent['type']
 export function useCalendar() {
   const { runs, memberById, status: runsStatus, refresh: refreshRuns } = useRuns()
   const { events: guildEvents, refresh: refreshGuildEvents } = useGuildEvents()
-  const { data: discordEvents, status: discordStatus, refresh: refreshDiscord } = useFetch<DiscordEvent[]>('/api/events/discord', {
-    key: 'discord-events',
-    default: () => [],
-  })
+  const { events: discordEvents, status: discordStatus, refresh: refreshDiscord } = useDiscordEvents()
 
   const events = computed(() => {
     const organizerNames = new Map([...memberById.value.entries()].map(([id, member]) => [id, member.displayName]))
     return mergeEvents({
-      discordEvents: discordEvents.value ?? [],
+      discordEvents: discordEvents.value,
       runs: runs.value,
       dungeons: instances,
       guildEvents: guildEvents.value,

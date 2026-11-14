@@ -73,6 +73,9 @@ export function createDemoTwitchProvider(data: DemoDataset): TwitchProvider {
     async listStreamers() {
       return clone(data.streamers)
     },
+    async listVods() {
+      return clone(data.vods)
+    },
   }
 }
 

@@ -1,9 +1,9 @@
-import type { Clip, StreamStatus, Streamer } from '#shared/types'
+import type { Clip, StreamStatus, Streamer, Vod } from '#shared/types'
 import type { StreamerEntry } from '../../../content/streamers'
 import { createTtlCache } from '../../lib/http'
 import type { TwitchProvider } from '../types'
 import type { TwitchClient } from './client'
-import type { HelixClip, HelixStream } from './schemas'
+import type { HelixClip, HelixStream, HelixVideo } from './schemas'
 
 export { createTwitchClient } from './client'
 
@@ -11,6 +11,7 @@ const STATUS_TTL = 60_000
 const CLIPS_TTL = 15 * 60_000
 const STREAMERS_TTL = 60_000
 const GAMES_TTL = 24 * 60 * 60_000
+const VODS_TTL = 15 * 60_000
 /** höchstens so viele Clip-Seiten (je 100) durchsuchen, um genug passende Clips zu finden */
 const MAX_CLIP_PAGES = 5
 /** bei weiteren Gilden-Streamern weniger Seiten durchsuchen */
@@ -63,6 +64,23 @@ export function helixClipToClip(clip: HelixClip): Clip {
     viewCount: clip.view_count,
     durationSeconds: clip.duration,
     createdAt: new Date(clip.created_at).toISOString(),
+  }
+}
+
+/** Twitch-Dauer wie „3h2m10s“ in Sekunden */
+export function parseTwitchDuration(value: string): number {
+  const match = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(value)
+  if (!match) return 0
+  return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0)
+}
+
+export function helixVideoToVod(video: HelixVideo): Vod {
+  return {
+    id: video.id,
+    url: video.url,
+    title: video.title,
+    startedAt: new Date(video.created_at).toISOString(),
+    durationSeconds: parseTwitchDuration(video.duration),
   }
 }
 
@@ -126,6 +144,11 @@ export function createTwitchProvider(client: TwitchClient, config: TwitchProvide
       return [...clips]
         .sort((a, b) => query.sort === 'popular' ? b.viewCount - a.viewCount : Date.parse(b.createdAt) - Date.parse(a.createdAt))
         .slice(0, query.limit)
+    },
+
+    listVods() {
+      return cache.get('vods', VODS_TTL, async () =>
+        (await client.getArchiveVideos(config.broadcasterId)).filter(video => video.type === 'archive').map(helixVideoToVod))
     },
 
     listStreamers() {
