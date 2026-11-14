@@ -9,12 +9,18 @@ const emit = defineEmits<{ join: [runId: string], edit: [guildEventId: string] }
 
 const { can } = useViewer()
 const { getRun, myEntry } = useRuns()
+const { canModerate: canModerateDiscord, cancel: cancelDiscordEvent, restore: restoreDiscordEvent } = useDiscordEvents()
 const { getEvent: getGuildEvent, canEdit: canEditGuildEvent, canDelete: canDeleteGuildEvent, cancel: cancelGuildEvent, remove: removeGuildEvent } = useGuildEvents()
 
 // Gilden-Event: bearbeiten/absagen für die Person, die es eingetragen hat, und Admins
 const guildEvent = computed(() => (props.event?.guildEventId ? getGuildEvent(props.event.guildEventId) : null))
 const canManageGuildEvent = computed(() => Boolean(guildEvent.value && isUpcoming.value && canEditGuildEvent(guildEvent.value)))
 const canDeleteEvent = computed(() => Boolean(guildEvent.value && canDeleteGuildEvent(guildEvent.value)))
+// Discord-Event: Admins können es auf der Seite absagen (auch nachträglich) und das zurücknehmen
+const discordId = computed(() => (props.event?.source === 'discord' ? props.event.id.replace(/^discord:/, '') : null))
+const canCancelDiscord = computed(() => Boolean(discordId.value && canModerateDiscord.value && props.event?.status !== 'cancelled'))
+const canRestoreDiscord = computed(() => Boolean(discordId.value && canModerateDiscord.value && props.event?.siteCancelled))
+const canCancel = computed(() => canManageGuildEvent.value || canCancelDiscord.value)
 /** Bestätigung: absagen (mit optionalem Grund) oder endgültig löschen */
 const confirm = ref<'cancel' | 'delete' | null>(null)
 const cancelReason = ref('')
@@ -26,13 +32,21 @@ watch(open, () => {
 })
 
 async function cancelEvent() {
-  if (!guildEvent.value) return
-  const result = await cancelGuildEvent(guildEvent.value.id, cancelReason.value)
+  const result = discordId.value
+    ? await cancelDiscordEvent(discordId.value, cancelReason.value)
+    : guildEvent.value ? await cancelGuildEvent(guildEvent.value.id, cancelReason.value) : null
+  if (!result) return
   if (!result.ok) {
     actionError.value = result.error.message
     return
   }
   confirm.value = null
+}
+
+async function restoreDiscord() {
+  if (!discordId.value) return
+  const result = await restoreDiscordEvent(discordId.value)
+  if (!result.ok) actionError.value = result.error.message
 }
 
 async function deleteEvent() {
@@ -166,7 +180,11 @@ function join() {
         v-if="confirm === 'cancel'"
         class="event-details__confirm"
       >
-        <p>Event absagen? Es bleibt als „abgesagt“ im Kalender sichtbar.</p>
+        <p>
+          Event absagen? Es bleibt als „abgesagt“ im Kalender sichtbar.<template v-if="discordId">
+            In Discord selbst ändert sich dadurch nichts.
+          </template>
+        </p>
         <label
           class="event-details__reason-label"
           for="event-cancel-reason"
@@ -244,6 +262,14 @@ function join() {
         In Discord öffnen
       </BaseButton>
       <BaseButton
+        v-if="event?.vodUrl"
+        :href="event.vodUrl"
+        external
+        variant="secondary"
+      >
+        Aufzeichnung ansehen
+      </BaseButton>
+      <BaseButton
         v-if="event?.runId"
         :to="`/gruppen/${event.runId}`"
         variant="secondary"
@@ -258,11 +284,18 @@ function join() {
         Löschen
       </BaseButton>
       <BaseButton
-        v-if="canManageGuildEvent && !confirm"
+        v-if="canCancel && !confirm"
         variant="ghost"
         @click="confirm = 'cancel'"
       >
         Absagen
+      </BaseButton>
+      <BaseButton
+        v-if="canRestoreDiscord"
+        variant="ghost"
+        @click="restoreDiscord"
+      >
+        Absage zurücknehmen
       </BaseButton>
       <BaseButton
         v-if="canManageGuildEvent"

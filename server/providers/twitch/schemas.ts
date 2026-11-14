@@ -54,8 +54,21 @@ export const HelixUserSchema = z.object({
   profile_image_url: z.string().nullish(),
 })
 
+/** Vergangene Übertragung (VOD) – nur Typ „archive“ wird abgefragt */
+export const HelixVideoSchema = z.object({
+  id: z.string(),
+  url: z.url(),
+  title: z.string(),
+  /** Beginn der Übertragung */
+  created_at: z.string(),
+  /** z. B. „3h2m10s“ */
+  duration: z.string(),
+  type: z.string(),
+})
+
 export const helixList = <T extends z.ZodType>(item: T) => z.object({ data: z.array(item) })
 
 export type HelixStream = z.infer<typeof HelixStreamSchema>
 export type HelixClip = z.infer<typeof HelixClipSchema>
+export type HelixVideo = z.infer<typeof HelixVideoSchema>
 export type HelixUser = z.infer<typeof HelixUserSchema>

@@ -27,6 +27,8 @@ export type Action
     /** Gilden-Events im Kalender eintragen bzw. eigene bearbeiten/absagen */
     | 'events:create'
     | 'events:edit'
+    /** Discord-Events auf der Seite als abgesagt markieren (nur Admins) */
+    | 'events:moderate'
     /** Admin-Werkzeuge (z. B. Blizzard-API-Probe) – nur Gildenleitung */
     | 'admin:tools'
     /** Schwarzes Brett lesen (Mitglieder) bzw. Aushänge verwalten (nur Admins) */
@@ -76,6 +78,7 @@ export function can(viewer: Viewer, action: Action, resource: PermissionResource
     case 'events:edit':
       return hasLevel(viewer, 'member') && isSelf(viewer, resource.organizerId)
     case 'runs:moderate':
+    case 'events:moderate':
     case 'admin:tools':
     case 'board:manage':
     case 'admin:area':

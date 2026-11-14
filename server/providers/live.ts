@@ -77,6 +77,7 @@ export function resilientTwitch(provider: TwitchProvider, channel: string): Twit
       fallback: () => serviceUnavailable('Die Clips sind gerade nicht erreichbar. Bitte versuche es später erneut.'),
     }),
     listStreamers: withFallback(provider.listStreamers, { label: 'twitch.streamers', fallback: () => [] }),
+    listVods: withFallback(provider.listVods, { label: 'twitch.vods', fallback: () => [] }),
   }
 }
 

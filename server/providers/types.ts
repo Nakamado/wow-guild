@@ -12,6 +12,7 @@ import type {
   RoleId,
   Streamer,
   StreamStatus,
+  Vod,
 } from '#shared/types'
 
 /**
@@ -54,6 +55,8 @@ export interface TwitchProvider {
   getStreamStatus(): Promise<StreamStatus>
   listClips(query: ClipQuery): Promise<Clip[]>
   listStreamers(): Promise<Streamer[]>
+  /** VODs von Miinyus vergangenen Streams (neueste zuerst) */
+  listVods(): Promise<Vod[]>
 }
 
 /** Lesender Zugriff auf Runs (Demo: fester Datensatz, Live: Supabase). */

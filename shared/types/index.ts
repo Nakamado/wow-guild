@@ -34,6 +34,7 @@ export type CalendarEvent = z.infer<typeof S.CalendarEventSchema>
 
 export type StreamStatus = z.infer<typeof S.StreamStatusSchema>
 export type Clip = z.infer<typeof S.ClipSchema>
+export type Vod = z.infer<typeof S.VodSchema>
 export type ClipPeriod = z.infer<typeof S.ClipPeriodSchema>
 export type ClipSort = z.infer<typeof S.ClipSortSchema>
 export type Streamer = z.infer<typeof S.StreamerSchema>

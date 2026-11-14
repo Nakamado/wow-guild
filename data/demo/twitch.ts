@@ -1,4 +1,4 @@
-import type { Clip, StreamStatus, Streamer } from '../../shared/types'
+import type { Clip, StreamStatus, Streamer, Vod } from '../../shared/types'
 
 /**
  * EINDEUTIG FIKTIVE Twitch-Daten. Clip-Titel sind Platzhalter, keine echten Clips;
@@ -43,6 +43,18 @@ export function createDemoStreamStatus(now: Date, channel: string, simulateLive:
 }
 
 /** Fiktive weitere Gilden-Streamer – im Live-Betrieb kommen sie aus einer Konfigurationsdatei. */
+/** FIKTIVES VOD zum vergangenen Demo-Stream („Stream: Erster Dungeon-Abend“) – verlinkt nur die Videoübersicht */
+export function createDemoVods(now: Date, channel: string): Vod[] {
+  const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 2 * 86_400_000
+  return [{
+    id: 'demo-vod-1',
+    url: `https://www.twitch.tv/${channel}/videos`,
+    title: 'Erster Dungeon-Abend mit der Gilde (Demo)',
+    startedAt: new Date(day + 18 * 3_600_000 + 4 * 60_000).toISOString(),
+    durationSeconds: 3 * 3600 + 12 * 60,
+  }]
+}
+
 export const demoStreamers: Streamer[] = [
   { id: 'demo-streamer-1', twitchId: 'demo-twitch-1', login: 'demo_frostbluete', displayName: 'Frostblüte (Demo)', avatarUrl: null, memberId: 'demo-member-01', isLive: true },
   { id: 'demo-streamer-2', twitchId: 'demo-twitch-2', login: 'demo_brummbart', displayName: 'Brummbart (Demo)', avatarUrl: null, memberId: 'demo-member-02', isLive: false },

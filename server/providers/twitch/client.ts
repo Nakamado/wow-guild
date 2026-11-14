@@ -1,5 +1,5 @@
 import { IntegrationError, requestJson, type FetchLike } from '../../lib/http'
-import { HelixClipSchema, HelixGameSchema, HelixStreamSchema, HelixUserSchema, TwitchTokenSchema, helixList, helixPage } from './schemas'
+import { HelixClipSchema, HelixGameSchema, HelixStreamSchema, HelixUserSchema, HelixVideoSchema, TwitchTokenSchema, helixList, helixPage } from './schemas'
 
 const HELIX = 'https://api.twitch.tv/helix'
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
@@ -81,6 +81,11 @@ export function createTwitchClient(clientId: string, clientSecret: string, optio
     async getGames(names: string[]) {
       if (!names.length) return []
       return helixList(HelixGameSchema).parse(await helix('/games', names.map(name => ['name', name]))).data
+    },
+
+    /** Vergangene Übertragungen eines Kanals (neueste zuerst, max. 100) */
+    async getArchiveVideos(userId: string, first = 100) {
+      return helixList(HelixVideoSchema).parse(await helix('/videos', [['user_id', userId], ['type', 'archive'], ['first', String(first)]])).data
     },
 
     async getUsers(logins: string[]) {

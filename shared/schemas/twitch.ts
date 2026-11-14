@@ -16,6 +16,15 @@ export const StreamStatusSchema = z.object({
   checkedAt: IsoDateTimeSchema,
 })
 
+/** Aufzeichnung eines vergangenen Streams (Twitch löscht VODs je nach Kanal nach 7–60 Tagen) */
+export const VodSchema = z.object({
+  id: z.string().min(1),
+  url: z.url(),
+  title: z.string(),
+  startedAt: IsoDateTimeSchema,
+  durationSeconds: z.number().int().min(0),
+})
+
 export const ClipSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),

@@ -8,6 +8,7 @@ import { createSupabaseBoardStore, type BoardStore } from '../repositories/supab
 import { createSupabaseGrantStore, type GrantStore } from '../repositories/supabase/grants'
 import { createSupabaseGuildEventStore, type GuildEventStore } from '../repositories/supabase/guild-events'
 import { createSupabaseMemberSettingsStore, type MemberSettingsStore } from '../repositories/supabase/member-settings'
+import { createSupabaseDiscordEventArchive, type DiscordEventArchive } from '../repositories/supabase/discord-event-archive'
 import { createSupabaseAnnouncementStore, type AnnouncementStore } from '../repositories/supabase/announcements'
 import { createSupabaseNotificationStore, type NotificationStore } from '../repositories/supabase/notifications'
 import { createSupabaseMilestoneStore, type MilestoneStore } from '../repositories/supabase/milestones'
@@ -112,6 +113,11 @@ export function useBoardStore(): BoardStore | null {
 /** Gilden-Events (auf der Webseite eingetragene Termine) – null im Demo-Modus oder ohne Datenbank */
 export function useGuildEventStore(): GuildEventStore | null {
   return useStore('guild-events', createSupabaseGuildEventStore)
+}
+
+/** Archiv vergangener Discord-Events – null ohne Datenbank */
+export function useDiscordEventArchive(): DiscordEventArchive | null {
+  return useStore('discord-event-archive', createSupabaseDiscordEventArchive)
 }
 
 /** Zuordnung Gruppe/Gilden-Event → Discord-Ankündigung – null ohne Datenbank */
