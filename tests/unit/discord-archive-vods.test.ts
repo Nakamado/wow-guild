@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiscordEvent, Vod } from '#shared/types'
-import { attachVods, withArchivedEvents } from '#shared/domain/events'
+import { attachVods, AUTO_CANCEL_REASON, isStreamEvent, streamCheck, withArchivedEvents } from '#shared/domain/events'
 import { helixVideoToVod, parseTwitchDuration } from '../../server/providers/twitch'
 
 const NOW = new Date('2026-11-14T12:00:00Z')
@@ -72,5 +72,39 @@ describe('Absage auf der Webseite', () => {
     expect(result.map(entry => [entry.id, entry.status, entry.cancelReason])).toEqual([['5', 'cancelled', 'Stream fällt aus'], ['6', 'cancelled', null]])
     // abgesagte bekommen kein VOD
     expect(attachVods(result, [vod('v', '2026-11-10T18:00:00Z', 2)], NOW)[1]!.vodUrl).toBeUndefined()
+  })
+})
+
+describe('Automatische Absage ausgefallener Streams', () => {
+  const stream = (extra: Partial<DiscordEvent> = {}) => event('7', '2026-11-12T18:00:00Z', { title: 'Streamüü!', endsAt: '2026-11-12T21:00:00Z', status: 'completed', ...extra })
+
+  it('erkennt Stream-Events an Titel oder Twitch-Link', () => {
+    expect(isStreamEvent({ title: 'Streamüü!', location: null })).toBe(true)
+    expect(isStreamEvent({ title: 'Gildentreffen', location: 'https://twitch.tv/miinyu' })).toBe(true)
+    expect(isStreamEvent({ title: 'Gildentreffen', location: 'Eisenschmiede' })).toBe(false)
+  })
+
+  it('prüft eine Stunde nach Beginn: live oder Übertragung um den Beginn herum', () => {
+    const vods = [vod('v', '2026-11-12T18:20:00Z', 3)]
+    // noch keine Stunde nach Beginn
+    expect(streamCheck(stream(), [], new Date('2026-11-12T18:59:00Z'))).toBe('pending')
+    // eine Stunde nach Beginn: VOD läuft seit 18:20 → gestreamt
+    expect(streamCheck(stream(), vods, new Date('2026-11-12T19:01:00Z'))).toBe('streamed')
+    // gerade live (VOD-Liste noch nicht aktuell) → gestreamt
+    expect(streamCheck(stream(), [], new Date('2026-11-12T19:01:00Z'), true)).toBe('streamed')
+    // nicht live und kein VOD um den Beginn herum → ausgefallen
+    expect(streamCheck(stream(), [vod('spaet', '2026-11-12T19:30:00Z', 2)], new Date('2026-11-12T19:01:00Z'))).toBe('missed')
+    expect(streamCheck(stream(), [vod('anders', '2026-11-11T18:00:00Z', 2)], NOW)).toBe('missed')
+    // später live, das Event ist aber vorbei → zählt nicht
+    expect(streamCheck(stream(), [], NOW, true)).toBe('missed')
+    expect(streamCheck(stream({ startsAt: '2026-11-01T18:00:00Z', endsAt: '2026-11-01T21:00:00Z' }), [], NOW)).toBe('too-old')
+    // keine Stream-Events und bereits abgesagte bleiben unberührt
+    expect(streamCheck(stream({ title: 'Gildentreffen' }), [], NOW)).toBe('pending')
+    expect(streamCheck(stream({ status: 'cancelled' }), [], NOW)).toBe('pending')
+  })
+
+  it('automatisch abgesagte erscheinen mit Grund und lassen sich zurücknehmen', () => {
+    const [entry] = withArchivedEvents([], [stream({ autoCancelled: true })], NOW)
+    expect(entry).toMatchObject({ status: 'cancelled', siteCancelled: true, autoCancelled: true, cancelReason: AUTO_CANCEL_REASON })
   })
 })
