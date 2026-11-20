@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 
 /**
  * Tägliche Bereinigung (Vercel Cron, siehe vercel.json): abgelaufene Protokolleinträge und
- * alte zurückgezogene Ranglistenfreigaben löschen. Nur mit „Authorization: Bearer <CRON_SECRET>“.
+ * alte zurückgezogene Ranglistenfreigaben löschen, Discord-Event-Archiv auffrischen. Nur mit „Authorization: Bearer <CRON_SECRET>“.
  */
 export default defineEventHandler(async (event) => {
   const secret = String(useRuntimeConfig(event).cronSecret || process.env.CRON_SECRET || '')
@@ -13,6 +13,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
   const result = await purgeExpiredRecords()
+  // Discord-Events auch ohne Seitenaufruf archivieren und ausgefallene Streams erkennen
+  const discordEvents = await syncDiscordEventArchive().catch(() => 0)
+  console.info(`[cleanup] Discord-Events im Kalender: ${discordEvents}`)
   console.info(`[cleanup] Protokoll: ${result.activityDeleted} gelöscht, zurückgezogene Freigaben: ${result.grantsDeleted} gelöscht, Benachrichtigungen: ${result.notificationsDeleted} gelöscht`)
   return result
 })

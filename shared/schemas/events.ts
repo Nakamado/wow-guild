@@ -15,8 +15,12 @@ export const DiscordEventSchema = z.object({
   url: z.url().nullable(),
   /** Aufzeichnung auf Twitch (nur vergangene Events, solange Twitch das VOD noch hat) */
   vodUrl: z.url().nullable().optional(),
+  /** Ort bei externen Discord-Events (z. B. Twitch-Link) */
+  location: z.string().nullable().optional(),
   /** Auf der Webseite als abgesagt markiert (Discord selbst weiß davon nichts) */
   siteCancelled: z.boolean().optional(),
+  /** automatisch abgesagt: Stream-Event ohne passende Übertragung auf Twitch */
+  autoCancelled: z.boolean().optional(),
   cancelReason: z.string().nullable().optional(),
 })
 

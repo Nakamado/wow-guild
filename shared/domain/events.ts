@@ -40,11 +40,53 @@ export function withArchivedEvents(live: DiscordEvent[], archived: DiscordEvent[
   const past = archived
     .filter(event => !liveIds.has(event.id) && Date.parse(event.startsAt) <= now.getTime())
     .map(event => ({ ...event, url: null, status: event.status === 'cancelled' ? event.status : 'completed' as const }))
-  // Auf der Webseite abgesagt: gilt auch für Events, die Discord noch als geplant führt
-  const siteCancelled = new Map(archived.filter(event => event.siteCancelled).map(event => [event.id, event.cancelReason ?? null]))
-  return [...live, ...past].map(event => (siteCancelled.has(event.id)
-    ? { ...event, status: 'cancelled' as const, siteCancelled: true, cancelReason: siteCancelled.get(event.id) ?? null }
-    : event))
+  // Auf der Webseite abgesagt (von Hand oder automatisch): gilt auch, wenn Discord es noch als geplant führt
+  const overrides = new Map(archived
+    .filter(event => event.siteCancelled || event.autoCancelled)
+    .map(event => [event.id, { reason: event.autoCancelled ? AUTO_CANCEL_REASON : event.cancelReason ?? null, auto: Boolean(event.autoCancelled) }]))
+  return [...live, ...past].map((event) => {
+    const override = overrides.get(event.id)
+    return override
+      ? { ...event, status: 'cancelled' as const, siteCancelled: true, autoCancelled: override.auto, cancelReason: override.reason }
+      : event
+  })
+}
+
+export const AUTO_CANCEL_REASON = 'Kein Stream auf Twitch gefunden'
+/** So lange nach dem Beginn muss Miinyu live sein (oder gewesen sein), sonst gilt der Stream als ausgefallen */
+export const STREAM_CHECK_DELAY_MS = 60 * 60_000
+/** Ältere Events werden nicht mehr automatisch abgesagt (Twitch hebt VODs mindestens 7 Tage auf) */
+export const STREAM_CHECK_MAX_AGE_MS = 6 * 86_400_000
+
+/** Sieht nach einem Stream aus: Twitch-Link als Ort oder „Stream“ im Titel */
+export function isStreamEvent(event: Pick<DiscordEvent, 'title' | 'location'>): boolean {
+  return /twitch\.tv/i.test(event.location ?? '') || /stream/i.test(event.title)
+}
+
+const eventEnd = (event: Pick<DiscordEvent, 'startsAt' | 'endsAt'>) =>
+  event.endsAt ? Date.parse(event.endsAt) : Date.parse(event.startsAt) + DEFAULT_EVENT_HOURS * 3_600_000
+
+/**
+ * Prüfung „hat der Stream stattgefunden?“ – ab 1 Std. nach Beginn des Stream-Events:
+ * - 'pending': noch zu früh (oder kein Stream-Event / schon abgesagt) – nichts tun
+ * - 'too-old': zu alt für eine sichere Aussage – als geprüft markieren, nicht absagen
+ * - 'streamed': Miinyu ist gerade live (während des Events) oder es gibt eine Übertragung,
+ *   die zwischen 1 Std. vor und 1 Std. nach Beginn lief (Twitch legt das VOD schon beim Start an)
+ * - 'missed': nichts davon → automatisch absagen
+ */
+export function streamCheck(event: DiscordEvent, vods: Vod[], now = new Date(), liveNow = false): 'pending' | 'too-old' | 'streamed' | 'missed' {
+  if (!isStreamEvent(event) || event.status === 'cancelled' || event.siteCancelled) return 'pending'
+  const start = Date.parse(event.startsAt)
+  const end = eventEnd(event)
+  const time = now.getTime()
+  if (time < start + STREAM_CHECK_DELAY_MS) return 'pending'
+  if (time > end + STREAM_CHECK_MAX_AGE_MS) return 'too-old'
+  if (liveNow && time <= end) return 'streamed'
+  const aroundStart = vods.some((vod) => {
+    const vodStart = Date.parse(vod.startedAt)
+    return vodStart <= start + STREAM_CHECK_DELAY_MS && vodStart + vod.durationSeconds * 1000 >= start - VOD_EARLY_START_MS
+  })
+  return aroundStart ? 'streamed' : 'missed'
 }
 
 /** Längste Annahme für Events ohne Ende (Stunden) */
@@ -58,18 +100,24 @@ const VOD_EARLY_START_MS = 60 * 60_000
  */
 export function attachVods<T extends DiscordEvent>(events: T[], vods: Vod[], now = new Date()): T[] {
   if (!vods.length) return events
-  const spans = vods.map(vod => ({ vod, start: Date.parse(vod.startedAt), end: Date.parse(vod.startedAt) + vod.durationSeconds * 1000 }))
   return events.map((event) => {
-    const start = Date.parse(event.startsAt)
-    if (event.status === 'cancelled' || start > now.getTime()) return event
-    const end = event.endsAt ? Date.parse(event.endsAt) : start + DEFAULT_EVENT_HOURS * 3_600_000
-    let best: { url: string, overlap: number } | null = null
-    for (const span of spans) {
-      const overlap = Math.min(end, span.end) - Math.max(start - VOD_EARLY_START_MS, span.start)
-      if (overlap > 0 && (!best || overlap > best.overlap)) best = { url: span.vod.url, overlap }
-    }
-    return best ? { ...event, vodUrl: best.url } : event
+    if (event.status === 'cancelled' || Date.parse(event.startsAt) > now.getTime()) return event
+    const vod = findVod(event, vods)
+    return vod ? { ...event, vodUrl: vod.url } : event
   })
+}
+
+/** VOD mit der größten zeitlichen Überschneidung (Stream darf bis zu 1 Std. früher starten) */
+export function findVod(event: Pick<DiscordEvent, 'startsAt' | 'endsAt'>, vods: Vod[]): Vod | null {
+  const start = Date.parse(event.startsAt)
+  const end = eventEnd(event)
+  let best: { vod: Vod, overlap: number } | null = null
+  for (const vod of vods) {
+    const vodStart = Date.parse(vod.startedAt)
+    const overlap = Math.min(end, vodStart + vod.durationSeconds * 1000) - Math.max(start - VOD_EARLY_START_MS, vodStart)
+    if (overlap > 0 && (!best || overlap > best.overlap)) best = { vod, overlap }
+  }
+  return best?.vod ?? null
 }
 
 export function runToCalendar(

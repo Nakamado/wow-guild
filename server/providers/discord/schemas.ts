@@ -32,6 +32,8 @@ export const DiscordScheduledEventSchema = z.object({
   scheduled_end_time: z.string().nullish(),
   status: z.number().int(),
   creator: DiscordUserSchema.nullish(),
+  /** bei externen Events der Ort, z. B. ein Twitch-Link */
+  entity_metadata: z.object({ location: z.string().nullish() }).nullish(),
 })
 
 export type DiscordUser = z.infer<typeof DiscordUserSchema>

@@ -13,15 +13,23 @@ interface ArchiveRow {
   url: string | null
   site_cancelled: boolean
   site_cancel_reason: string | null
+  location?: string | null
+  stream_checked?: boolean
+  auto_cancelled?: boolean
 }
+
+/** Archiviertes Event inkl. Prüfstatus „hat der Stream stattgefunden?“ */
+export type ArchivedDiscordEvent = DiscordEvent & { streamChecked: boolean }
 
 export interface DiscordEventArchive {
   /** gesehene Events speichern bzw. aktualisieren */
   save(events: DiscordEvent[]): Promise<void>
   /** archivierte Events (ohne Veranstalter-Namen), inkl. Absage auf der Webseite */
-  list(): Promise<DiscordEvent[]>
+  list(): Promise<ArchivedDiscordEvent[]>
   /** auf der Webseite absagen (reason) bzw. Absage zurücknehmen (cancelled = false) */
   setSiteCancelled(event: DiscordEvent, cancelled: boolean, reason?: string | null): Promise<void>
+  /** Ergebnis der Stream-Prüfung speichern (missed = automatisch absagen) */
+  markStreamChecked(id: string, missed: boolean): Promise<void>
 }
 
 /** Nur echte Discord-IDs archivieren (Demo- oder Testdaten nie) */
@@ -38,17 +46,20 @@ export function createSupabaseDiscordEventArchive(db: SupabaseClient): DiscordEv
     ends_at: event.endsAt,
     status: event.siteCancelled ? 'scheduled' : event.status,
     url: event.url,
+    ...(event.location !== undefined ? { location: event.location?.slice(0, 300) ?? null } : {}),
     updated_at: new Date().toISOString(),
   })
   return {
     async save(events) {
       const rows = events.filter(event => isDiscordId(event.id)).map(discordColumns)
       if (!rows.length) return
-      const result = await table().upsert(rows)
+      let result = await table().upsert(rows)
+      // Migration 20261119 noch nicht eingespielt: ohne die neue Spalte „location“ speichern
+      if (result.error?.message.includes('location')) result = await table().upsert(rows.map(({ location: _location, ...row }) => row))
       if (result.error) throw fromPostgresError(result.error)
     },
     async list() {
-      const result = await table().select('id, title, description, starts_at, ends_at, status, url, site_cancelled, site_cancel_reason').order('starts_at', { ascending: false }).limit(500)
+      const result = await table().select('*').order('starts_at', { ascending: false }).limit(500)
       if (result.error) throw fromPostgresError(result.error)
       return (result.data as ArchiveRow[]).map(row => ({
         id: row.id,
@@ -61,6 +72,10 @@ export function createSupabaseDiscordEventArchive(db: SupabaseClient): DiscordEv
         url: row.url,
         siteCancelled: row.site_cancelled,
         cancelReason: row.site_cancel_reason,
+        location: row.location ?? null,
+        autoCancelled: row.auto_cancelled ?? false,
+        // ohne die neue Spalte (Migration fehlt) nie automatisch absagen
+        streamChecked: row.stream_checked ?? true,
       }))
     },
     async setSiteCancelled(event, cancelled, reason = null) {
@@ -69,7 +84,13 @@ export function createSupabaseDiscordEventArchive(db: SupabaseClient): DiscordEv
         ...discordColumns(event),
         site_cancelled: cancelled,
         site_cancel_reason: cancelled ? reason || null : null,
+        // zurückgenommen: auch eine automatische Absage aufheben und nicht erneut prüfen
+        ...(cancelled ? {} : { auto_cancelled: false, stream_checked: true }),
       })
+      if (result.error) throw fromPostgresError(result.error)
+    },
+    async markStreamChecked(id, missed) {
+      const result = await table().update({ stream_checked: true, auto_cancelled: missed }).eq('id', id)
       if (result.error) throw fromPostgresError(result.error)
     },
   }

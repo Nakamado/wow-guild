@@ -48,5 +48,6 @@ export function scheduledEventToDiscordEvent(event: DiscordScheduledEvent): Disc
     status: statusMap[event.status] ?? 'scheduled',
     organizerName: event.creator ? discordDisplayName(event.creator) : null,
     url: `https://discord.com/events/${event.guild_id}/${event.id}`,
+    location: event.entity_metadata?.location ?? null,
   }
 }
